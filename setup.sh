@@ -32,6 +32,16 @@ action() {
     # install minimal software stack once
     #
 
+    # software for lx-machines at RWTH Aachen
+    if [ -f "/net/software_cms/vispa/sl6_local/exports.sh" ]; then
+        source /net/software_cms/vispa/sl6_local/exports.sh
+    fi
+
+    # software paths
+    _addbin "$JTSF_SOFTWARE/bin"
+    _addpy "$JTSF_SOFTWARE/lib/python2.7/site-packages"
+
+    # software that is used in this project
     if [ ! -d "$JTSF_SOFTWARE" ]; then
         echo "installing development software in $JTSF_SOFTWARE"
 
@@ -47,10 +57,6 @@ action() {
     #
     # env setup
     #
-
-    # software
-    _addbin "$JTSF_SOFTWARE/bin"
-    _addpy "$JTSF_SOFTWARE/lib/python2.7/site-packages"
 
     # add _this_ repo
     _addpy "$JTSF_BASE"

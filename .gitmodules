@@ -1,0 +1,3 @@
+[submodule "root_legacy/csvReweightingRun2"]
+	path = root_legacy/csvReweightingRun2
+	url = git@github.com:cms-ttH/csvReweightingRun2.git

@@ -50,7 +50,7 @@ action() {
         _install_pip scinum
         _install_pip order
         # _install_pip law
-        _install_pip git+https://github.com/riga/law.git
+        LAW_INSTALL_CUSTOM_SCRIPT=1 _install_pip git+https://github.com/riga/law.git
     fi
 
 
@@ -65,5 +65,16 @@ action() {
     export LAW_HOME="$JTSF_BASE/.law"
     export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
     source "$( law completion )"
+
+    #
+    # CMSSW setup
+    #
+
+    source /cvmfs/cms.cern.ch/cmsset_default.sh
+    export SCRAM_ARCH=slc6_amd64_gcc630
 }
 action "$@"
+
+cd ..
+cmsenv
+cd jet-tagging-sf

@@ -17,6 +17,7 @@ class Load_Data(Task, law.ExternalTask):
     )
 
     def output(self):
+        assert self.leptonType.value < 0
         return law.LocalFileTarget(os.path.join(
             self.local_data_root,
             'in',

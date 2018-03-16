@@ -1,9 +1,9 @@
 #!/usr/bin/env python
 
-import utils
+import utils.email
 from workflow.base_tasks.base import Task
-from workflow.base_tasks.rootScriptRunner import RootScriptRunner
 from workflow.enums import LeptonType, Tagger
+from workflow.legacy_tasks.rootScriptRunner import RootScriptRunner
 from workflow.tasks.T020_triggerWeights import TriggerWeights
 
 import luigi
@@ -34,6 +34,8 @@ class TriggerWeightsPlots(Task):
     def requires(self):
         requs = dict()
         for leptonType in LeptonType:
+            if leptonType == LeptonType.All:
+                continue
             if leptonType.name not in requs:
                 requs[leptonType.name] = dict()
             for hf, hf_str in zip([True, False], ['hf', 'lf']):
@@ -54,6 +56,8 @@ class TriggerWeightsPlots(Task):
         output.parent.touch()
         ratios = dict(self.requires())
         for leptonType in LeptonType:
+            if leptonType == LeptonType.All:
+                continue
             for hf, hf_str in zip([True, False], ['hf', 'lf']):
                 if leptonType == LeptonType.MuonEG and not hf:
                     continue

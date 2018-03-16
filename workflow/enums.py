@@ -10,6 +10,7 @@ class LeptonType(enum.IntEnum):
     DoubleEG = -100
     DoubleMuon = -200
     MuonEG = -300
+    All = 0
 
 
 class RunEra(enum.Enum):

@@ -2,11 +2,11 @@
 
 from workflow.base_tasks.base import Task
 from workflow.base_tasks.rootScriptRunner import RootScriptRunner
+from workflow.enums import LeptonType, RunEra, FinalState, Tagger
+from workflow.tasks.T010_loadFiles import Load_Data, Load_MC
 
-import enum
 import law
 import luigi
-import os
 
 # For making new trigger weights:
 # csvSF_treeReader_13TeV.C:
@@ -30,102 +30,37 @@ import os
 #     -Output is in CSVHistoFiles directory
 
 
-class Tagger(enum.IntEnum):
-    cMVA = 0
-    csv = 1
-
-
-class LeptonType(enum.IntEnum):
-    DoubleEG = -100
-    DoubleMuon = -200
-    MuonEG = -300
-
-
-class RunEra(enum.Enum):
-    B = 1
-    C = 2
-    D = 3
-    E = 4
-    F = 5
-
-
-class FinalState(enum.IntEnum):
-    zjets = 2300
-    lowMasszjets = 2310
-    # WJetsToLNu = 2400
-    ttjets = 2500
-    # TToLepton_s = 2510
-    # TBarToLepton_s = 2511
-    # TToLeptons_t = 2512
-    # TBarToLeptons_t = 2513
-    singletW = 2514
-    singletbarW = 2515
-    # TTZJets = 2523
-    # TTWJets = 2524
-    WW = 2600
-
-
-class Load_Data(luigi.ExternalTask, Task):
-    version = None
-    leptonType = luigi.EnumParameter(enum=LeptonType)
-    runEra = luigi.EnumParameter(enum=RunEra)
-    date = luigi.Parameter(
-        default='2018-02-10',
-    )
-
-    def output(self):
-        return law.LocalFileTarget(os.path.join(
-            self.local_data_root,
-            'in',
-            self.date,
-            '%s_Run2017%s_17Nov2017_%s.root'
-            % (self.leptonType.name, self.runEra.name, self.date)
-        ))
-
-
-class Load_MC(luigi.ExternalTask, Task):
-    version = None
-    finalState = luigi.EnumParameter(enum=FinalState)
-    date = luigi.Parameter(
-        default='2018-02-10',
-    )
-
-    def output(self):
-        return law.LocalFileTarget(os.path.join(
-            self.local_data_root,
-            'in',
-            self.date,
-            '%s_%s.root' % (self.finalState.name, self.date)
-        ))
-
-
 class TriggerWeights(Task, law.WrapperTask):
     inclusiveSelection = True
     useTriggerWeights = False
+    leptonType = luigi.EnumParameter(enum=LeptonType)
 
     def requires(self):
         requs = []
-        for leptonType in LeptonType:
-            for hf in [True, False]:
-                if leptonType == LeptonType.MuonEG and not hf:
-                    continue
-                requs.append(CSVSF_TreeReader(
-                    useTriggerWeights=self.useTriggerWeights,
-                    isHF=hf,
-                    insample_ID=leptonType.value,
-                    inclusiveSelection=self.inclusiveSelection,
-                    version=self.version
-                ))
-        for finalState in FinalState:
-            for hf in [True, False]:
+        for hf in [True, False]:
+            for finalState in FinalState:
                 requs.append(CSVSF_TreeReader(
                     useTriggerWeights=self.useTriggerWeights,
                     isHF=hf,
                     insample_ID=finalState.value,
+                    leptonType=self.leptonType,
                     inclusiveSelection=self.inclusiveSelection,
                     version=self.version
                 ))
+            if self.leptonType == LeptonType.MuonEG and not hf:
+                continue
+            requs.append(CSVSF_TreeReader(
+                useTriggerWeights=self.useTriggerWeights,
+                isHF=hf,
+                insample_ID=self.leptonType.value,
+                leptonType=self.leptonType,
+                inclusiveSelection=self.inclusiveSelection,
+                version=self.version
+            ))
         return requs
+
+    def output(self):
+        return self.input()
 
 
 class CSVSF_TreeReader(RootScriptRunner):
@@ -146,6 +81,7 @@ class CSVSF_TreeReader(RootScriptRunner):
     insample_ID = luigi.IntParameter(
         default=1,
     )
+    leptonType = luigi.EnumParameter(enum=LeptonType)
     inclusiveSelection = luigi.BoolParameter()
 
     @property
@@ -155,8 +91,8 @@ class CSVSF_TreeReader(RootScriptRunner):
         result.append(
             "root_legacy/csvReweightingRun2/csvTreeMaker/"
             "macros/csvSF_treeReader_13TeV.C"
-            "'(\"%s\", %d, %d, %d, %d, %d, \"%s\", %d)'"
-            % (self.output().path, self.useTriggerWeights,
+            "'(\"%s\", \"%s\", %d, %d, %d, %d, %d, \"%s\", %d)'"
+            % (self.leptonType.name, self.output().path, self.useTriggerWeights,
                self.inclusiveSelection, self.tagger.value, self.isHF,
                self.versionNum, self.JES, self.insample_ID))
         return result
@@ -192,4 +128,4 @@ class CSVSF_TreeReader(RootScriptRunner):
             fname += '_histo_All.root'
         else:
             fname += '_histo.root'
-        return self.local_target(fname)
+        return self.local_target(self.leptonType.name, fname)

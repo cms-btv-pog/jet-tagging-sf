@@ -41,10 +41,8 @@ class RootScriptRunner(Task):
                               '\n'.join([i.path for i in
                                          luigi.task.flatten_output(self)])))
         except subprocess.CalledProcessError as e:
-            e.strerror = (
-                'Command \'%s\' returned non-zero exit status %d.\n%s'
-                % (e.cmd, e.returncode, e.output.decode('utf-8'))
-            )
+            print('Command \'%s\' returned non-zero exit status %d.\n%s'
+                % (e.cmd, e.returncode, e.output.decode('utf-8')))
             raise e
         except OSError as e:
             if e.filename is not None:

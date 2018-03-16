@@ -30,7 +30,8 @@ class Task(law.Task):
         return parts
 
     def local_store(self):
-        parts = (self.local_data_root,) + self.store_parts() + self.store_parts_opt()
+        parts = (self.local_data_root,) + self.store_parts() \
+            + self.store_parts_opt()
         return os.path.join(*parts)
 
     def local_path(self, *parts):

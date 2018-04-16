@@ -11,5 +11,6 @@ dist
 build
 data
 software
+tmp
 .law
 .ropeproject

@@ -6,9 +6,10 @@ action() {
     #
 
     export JTSF_BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && /bin/pwd )"
-    export JTSF_SOFTWARE="$JTSF_BASE/software"
-    export JTSF_DATA="/user/djschmidt/btaggingSF/jet-tagging-sf-output"
-    export JTSF_LOCAL_CACHE="/user/djschmidt/btaggingSF/jet-tagging-sf-cache"
+    [ -z "$JTSF_DATA" ] && export JTSF_DATA="/user/public/jet-tagging-sf"
+    export JTSF_SOFTWARE="$JTSF_DATA/software"
+    export JTSF_STORE="$JTSF_DATA/store"
+    export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
 
 
     #
@@ -29,13 +30,32 @@ action() {
 
 
     #
-    # install minimal software stack once
+    # CMSSW setup
     #
 
-    # software for lx-machines at RWTH Aachen
-    if [ -f "/net/software_cms/vispa/sl6_local/exports.sh" ]; then
-        source /net/software_cms/vispa/sl6_local/exports.sh
+    source "/cvmfs/cms.cern.ch/cmsset_default.sh"
+    export SCRAM_ARCH="slc6_amd64_gcc630"
+    export CMSSW_VERSION="CMSSW_9_4_0"
+    export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
+
+    if [ ! -d "$CMSSW_BASE" ]; then
+        mkdir -p "$( dirname "$CMSSW_BASE" )"
+        cd "$( dirname "$CMSSW_BASE" )"
+        scramv1 project CMSSW "$CMSSW_VERSION"
+        cd "$CMSSW_BASE/src"
+        eval `scramv1 runtime -sh`
+        scram b
+        cd "$JTSF_BASE"
+    else
+        cd "$CMSSW_BASE/src"
+        eval `scramv1 runtime -sh`
+        cd "$JTSF_BASE"
     fi
+
+
+    #
+    # install minimal software stack once
+    #
 
     # software paths
     _addbin "$JTSF_SOFTWARE/bin"
@@ -44,14 +64,24 @@ action() {
     # software that is used in this project
     if [ ! -d "$JTSF_SOFTWARE" ]; then
         echo "installing development software in $JTSF_SOFTWARE"
+        mkdir -p "$JTSF_SOFTWARE"
 
         _install_pip luigi
         _install_pip six
         _install_pip scinum
         _install_pip order
-        # _install_pip law
         LAW_INSTALL_CUSTOM_SCRIPT=1 _install_pip git+https://github.com/riga/law.git
+
+        # gfal2
+        cd "$JTSF_SOFTWARE"
+        wget https://www.dropbox.com/s/3nylghi0xtqaiyy/gfal2.tgz
+        tar -xzf gfal2.tgz
+        rm gfal2.tgz
+        cd "$JTSF_BASE"
     fi
+
+    # source gfal2
+    source "$JTSF_SOFTWARE/gfal2/setup.sh"
 
 
     #
@@ -65,16 +95,5 @@ action() {
     export LAW_HOME="$JTSF_BASE/.law"
     export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
     source "$( law completion )"
-
-    #
-    # CMSSW setup
-    #
-
-    source /cvmfs/cms.cern.ch/cmsset_default.sh
-    export SCRAM_ARCH=slc6_amd64_gcc630
 }
 action "$@"
-
-cd ..
-cmsenv
-cd jet-tagging-sf

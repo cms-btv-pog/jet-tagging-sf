@@ -35,7 +35,7 @@ action() {
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
     export SCRAM_ARCH="slc6_amd64_gcc630"
-    export CMSSW_VERSION="CMSSW_9_4_0"
+    export CMSSW_VERSION="CMSSW_9_4_6_patch1"
     export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
 
     if [ ! -d "$CMSSW_BASE" ]; then
@@ -94,6 +94,7 @@ action() {
     # law setup
     export LAW_HOME="$JTSF_BASE/.law"
     export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
+    export LUIGI_CONFIG_PATH="$JTSF_BASE/luigi.cfg"
     source "$( law completion )"
 }
 action "$@"

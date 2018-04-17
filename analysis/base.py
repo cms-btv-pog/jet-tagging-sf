@@ -6,10 +6,12 @@ __all__ = ["AnalysisTask", "DatasetTask", "GridWorkflow"]
 
 import re
 import os
+import shutil
 
 import law
 import luigi
 
+from analysis.util import calc_checksum
 from analysis.config_2017 import analysis as analysis_2017, campaign as campaign_2017
 
 
@@ -62,6 +64,13 @@ class DatasetTask(AnalysisTask):
 
     def store_parts(self):
         return super(DatasetTask, self).store_parts() + (self.dataset,)
+
+    def create_branch_map(self):
+        return list(range(self.dataset_inst.n_files))
+
+    def glite_output_postfix(self):
+        self.get_branch_map()
+        return "_{}To{}".format(self.start_branch, self.end_branch)
 
 
 class GridWorkflow(AnalysisTask, law.GLiteWorkflow):
@@ -118,7 +127,50 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow):
         return config
 
 
+class InstallCMSSWCode(AnalysisTask):
+
+    version = None
+
+    def __init__(self, *args, **kwargs):
+        super(InstallCMSSWCode, self).__init__(*args, **kwargs)
+
+        self._checksum = None
+
+    @property
+    def checksum(self):
+        if self._checksum is None:
+            path = os.path.join(os.getenv("JTSF_BASE"), "cmssw")
+            self._checksum = calc_checksum(path, exclude=["*.pyc", "*.git*", "tmpfiles*"])
+
+        return self._checksum
+
+    def output(self):
+        return self.local_target("{}.txt".format(self.checksum))
+
+    def run(self):
+        # copy the current cmssw code to the CMSSW_BASE directory
+        for subsystem in ["jet_tagging_sf"]:
+            src = os.path.join(os.getenv("JTSF_BASE"), "cmssw", subsystem)
+            dst = os.path.join(os.getenv("CMSSW_BASE"), "src", subsystem)
+            if os.path.exists(dst):
+                shutil.rmtree(dst)
+            shutil.copytree(src, dst)
+
+        # install the software
+        code = law.util.interruptable_popen("scram b", shell=True, executable="/bin/bash",
+            cwd=os.path.dirname(dst))[0]
+        if code != 0:
+            raise Exception("scram build failed")
+
+        # touch the flag output file
+        output = self.output()
+        output.parent.touch(0o0770)
+        output.touch(self.checksum)
+
+
 class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
+
+    force_upload = luigi.BoolParameter(default=False, description="force uploading")
 
     # settings for BunddleCMSSW
     cmssw_path = os.getenv("CMSSW_BASE")
@@ -128,6 +180,17 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
 
     version = None
     task_namespace = None
+
+    def __init__(self, *args, **kwargs):
+        super(UploadCMSSW, self).__init__(*args, **kwargs)
+
+        self.has_run = False
+
+    def complete(self):
+        if self.force_upload:
+            return self.has_run
+        else:
+            return super(UploadCMSSW, self).complete()
 
     def single_output(self):
         path = "{}.tgz".format(os.path.basename(self.cmssw_path))
@@ -140,6 +203,8 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
         bundle = law.LocalFileTarget(is_tmp="tgz")
         self.bundle(bundle)
         self.transfer(bundle)
+
+        self.has_run = True
 
 
 class UploadSoftware(AnalysisTask, law.TransferLocalFile):

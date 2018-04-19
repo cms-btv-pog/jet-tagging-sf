@@ -44,11 +44,32 @@ try:
         "input dataset contains real data",
     )
     options.register(
-        "triggers",
+        "leptonChannel",
+        "",
+        VarParsing.multiplicity.singleton,
+        VarParsing.varType.string,
+        "the lepton channel name when running on real data",
+    )
+    options.register(
+        "eeTriggers",
         [],
         VarParsing.multiplicity.list,
         VarParsing.varType.string,
-        "triggers to use",
+        "ee triggers to use",
+    )
+    options.register(
+        "emuTriggers",
+        [],
+        VarParsing.multiplicity.list,
+        VarParsing.varType.string,
+        "emu triggers to use",
+    )
+    options.register(
+        "mumuTriggers",
+        [],
+        VarParsing.multiplicity.list,
+        VarParsing.varType.string,
+        "mumu triggers to use",
     )
     options.register(
         "metFilters",
@@ -108,6 +129,10 @@ try:
     )
     options.parseArguments()
 
+    # sanity checks
+    if options.isData and not options.leptonChannel:
+        raise Exception("a lepton channel is required when running on real data")
+
     # create the process and a sequence for additional modules
     process = cms.Process("CSVSF")
     seq = cms.Sequence()
@@ -148,9 +173,12 @@ try:
 
     # load and configure the csv tree maker
     process.load("jet_tagging_sf.jet_tagging_sf.csvTreeMaker_cfi")
-    process.csvTreeMaker.isData = cms.bool(options.isData)
     process.csvTreeMaker.verbose = cms.untracked.bool(True)
-    process.csvTreeMaker.triggers = cms.vstring(options.triggers)
+    process.csvTreeMaker.isData = cms.bool(options.isData)
+    process.csvTreeMaker.leptonChannel = cms.string(options.leptonChannel)
+    process.csvTreeMaker.eeTriggers = cms.vstring(options.eeTriggers)
+    process.csvTreeMaker.emuTriggers = cms.vstring(options.emuTriggers)
+    process.csvTreeMaker.mumuTriggers = cms.vstring(options.mumuTriggers)
     process.csvTreeMaker.metFilters = cms.vstring(options.metFilters)
     process.csvTreeMaker.jesFiles = cms.vstring(options.jesFiles)
     process.csvTreeMaker.jesRanges = cms.vint32(options.jesRanges)

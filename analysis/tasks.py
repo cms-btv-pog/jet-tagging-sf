@@ -124,19 +124,22 @@ class CreateTuples(DatasetTask, GridWorkflow, law.LocalWorkflow):
         lfn = random.choice(self.input()["lfns"].targets).load()[self.branch_data]
         setup_files_dir, setup_files = self.requires()["files"].localize()
 
-        # gather information
-        global_tag = self.config_inst.get_aux("global_tag")[self.dataset_inst.data_source]
-        lumi_file = setup_files["lumi_file"]
-
         with self.output().localize("w") as tmp_output:
             # build the cmsRun command
             cmd = "cmsRun " + law.util.rel_path(__file__, "csvTreeMaker_cfg.py")
             cmd += " inputFiles=root://xrootd-cms.infn.it/{}".format(lfn)
             cmd += " outputFile={}".format(tmp_output.path)
             cmd += " isData={}".format(self.dataset_inst.is_data)
-            cmd += " globalTag={}".format(global_tag)
-            cmd += " lumiFile={}".format(lumi_file)
-            cmd += " maxEvents=100"
+            cmd += " globalTag={}".format(
+                self.config_inst.get_aux("global_tag")[self.dataset_inst.data_source])
+            cmd += " lumiFile={}".format(setup_files["lumi_file"])
+            for channel_inst, triggers in self.config_inst.get_aux("triggers").items():
+                for trigger in triggers:
+                    cmd += " {}Triggers={}".format(channel_inst.name, trigger)
+            if self.dataset_inst.is_data:
+                cmd += " leptonChannel={}".format(
+                    self.config_inst.get_aux("dataset_channels")[self.dataset_inst].name)
+            cmd += " maxEvents=100"  # TODO: remove
 
             tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
             tmp_dir.touch()

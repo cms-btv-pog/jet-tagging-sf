@@ -12,9 +12,12 @@ import FWCore.ParameterSet.Config as cms
 
 
 csvTreeMaker = cms.EDAnalyzer("CSVTreeMaker",
-    isData=cms.bool(False),
     verbose=cms.untracked.bool(False),
-    triggers=cms.vstring(),
+    isData=cms.bool(False),
+    leptonChannel=cms.string(""),
+    eeTriggers=cms.vstring(),
+    emuTriggers=cms.vstring(),
+    mumuTriggers=cms.vstring(),
     metFilters=cms.vstring(),
     jesFiles=cms.vstring(),
     jesRanges=cms.vint32(),

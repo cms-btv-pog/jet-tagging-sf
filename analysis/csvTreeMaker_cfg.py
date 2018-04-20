@@ -143,6 +143,7 @@ try:
     muonCollection = cms.InputTag("slimmedMuons", "", defaultProcess)
     metCollection = cms.InputTag("slimmedMETs", "", defaultProcess)
     jetCollection = cms.InputTag("slimmedJets", "", defaultProcess)
+    metFilterBitsCollection = cms.InputTag("TriggerResults", "", defaultProcess)
 
     # message logger
     process.load("FWCore.MessageLogger.MessageLogger_cfi")
@@ -173,7 +174,7 @@ try:
 
     # load and configure the csv tree maker
     process.load("jet_tagging_sf.jet_tagging_sf.csvTreeMaker_cfi")
-    process.csvTreeMaker.verbose = cms.untracked.bool(True)
+    process.csvTreeMaker.verbose = cms.untracked.bool(False)
     process.csvTreeMaker.isData = cms.bool(options.isData)
     process.csvTreeMaker.leptonChannel = cms.string(options.leptonChannel)
     process.csvTreeMaker.eeTriggers = cms.vstring(options.eeTriggers)
@@ -185,12 +186,11 @@ try:
     process.csvTreeMaker.jesUncFiles = cms.vstring(options.jesUncFiles)
     process.csvTreeMaker.jesUncSrcFile = cms.string(options.jesUncSrcFile)
     process.csvTreeMaker.jesUncSources = cms.vstring(options.jesUncSources)
+    process.csvTreeMaker.metFilterBitsCollection = metFilterBitsCollection
     process.csvTreeMaker.electronCollection = electronCollection
     process.csvTreeMaker.muonCollection = muonCollection
     process.csvTreeMaker.metCollection = metCollection
     process.csvTreeMaker.jetCollection = jetCollection
-    process.csvTreeMaker.rhoCollection = cms.InputTag("fixedGridRhoFastjetAll")
-    process.csvTreeMaker.eleVIDCollection = cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Fall17-94X-V1-tight")
 
     # additional configuration
     process.maxEvents = cms.untracked.PSet(input=cms.untracked.int32(options.maxEvents))

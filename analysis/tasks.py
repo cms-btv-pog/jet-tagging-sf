@@ -50,7 +50,8 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         self.source_files = self.get_source_files()
 
     def single_output(self):
-        return self.wlcg_target("{}.tgz".format(law.util.create_hash(self.source_files)))
+        h = law.util.create_hash(law.util.flatten(self.source_files))
+        return self.wlcg_target("{}.tgz".format(h))
 
     @classmethod
     def create_path_hash(cls, path):
@@ -62,11 +63,31 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
             return "{}_{}".format(law.util.create_hash(path), os.path.basename(path))
 
     def get_source_files(self):
-        files = {
+        # prepare JES files
+        jes_url = lambda version, level: "https://raw.githubusercontent.com/cms-jet/JECDatabase" \
+            "/master/textFiles/{0}/{0}_{1}_AK4PFchs.txt".format(version, level)
+        jes_files = collections.defaultdict(lambda: collections.defaultdict(dict))
+        for src in ("mc", "data"):
+            for _, _, version in self.config_inst.get_aux("jes_version")[src]:
+                for level in self.config_inst.get_aux("jes_levels")[src] + ["Uncertainty"]:
+                    jes_files[src][version][level] = jes_url(version, level)
+        jes_unc_src_file = jes_url(self.config_inst.get_aux("jes_version")["mc"][0][2],
+            "UncertaintySources")
+
+        # prepare JER files
+        jer_url = lambda version, src: "https://raw.githubusercontent.com/cms-jet/JRDatabase" \
+            "/master/textFiles/{0}/{0}_{1}_AK4PFchs.txt".format(version, src)
+        jer_files = {}
+        for src in ("SF", "PtResolution", "PhiResolution"):
+            jer_files[src] = jer_url(self.config_inst.get_aux("jer_version") + "_MC", src)
+
+        return {
             "lumi_file": self.config_inst.get_aux("lumi_file"),
             "normtag_file": self.config_inst.get_aux("normtag_file"),
+            "jes_files": jes_files,
+            "jes_unc_src_file": jes_unc_src_file,
+            "jer_files": jer_files,
         }
-        return files
 
     def run(self):
         # create a tmp dir
@@ -106,7 +127,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         return tmp_dir, law.util.map_struct(abspath, self.source_files)
 
 
-class CreateTuples(DatasetTask, GridWorkflow, law.LocalWorkflow):
+class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def workflow_requires(self):
         return self.requires_from_branch()
@@ -118,28 +139,53 @@ class CreateTuples(DatasetTask, GridWorkflow, law.LocalWorkflow):
         }
 
     def output(self):
-        return self.wlcg_target("tuple_{}.root".format(self.branch))
+        return self.wlcg_target("tree_{}.root".format(self.branch))
 
     def run(self):
         lfn = random.choice(self.input()["lfns"].targets).load()[self.branch_data]
         setup_files_dir, setup_files = self.requires()["files"].localize()
 
+        # manage jes files
+        data_src = self.dataset_inst.data_source
+        jes_versions = self.config_inst.get_aux("jes_version")[data_src]
+        jes_levels = self.config_inst.get_aux("jes_levels")[data_src]
+        jes_ranges = law.util.flatten(tpl[:2] for tpl in jes_versions)
+        jes_files_dict = setup_files["jes_files"][data_src]
+        jes_files = law.util.flatten([
+            [jes_files_dict[version][level] for level in jes_levels]
+            for _, _, version in jes_versions
+        ])
+        jes_unc_files = [jes_files_dict[version]["Uncertainty"] for _, _, version in jes_versions]
+        jes_unc_src_file = setup_files["jes_unc_src_file"] if self.dataset_inst.is_mc else ""
+
+        # cmsRun argument helper
+        def cmsRunArg(key, value):
+            return " ".join("{}={}".format(key, v) for v in law.util.make_list(value))
+
         with self.output().localize("w") as tmp_output:
+            args = [
+                ("inputFiles", "root://xrootd-cms.infn.it/{}".format(lfn)),
+                ("outputFile", tmp_output.path),
+                ("isData", self.dataset_inst.is_data),
+                ("globalTag", self.config_inst.get_aux("global_tag")[data_src]),
+                ("lumiFile", setup_files["lumi_file"]),
+                ("metFilters", self.config_inst.get_aux("metFilters")[data_src]),
+                ("jesFiles", jes_files),
+                ("jesRanges", jes_ranges),
+                ("jesUncFiles", jes_unc_files),
+                ("jesUncSrcFile", jes_unc_src_file),
+                ("jesUncSources", self.config_inst.get_aux("jes_sources")),
+                ("maxEvents", 20000)
+            ]
+            for channel_inst, triggers in self.config_inst.get_aux("triggers").items():
+                args.append((channel_inst.name + "Triggers", triggers))
+            if self.dataset_inst.is_data:
+                ch = self.config_inst.get_aux("dataset_channels")[self.dataset_inst].name
+                args.append(("leptonChannel", ch))
+
             # build the cmsRun command
             cmd = "cmsRun " + law.util.rel_path(__file__, "csvTreeMaker_cfg.py")
-            cmd += " inputFiles=root://xrootd-cms.infn.it/{}".format(lfn)
-            cmd += " outputFile={}".format(tmp_output.path)
-            cmd += " isData={}".format(self.dataset_inst.is_data)
-            cmd += " globalTag={}".format(
-                self.config_inst.get_aux("global_tag")[self.dataset_inst.data_source])
-            cmd += " lumiFile={}".format(setup_files["lumi_file"])
-            for channel_inst, triggers in self.config_inst.get_aux("triggers").items():
-                for trigger in triggers:
-                    cmd += " {}Triggers={}".format(channel_inst.name, trigger)
-            if self.dataset_inst.is_data:
-                cmd += " leptonChannel={}".format(
-                    self.config_inst.get_aux("dataset_channels")[self.dataset_inst].name)
-            cmd += " maxEvents=100"  # TODO: remove
+            cmd += " " + " ".join(cmsRunArg(*tpl) for tpl in args)
 
             tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
             tmp_dir.touch()

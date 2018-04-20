@@ -12,7 +12,7 @@
 #include <fnmatch.h>
 
 #include "FWCore/Common/interface/TriggerNames.h"
-#include "FWCore/Framework/interface/one/EDAnalyzer.h"
+#include "FWCore/Framework/interface/EDAnalyzer.h"
 #include "FWCore/Framework/interface/Event.h"
 #include "FWCore/Framework/interface/Frameworkfwd.h"
 #include "FWCore/Framework/interface/MakerMacros.h"
@@ -48,7 +48,6 @@
 
 #include "SimDataFormats/GeneratorProducts/interface/GenEventInfoProduct.h"
 #include "SimDataFormats/GeneratorProducts/interface/GenRunInfoProduct.h"
-#include "SimDataFormats/GeneratorProducts/interface/LHEEventProduct.h"
 #include "SimDataFormats/PileupSummaryInfo/interface/PileupSummaryInfo.h"
 
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
@@ -61,6 +60,7 @@
 typedef std::string string;
 typedef std::vector<string> vstring;
 typedef std::vector<int32_t> vint;
+typedef std::pair<string, string> stringPair;
 typedef math::XYZTLorentzVector LorentzVector;
 
 double EMPTY_VALUE = -1e5;
@@ -100,13 +100,181 @@ enum LeptonChannel
     C_MUMU
 };
 
-vstring treeVariables = {
-    "event", "run", "lumi", "channel", "rho", "weight",
-    "lep1_E", "lep1_px", "lep1_py", "lep1_pz", "lep1_iso", "lep1_pdg", "lep1_tight",
-    "lep2_E", "lep2_px", "lep2_py", "lep2_pz", "lep2_iso", "lep2_pdg", "lep2_tight"
+double deltaR(const LorentzVector& v1, const LorentzVector& v2)
+{
+    double deltaEta = v1.eta() - v2.eta();
+    double deltaPhi = fabs(v1.phi() - v2.phi());
+    if (deltaPhi > M_PI)
+    {
+        deltaPhi = 2. * M_PI - deltaPhi;
+    }
+    return sqrt(deltaEta * deltaEta + deltaPhi * deltaPhi);
+}
+
+bool comparePt(const pat::Jet& jet1, const pat::Jet& jet2)
+{
+    return jet1.pt() < jet2.pt();
+}
+
+class Variables
+{
+public:
+    Variables()
+    {
+    }
+
+    ~Variables()
+    {
+    }
+
+    void addFloat(const string);
+    void addDouble(const string);
+    void addInt32(const string);
+    void addInt64(const string);
+    void reset();
+
+    inline size_t size() const
+    {
+        return names_.size();
+    }
+
+    inline string getName(size_t i) const
+    {
+        return names_[i];
+    }
+
+    inline bool contains(const string name) const
+    {
+        return std::find(names_.begin(), names_.end(), name) != names_.end();
+    }
+
+    inline string getFlag(const string name)
+    {
+        return typeFlags_[name];
+    }
+
+    inline void setFloat(const string name, float value)
+    {
+        floatValues_[name] = value;
+    }
+
+    inline void setDouble(const string name, double value)
+    {
+        doubleValues_[name] = value;
+    }
+
+    inline void setInt32(const string name, int32_t value)
+    {
+        int32Values_[name] = value;
+    }
+
+    inline void setInt64(const string name, int64_t value)
+    {
+        int64Values_[name] = value;
+    }
+
+    inline float& getFloat(const string name)
+    {
+        return floatValues_[name];
+    }
+
+    inline double& getDouble(const string name)
+    {
+        return doubleValues_[name];
+    }
+
+    inline int32_t& getInt32(const string name)
+    {
+        return int32Values_[name];
+    }
+
+    inline int64_t& getInt64(const string name)
+    {
+        return int64Values_[name];
+    }
+
+private:
+    float emptyFloat = -1e5;
+    double emptyDouble = -1e5;
+    int32_t emptyInt32 = int32_t(-1e5);
+    int64_t emptyInt64 = int64_t(-1e5);
+
+    vstring names_;
+    std::map<string, string> typeFlags_;
+    std::map<string, float> floatValues_;
+    std::map<string, double> doubleValues_;
+    std::map<string, int32_t> int32Values_;
+    std::map<string, int64_t> int64Values_;
+
+    inline void complainOnDuplicate(const string name) const
+    {
+        if (contains(name))
+        {
+            throw std::runtime_error("duplicate variable " + name);
+        }
+    }
 };
 
-class CSVTreeMaker : public edm::one::EDAnalyzer<edm::one::SharedResources>
+void Variables::addFloat(const string name)
+{
+    complainOnDuplicate(name);
+    names_.push_back(name);
+    floatValues_[name] = emptyFloat;
+    typeFlags_[name] = "F";
+}
+
+void Variables::addDouble(const string name)
+{
+    complainOnDuplicate(name);
+    names_.push_back(name);
+    doubleValues_[name] = emptyDouble;
+    typeFlags_[name] = "D";
+}
+
+void Variables::addInt32(const string name)
+{
+    complainOnDuplicate(name);
+    names_.push_back(name);
+    int32Values_[name] = emptyInt32;
+    typeFlags_[name] = "I";
+}
+
+void Variables::addInt64(const string name)
+{
+    complainOnDuplicate(name);
+    names_.push_back(name);
+    int64Values_[name] = emptyInt64;
+    typeFlags_[name] = "L";
+}
+
+void Variables::reset()
+{
+    std::map<string, float>::iterator itFloat;
+    for (itFloat = floatValues_.begin(); itFloat != floatValues_.end(); itFloat++)
+    {
+        itFloat->second = emptyFloat;
+    }
+
+    std::map<string, double>::iterator itDouble;
+    for (itDouble = doubleValues_.begin(); itDouble != doubleValues_.end(); itDouble++)
+    {
+        itDouble->second = emptyDouble;
+    }
+
+    std::map<string, int32_t>::iterator itInt32;
+    for (itInt32 = int32Values_.begin(); itInt32 != int32Values_.end(); itInt32++)
+    {
+        itInt32->second = emptyInt32;
+    }
+
+    std::map<string, int64_t>::iterator itInt64;
+    for (itInt64 = int64Values_.begin(); itInt64 != int64Values_.end(); itInt64++)
+    {
+        itInt64->second = emptyInt64;
+    }
+}
+
+class CSVTreeMaker : public edm::EDAnalyzer
 {
 public:
     explicit CSVTreeMaker(const edm::ParameterSet&);
@@ -119,20 +287,33 @@ private:
     virtual void endJob() override;
 
     // methods for handling variables and output objects
-    void resetVariables();
+    void setupJESObjects();
+    void setupVariables();
     void setVariable(const string& name, double value);
-    void prepareOutput();
 
     // selection methods
     bool metFilterSelection(const edm::Event&);
+    bool triggerSelection(const edm::Event&, LeptonChannel&);
+    bool electronSelection(const edm::Event&, reco::Vertex&, std::vector<pat::Electron>&,
+        std::vector<pat::Electron>&);
+    bool muonSelection(const edm::Event&, reco::Vertex&, std::vector<pat::Muon>&,
+        std::vector<pat::Muon>&);
     bool leptonSelection(std::vector<pat::Electron>&, std::vector<pat::Electron>&,
         std::vector<pat::Muon>&, std::vector<pat::Muon>&, reco::RecoCandidate*&,
         reco::RecoCandidate*&, LeptonChannel&);
-    bool triggerSelection(const edm::Event&, LeptonChannel&);
+    bool jetMETSelection(const edm::Event&, double, reco::RecoCandidate*, reco::RecoCandidate*,
+        const pat::MET&, const string&, const string&, std::vector<pat::Jet>&,
+        std::vector<pat::Jet>&, pat::MET&);
     VertexType vertexID(reco::Vertex&);
     ElectronType electronID(pat::Electron&, reco::Vertex&);
     MuonType muonID(pat::Muon&, reco::Vertex&);
     JetType jetID(pat::Jet&, reco::RecoCandidate*, reco::RecoCandidate*);
+
+    // random helpers
+    double readGenWeight(const edm::Event&);
+    float readPU(const edm::Event&);
+    double readRho(const edm::Event&);
+    void correctJet(pat::Jet&, const string&, const string&, int64_t, double);
 
     // options
     bool verbose_;
@@ -150,7 +331,6 @@ private:
 
     // tokes
     edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
-    edm::EDGetTokenT<LHEEventProduct> lheEventToken_;
     edm::EDGetTokenT<edm::TriggerResults> triggerBitsToken_;
     edm::EDGetTokenT<edm::TriggerResults> metFilterBitsToken_;
     edm::EDGetTokenT<std::vector<PileupSummaryInfo> > pileupInfoToken_;
@@ -164,71 +344,19 @@ private:
     edm::EDGetTokenT<edm::ValueMap<bool> > eleVIDToken_;
 
     // additional members
-    std::map<string, double> vars_;
-    size_t n_events_;
-    size_t n_selected_;
+    Variables variables_;
     TTree* tree_;
-    TH1F* weight_hist_;
+    TH1F* eventHist_;
+    TH1F* selectedEventHist_;
+    TH1F* weightHist_;
+    TH1F* selectedWeightHist_;
+    TH1F* cutflowHist_;
     size_t nJESRanges_;
     size_t nJESFilesPerRange_;
+    std::vector<std::pair<string, string> > jesVariations_;
     std::vector<FactorizedJetCorrector*> jetCorrectors_; // per jes range
     std::vector<JetCorrectionUncertainty*> jetCorrectorUncs_; // per jes range
     std::vector<JetCorrectionUncertainty*> jetCorrectorUncSources_; // per source, one for all ranges
-
-    // edm::EDGetTokenT<reco::GenJetCollection> genJetsToken;
-
-    // edm::EDGetTokenT <edm::TriggerResults> triggerResultsToken;
-    // edm::EDGetTokenT <edm::TriggerResults> filterResultsToken;
-
-    // // new MVAelectron
-    // // edm::EDGetTokenT< edm::View<pat::Electron> > EDMElectronsToken;
-    // // MVA values and categories
-    // // edm::EDGetTokenT<edm::ValueMap<float> > EDMeleMVAvaluesToken;
-    // // edm::EDGetTokenT<edm::ValueMap<int> > EDMeleMVAcategoriesToken;
-
-    // edm::EDGetTokenT <reco::VertexCollection> vertexToken;
-    // edm::EDGetTokenT <pat::ElectronCollection> electronToken;
-    // edm::EDGetTokenT <pat::MuonCollection> muonToken;
-    // edm::EDGetTokenT <pat::JetCollection> jetToken;
-    // // edm::EDGetTokenT <edm::View<pat::Jet > > jetToken;
-
-    // edm::EDGetTokenT <pat::METCollection> metToken;
-    // // edm::EDGetTokenT <pat::METCollection> metNoHFToken;
-
-    // edm::EDGetTokenT <pat::PackedCandidateCollection> packedpfToken;
-
-    // edm::EDGetTokenT <reco::BeamSpot> beamspotToken;
-    // // edm::EDGetTokenT <reco::ConversionCollection> EDMConversionCollectionToken;
-    // edm::EDGetTokenT <double> rhoToken;
-    // edm::EDGetTokenT <reco::GenParticleCollection> mcparicleToken;
-    // edm::EDGetTokenT <std::vector< PileupSummaryInfo > > puInfoToken;
-
-    // edm::EDGetTokenT <GenEventInfoProduct> genInfoProductToken;
-
-    // HLTConfigProvider hlt_config_;
-
-    // bool verbose_;
-    // bool isData;
-    // const int insample_;
-    // const std::string sampleName_;
-    // const double xSec_;
-    // const double nGen_;
-    // const double intLumi_;
-
-    // std::string hltTag;
-    // std::string filterTag;
-
-    // int nevents;
-    // double nevents_wgt;
-
-    // int nevents_clean;
-    // double nevents_clean_wgt;
-
-    // EventVars *eve;
-    // TH1F* h_nEvents;
-    // TH1F* h_numPV;
-
-    // // EGammaMvaEleEstimatorCSA14* myMVATrig;
 };
 
 CSVTreeMaker::CSVTreeMaker(const edm::ParameterSet& iConfig)
@@ -245,7 +373,6 @@ CSVTreeMaker::CSVTreeMaker(const edm::ParameterSet& iConfig)
     , jesUncSrcFile_(iConfig.getParameter<string>("jesUncSrcFile"))
     , jesUncSources_(iConfig.getParameter<vstring>("jesUncSources"))
     , genInfoToken_(consumes<GenEventInfoProduct>(iConfig.getParameter<edm::InputTag>("genInfoCollection")))
-    , lheEventToken_(consumes<LHEEventProduct>(iConfig.getParameter<edm::InputTag>("lheEventCollection")))
     , triggerBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerBitsCollection")))
     , metFilterBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("metFilterBitsCollection")))
     , pileupInfoToken_(consumes<std::vector<PileupSummaryInfo> >(iConfig.getParameter<edm::InputTag>("pileupInfoCollection")))
@@ -257,32 +384,20 @@ CSVTreeMaker::CSVTreeMaker(const edm::ParameterSet& iConfig)
     , jetToken_(consumes<std::vector<pat::Jet> >(iConfig.getParameter<edm::InputTag>("jetCollection")))
     , rhoToken_(consumes<double>(iConfig.getParameter<edm::InputTag>("rhoCollection")))
     , eleVIDToken_(consumes<edm::ValueMap<bool> >(iConfig.getParameter<edm::InputTag>("eleVIDCollection")))
-    , n_events_(0)
-    , n_selected_(0)
     , tree_(0)
-    , weight_hist_(0)
+    , eventHist_(0)
+    , selectedEventHist_(0)
+    , weightHist_(0)
+    , selectedWeightHist_(0)
+    , cutflowHist_(0)
 {
     if (verbose_)
     {
         std::cout << "running CSVTreeMaker in verbose mode" << std::endl;
     }
 
-    usesResource("TFileService");
-
-    // eve = 0;
-    // worldTree->Branch("eve.", "EventVars", &eve, 8000, 1);
-    // h_nEvents = fs_->make<TH1F>("nEvents", "nEvents", 3, 0, 3);
-    // h_nEvents->GetXaxis()->SetBinLabel(1, "All");
-    // h_nEvents->GetXaxis()->SetBinLabel(2, "Pos");
-    // h_nEvents->GetXaxis()->SetBinLabel(3, "Neg");
-
-    // h_numPV = fs_->make<TH1F>("numPVs", "numPVs", 50, 0, 50);
-
-    // nevents = 0;
-    // nevents_wgt = 0;
-
-    // nevents_clean = 0;
-    // nevents_clean_wgt = 0;
+    setupJESObjects();
+    setupVariables();
 }
 
 CSVTreeMaker::~CSVTreeMaker()
@@ -292,719 +407,445 @@ CSVTreeMaker::~CSVTreeMaker()
         delete tree_;
         tree_ = 0;
     }
-    if (weight_hist_)
+    if (eventHist_)
     {
-        delete weight_hist_;
-        weight_hist_ = 0;
+        delete eventHist_;
+        eventHist_ = 0;
+    }
+    if (selectedEventHist_)
+    {
+        delete selectedEventHist_;
+        selectedEventHist_ = 0;
+    }
+    if (weightHist_)
+    {
+        delete weightHist_;
+        weightHist_ = 0;
+    }
+    if (selectedWeightHist_)
+    {
+        delete selectedWeightHist_;
+        selectedWeightHist_ = 0;
+    }
+    if (cutflowHist_)
+    {
+        delete cutflowHist_;
+        cutflowHist_ = 0;
     }
 }
 
-void CSVTreeMaker::resetVariables()
+void CSVTreeMaker::setupJESObjects()
 {
-    std::map<string, double>::iterator it;
-    for (it = vars_.begin(); it != vars_.end(); it++)
+    if (jesFiles_.size() == 0)
     {
-        it->second = EMPTY_VALUE;
+        return;
+    }
+
+    // sanity checks
+    if (jesRanges_.size() % 2 != 0)
+    {
+        throw std::runtime_error("please provide an even number of jesRanges");
+    }
+    nJESRanges_ = jesRanges_.size() / 2;
+    if (jesFiles_.size() % nJESRanges_ != 0)
+    {
+        throw std::runtime_error("the number of JESFiles does not match the number of JESRanges");
+    }
+    nJESFilesPerRange_ = jesFiles_.size() / nJESRanges_;
+    if (jesUncFiles_.size() > 0 && jesUncFiles_.size() != nJESRanges_)
+    {
+        throw std::runtime_error("the number of JESUncFiles does not match the number of JESRanges");
+    }
+
+    // initialize the jet correctors
+    // example: when there are 8 jes files and 2 jes ranges, each JETCorrector has 4 files which
+    // should correspond to the number of correction levels applied
+    for (size_t i = 0; i < nJESRanges_; i++)
+    {
+        std::vector<JetCorrectorParameters> corrParams;
+        for (size_t j = 0; j < nJESFilesPerRange_; j++)
+        {
+            JetCorrectorParameters params(jesFiles_[i * nJESFilesPerRange_ + j]);
+            corrParams.push_back(params);
+        }
+        jetCorrectors_.push_back(new FactorizedJetCorrector(corrParams));
+    }
+
+    // also process uncertaintes, but - of course - only for MC
+    if (!isData_)
+    {
+        // initialize the total jet corrector uncertainties
+        if (jesUncFiles_.size() > 0)
+        {
+            for (size_t i = 0; i < jesUncFiles_.size(); i++)
+            {
+                JetCorrectorParameters params(jesUncFiles_[i]);
+                jetCorrectorUncs_.push_back(new JetCorrectionUncertainty(params));
+            }
+        }
+
+        // initialize the factorized jet corrector uncertainties
+        for (size_t i = 0; i < jesUncSources_.size(); ++i)
+        {
+            if (!jesUncSrcFile_.empty())
+            {
+                JetCorrectorParameters params(jesUncSrcFile_, jesUncSources_[i]);
+                jetCorrectorUncSources_.push_back(new JetCorrectionUncertainty(params));
+            }
+            else
+            {
+                jetCorrectorUncSources_.push_back(0);
+            }
+        }
+    }
+
+    // build the JES variations, i.e. a vector a string pairs (variation, direction)
+    // first, the nominal one
+    jesVariations_.push_back(stringPair("", ""));
+    // iterate over JES uncertainties
+    for (size_t i = 0; i < jesUncSources_.size(); i++)
+    {
+        jesVariations_.push_back(stringPair(jesUncSources_[i], "up"));
+        jesVariations_.push_back(stringPair(jesUncSources_[i], "down"));
     }
 }
 
-void CSVTreeMaker::setVariable(const string& name, double value)
+void CSVTreeMaker::setupVariables()
 {
-    vars_[name] = value;
+    // event variables
+    variables_.addInt32("is_data");
+    variables_.addInt64("event");
+    variables_.addInt32("run");
+    variables_.addInt32("lumi");
+    variables_.addDouble("gen_weight");
+    variables_.addFloat("pu");
+    variables_.addDouble("rho");
+    variables_.addInt32("channel");
+
+    // leptons
+    for (size_t i = 1; i <= 2; i++)
+    {
+        variables_.addDouble("lep" + std::to_string(i) + "_E");
+        variables_.addDouble("lep" + std::to_string(i) + "_px");
+        variables_.addDouble("lep" + std::to_string(i) + "_py");
+        variables_.addDouble("lep" + std::to_string(i) + "_pz");
+        variables_.addInt32("lep" + std::to_string(i) + "_charge");
+        variables_.addInt32("lep" + std::to_string(i) + "_pdg");
+        variables_.addFloat("lep" + std::to_string(i) + "_iso");
+        variables_.addInt32("lep" + std::to_string(i) + "_tight");
+        variables_.addDouble("lep" + std::to_string(i) + "_eta_sc");
+    }
+
+    // jet and MET and other JES dependent variables
+    for (size_t i = 0; i < (isData_ ? 1 : jesVariations_.size()); i++)
+    {
+        string postfix = "";
+        if (!jesVariations_[i].first.empty())
+        {
+            postfix += "_jes_" + jesVariations_[i].first + "_" + jesVariations_[i].second;
+        }
+
+        variables_.addInt32("jetmet_pass" + postfix);
+        variables_.addInt32("n_jets" + postfix);
+        variables_.addDouble("met_px" + postfix);
+        variables_.addDouble("met_py" + postfix);
+
+        // jets
+        for (size_t j = 1; j <= 4; j++)
+        {
+            variables_.addDouble("jet" + std::to_string(j) + "_E" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_px" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_py" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_pz" + postfix);
+            variables_.addInt32("jet" + std::to_string(j) + "_tight" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_csv" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_cl" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_cb" + postfix);
+        }
+    }
 }
 
 void CSVTreeMaker::beginJob()
 {
     edm::Service<TFileService> fs;
 
-    // create the histogram containing the sum of event weights in its only bin
-    weight_hist_ = fs->make<TH1F>("event_weights", "", 1, 0., 1.);
+    // create the counting histograms, 2 bins each to separate information for events with positive
+    // or negative weights
+    eventHist_ = fs->make<TH1F>("events", "", 2, -1., 1.);
+    selectedEventHist_ = fs->make<TH1F>("selected_events", "", 2, -1., 1.);
+    weightHist_ = fs->make<TH1F>("event_weights", "", 2, -1., 1.);
+    selectedWeightHist_ = fs->make<TH1F>("selected_event_weights", "", 2, -1., 1.);
+    cutflowHist_ = fs->make<TH1F>("cutflow", "", 6, 0., 6.);
 
     // create the tree
-    tree_ = fs->make<TTree>("events", "events");
+    tree_ = fs->make<TTree>("tree", "tree");
 
-    // define variables and add branches based on added variables
-    for (size_t i = 0; i < treeVariables.size(); i++)
+    // add branches based on added variables
+    for (size_t i = 0; i < variables_.size(); i++)
     {
-        string name = treeVariables[i];
+        string name = variables_.getName(i);
+        string typeFlag = variables_.getFlag(name);
 
         if (verbose_)
         {
             std::cout << "adding variable: " << name << std::endl;
         }
 
-        vars_[name] = EMPTY_VALUE;
-        tree_->Branch(name.c_str(), &vars_[name], (name + "/D").c_str());
+        if (typeFlag == "F")
+        {
+            tree_->Branch(name.c_str(), &variables_.getFloat(name), (name + "/F").c_str());
+        }
+        else if (typeFlag == "D")
+        {
+            tree_->Branch(name.c_str(), &variables_.getDouble(name), (name + "/D").c_str());
+        }
+        else if (typeFlag == "I")
+        {
+            tree_->Branch(name.c_str(), &variables_.getInt32(name), (name + "/I").c_str());
+        }
+        else if (typeFlag == "L")
+        {
+            tree_->Branch(name.c_str(), &variables_.getInt64(name), (name + "/L").c_str());
+        }
     }
+    std::cout << "total variables: " << variables_.size() << std::endl;
 }
 
 void CSVTreeMaker::endJob()
 {
     tree_->Write();
-    weight_hist_->Write();
+    eventHist_->Write();
+    selectedEventHist_->Write();
+    weightHist_->Write();
+    selectedWeightHist_->Write();
+    cutflowHist_->Write();
 
     // log some stats
-    if (verbose_)
-    {
-        std::cout << "processed events: " << n_events_ << std::endl;
-        std::cout << "selected events: " << n_selected_ << std::endl;
-    }
+    std::cout << "total events        : " << eventHist_->Integral() << std::endl;
+    std::cout << "selected events     : " << selectedEventHist_->Integral() << std::endl;
+    std::cout << "sum weights         : " << weightHist_->Integral() << std::endl;
+    std::cout << "sum selected weights: " << selectedWeightHist_->Integral() << std::endl;
 }
 
-void CSVTreeMaker::analyze(const edm::Event& iEvent, const edm::EventSetup& iSetup)
+void CSVTreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
 {
-    resetVariables();
-    n_events_ += 1;
+    variables_.reset();
+
+    // start cutflow
+    double cutflowBin = 0.5;
+    cutflowHist_->Fill(cutflowBin++);
+
+    // read the generator generator infos
+    double genWeight = isData_ ? 1. : readGenWeight(event);
+
+    // fill hists
+    double histPos = genWeight < 0 ? -0.5 : 0.5;
+    eventHist_->Fill(histPos, 1.);
+    weightHist_->Fill(histPos, genWeight);
+
+    // read the rho value
+    double rho = readRho(event);
 
     // check MET filters
-    if (!metFilterSelection(iEvent))
+    if (!metFilterSelection(event))
     {
         return;
     }
+    cutflowHist_->Fill(cutflowBin++);
 
     // read the select the vertex
     edm::Handle<std::vector<reco::Vertex> > verticesHandle;
-    iEvent.getByToken(vertexToken_, verticesHandle);
-    if (!verticesHandle.isValid())
-    {
-        return;
-    }
+    event.getByToken(vertexToken_, verticesHandle);
     std::vector<reco::Vertex> vertices(*verticesHandle);
     reco::Vertex vertex = vertices.front();
     if (vertexID(vertex) != V_VALID)
     {
         return;
     }
+    cutflowHist_->Fill(cutflowBin++);
+
+    // read pu infos
+    float pu = isData_ ? vertices.size() : readPU(event);
 
     // read and select electrons
-    edm::Handle<std::vector<pat::Electron> > electronsHandle;
-    iEvent.getByToken(electronToken_, electronsHandle);
     std::vector<pat::Electron> electrons;
     std::vector<pat::Electron> tightElectrons;
-    if (electronsHandle.isValid())
+    if (!electronSelection(event, vertex, electrons, tightElectrons))
     {
-        std::vector<pat::Electron> electronsCopy(*electronsHandle);
-        for (pat::Electron& electron : electronsCopy)
-        {
-            ElectronType type = electronID(electron, vertex);
-            if (type == E_LOOSE)
-            {
-                electrons.push_back(electron);
-            }
-            else if (type == E_TIGHT)
-            {
-                electrons.push_back(electron);
-                tightElectrons.push_back(electron);
-            }
-        }
+        return;
     }
 
     // read and select muons
-    edm::Handle<std::vector<pat::Muon> > muonsHandle;
-    iEvent.getByToken(muonToken_, muonsHandle);
     std::vector<pat::Muon> muons;
     std::vector<pat::Muon> tightMuons;
-    if (muonsHandle.isValid())
+    if (!muonSelection(event, vertex, muons, tightMuons))
     {
-        std::vector<pat::Muon> muonsCopy(*muonsHandle);
-        for (pat::Muon& muon : muonsCopy)
-        {
-            MuonType type = muonID(muon, vertex);
-            if (type == M_LOOSE)
-            {
-                muons.push_back(muon);
-            }
-            else if (type == M_TIGHT)
-            {
-                muons.push_back(muon);
-                tightMuons.push_back(muon);
-            }
-        }
+        return;
     }
 
-    // lepton selection
+    // combined lepton selection
     reco::RecoCandidate* lep1 = nullptr;
     reco::RecoCandidate* lep2 = nullptr;
     LeptonChannel channel = C_INVALID;
-    bool passedLeptonSelection = leptonSelection(
+    bool passLeptonSelection = leptonSelection(
         electrons, tightElectrons, muons, tightMuons, lep1, lep2, channel);
-    if (!passedLeptonSelection)
+    if (!passLeptonSelection)
     {
         return;
     }
+    cutflowHist_->Fill(cutflowBin++);
 
     // trigger selection
-    if (!triggerSelection(iEvent, channel))
+    if (!triggerSelection(event, channel))
     {
         return;
     }
+    cutflowHist_->Fill(cutflowBin++);
 
-    if (0)
+    // read the MET
+    edm::Handle<std::vector<pat::MET> > metHandle;
+    event.getByToken(metToken_, metHandle);
+    pat::MET metOrig(metHandle->at(0));
+    metOrig.setP4(metOrig.shiftedP4(pat::MET::NoShift, pat::MET::Type1XY));
+
+    // read and select jets plus MET
+    std::vector<std::vector<pat::Jet> > jets;
+    std::vector<std::vector<pat::Jet> > tightJets;
+    std::vector<pat::MET> mets;
+    std::vector<bool> passJetMETSelection;
+    bool passOneJetMETSelection = false;
+    for (size_t i = 0; i < (isData_ ? 1 : jesVariations_.size()); i++)
     {
-        //     edm::Handle<pat::METCollection> pfmet;
-        //     iEvent.getByToken(metToken, pfmet);
-
-        //     // edm::Handle<pat::METCollection> pfmetNoHF;
-        //     // iEvent.getByToken(metNoHFToken,pfmetNoHF);
-
-        //     edm::Handle<double> rhoHandle;
-        //     iEvent.getByToken(rhoToken, rhoHandle);
-        //     ////------- set up rho for lepton effArea Isolation correction
-        //     double rho_event = ((rhoHandle.isValid())) ? *rhoHandle : -99;
-        //     miniAODhelper.SetRho(rho_event);
-
-        //     edm::Handle<std::vector<PileupSummaryInfo> > PupInfo;
-        //     if (!isData)
-        //         iEvent.getByToken(puInfoToken, PupInfo);
-
-        //     edm::Handle<GenEventInfoProduct> GenEventInfoHandle;
-        //     if (!isData)
-        //         iEvent.getByToken(genInfoProductToken, GenEventInfoHandle);
-
-        //     double GenEventInfoWeight = 1;
-        //     if (!isData)
-        //         GenEventInfoWeight = GenEventInfoHandle.product()->weight();
-        //     h_nEvents->Fill(0.5);
-        //     if (GenEventInfoWeight > 0)
-        //         h_nEvents->Fill(1.5);
-        //     else
-        //         h_nEvents->Fill(2.5);
-
-        //     eve->numPVs_ = numpv;
-
-        //     if (GenEventInfoWeight > 0)
-        //         h_numPV->Fill(numpv, 1);
-        //     else
-        //         h_numPV->Fill(numpv, -1);
-
-        //     double numTruePV = -1;
-        //     double numGenPV = -1;
-        //     if ((PupInfo.isValid()))
-        //     {
-        //         for (std::vector<PileupSummaryInfo>::const_iterator PVI = PupInfo->begin(); PVI != PupInfo->end(); ++PVI)
-        //         {
-        //             int BX = PVI->getBunchCrossing();
-        //             if (BX == 0)
-        //             {
-        //                 numTruePV = PVI->getTrueNumInteractions();
-        //                 numGenPV = PVI->getPU_NumInteractions();
-        //             }
-        //         }
-        //     }
-
-        //     eve->numTruePV_ = numTruePV;
-        //     eve->numGenPV_ = numGenPV;
-
-        //     double wgt_lumi = 1.;
-        //     if (insample_ >= 0)
-        //         wgt_lumi = xSec_ * intLumi_ * 1. / nGen_;
-
-        //     // Increment event counter
-        //     nevents++;
-        //     nevents_wgt += wgt_lumi;
-
-        //     // Number of events after filtering, triggers, etc. (now nothing)
-        //     nevents_clean++;
-        //     nevents_clean_wgt += wgt_lumi;
-
-        //     int run = iEvent.id().run();
-        //     int lumi = iEvent.luminosityBlock();
-        //     long evt = iEvent.id().event();
-
-        //     eve->run_ = run;
-        //     eve->lumi_ = lumi;
-        //     eve->evt_ = evt;
-
-        //     const JetCorrector* corrector = JetCorrector::getJetCorrector("ak4PFchsL1L2L3", iSetup); //Get the jet corrector from the event setup
-
-        //     miniAODhelper.SetJetCorrector(corrector);
-
-        //     /////////
-        //     ///
-        //     /// Electrons
-        //     ///
-        //     ////////
-        //     // miniAODhelper.SetElectronMVAinfo(h_conversioncollection, bsHandle);
-        //     // /// Ele MVA ID
-        //     // std::vector<pat::Electron> selectedElectrons_tight = miniAODhelper.GetSelectedElectrons( electrons, minTightLeptonPt, electronID::electronEndOf15MVA80iso0p15, 2.4 );
-        //     // std::vector<pat::Electron> selectedElectrons_loose = miniAODhelper.GetSelectedElectrons( electrons, looseLeptonPt, electronID::electronEndOf15MVA80iso0p15, 2.4 );
-
-        //     /// Ele Cut Based ID
-        //     std::vector<pat::Electron> selectedElectrons_tight = miniAODhelper.GetSelectedElectrons(*electrons, minTightLeptonPt, electronID::electron80XCutBasedM, 2.4);
-        //     std::vector<pat::Electron> selectedElectrons_loose = miniAODhelper.GetSelectedElectrons(*electrons, looseLeptonPt, electronID::electron80XCutBasedM, 2.4);
-
-        //     int numTightElectrons = int(selectedElectrons_tight.size());
-        //     int numLooseElectrons = int(selectedElectrons_loose.size()); // - numTightElectrons;
-
-        //     /////////
-        //     ///
-        //     /// Muons
-        //     ///
-        //     ////////
-        //     std::vector<pat::Muon> selectedMuons_tight = miniAODhelper.GetSelectedMuons(*muons, minTightLeptonPt, muonID::muonTight, coneSize::R04, corrType::deltaBeta, 2.4);
-        //     std::vector<pat::Muon> selectedMuons_loose = miniAODhelper.GetSelectedMuons(*muons, looseLeptonPt, muonID::muonTight, coneSize::R04, corrType::deltaBeta, 2.4);
-        //     // std::vector<pat::Muon> selectedMuons_loose = miniAODhelper.GetSelectedMuons( *muons, looseLeptonPt, muonID::muonLoose );
-
-        //     int numTightMuons = int(selectedMuons_tight.size());
-        //     int numLooseMuons = int(selectedMuons_loose.size()); // - numTightMuons;
-
-        //     eve->numTightMuons_ = numTightMuons;
-        //     eve->numLooseMuons_ = numLooseMuons;
-        //     eve->numTightElectrons_ = numTightElectrons;
-        //     eve->numLooseElectrons_ = numLooseElectrons;
-
-        //     /////////////
-        //     // --- Pass exactly two leptons cuts
-        //     // ---------- the lepton selections might change in the future -------
-        //     //
-        //     /////////////
-
-        //     bool passDIL = ((numTightMuons + numTightElectrons) >= 1 && (numLooseMuons + numLooseElectrons) == 2);
-        //     // bool passDIL = (numTightMuons + numTightElectrons) == 2; //old selections
-
-        //     // Event must be DIL, as requested
-        //     if (!passDIL)
-        //         return;
-
-        //     eve->PassDIL_ = (passDIL) ? 1 : 0;
-
-        //     //// DIL subcategories: ee, mumu, emu
-        //     int TwoMuon = 0, TwoElectron = 0, MuonElectron = 0;
-        //     if (numTightMuons >= 1 && numLooseMuons == 2 && numLooseElectrons == 0)
-        //         TwoMuon = 1;
-        //     if (numTightElectrons >= 1 && numLooseElectrons == 2 && numLooseMuons == 0)
-        //         TwoElectron = 1;
-        //     if ((numTightMuons + numTightElectrons) >= 1 && numLooseMuons == 1 && numLooseElectrons == 1)
-        //         MuonElectron = 1;
-        //     // if ( numTightMuons==2 && numTightElectrons==0 ) TwoMuon = 1; //old selections
-        //     // if ( numTightElectrons==2 && numTightMuons==0 ) TwoElectron = 1;
-        //     // if ( numTightMuons==1 && numTightElectrons==1 ) MuonElectron = 1;
-
-        //     eve->TwoMuon_ = TwoMuon;
-        //     eve->TwoElectron_ = TwoElectron;
-        //     eve->MuonElectron_ = MuonElectron;
-
-        //     ///////////
-        //     /////  extra lepton variables: opposite charge, dR_leplep and mass_leplep
-        //     //////////
-        //     vint lepton_trkCharge, lepton_isMuon; //, lepton_isTight, lepton_isLoose;
-
-        //     std::vector<TLorentzVector> vec_TLV_lep;
-        //     TLorentzVector sum_lepton_vect;
-        //     sum_lepton_vect.SetPxPyPzE(0., 0., 0., 0.);
-
-        //     ///// --- loop over muons
-        //     for (std::vector<pat::Muon>::const_iterator iMu = selectedMuons_loose.begin(); iMu != selectedMuons_loose.end(); iMu++)
-        //     {
-        //         // Get muon 4Vector and add to vecTLorentzVector for muons
-        //         TLorentzVector leptonP4;
-        //         leptonP4.SetPxPyPzE(iMu->px(), iMu->py(), iMu->pz(), iMu->energy());
-        //         vec_TLV_lep.push_back(leptonP4);
-
-        //         sum_lepton_vect += leptonP4;
-
-        //         lepton_isMuon.push_back(1);
-
-        //         int trkCharge = -99;
-        //         if (iMu->muonBestTrack().isAvailable())
-        //             trkCharge = iMu->muonBestTrack()->charge();
-        //         lepton_trkCharge.push_back(trkCharge);
-        //     }
-
-        //     ///// --- loop over electrons
-        //     for (std::vector<pat::Electron>::const_iterator iEle = selectedElectrons_loose.begin(); iEle != selectedElectrons_loose.end(); iEle++)
-        //     {
-        //         // Get electron 4Vector and add to vecTLorentzVector for electrons
-        //         TLorentzVector leptonP4;
-        //         leptonP4.SetPxPyPzE(iEle->px(), iEle->py(), iEle->pz(), iEle->energy());
-        //         vec_TLV_lep.push_back(leptonP4);
-
-        //         sum_lepton_vect += leptonP4;
-
-        //         lepton_isMuon.push_back(0);
-
-        //         int trkCharge = -99;
-        //         if (iEle->gsfTrack().isAvailable())
-        //             trkCharge = iEle->gsfTrack()->charge();
-        //         lepton_trkCharge.push_back(trkCharge);
-        //     }
-
-        //     eve->lepton_trkCharge_ = lepton_trkCharge;
-        //     eve->lepton_vect_TLV_ = vec_TLV_lep; /// non existing yet
-        //     eve->lepton_isMuon_ = lepton_isMuon;
-
-        //     /// DIL specific: opposite charged lepton pair
-        //     int oppositeLepCharge = -9;
-        //     if (lepton_trkCharge.size() == 2)
-        //     {
-        //         int chg0 = lepton_trkCharge[0];
-        //         int chg1 = lepton_trkCharge[1];
-
-        //         if ((chg0 * chg1) == -1)
-        //             oppositeLepCharge = 1;
-        //         else if ((chg0 * chg1) == 1)
-        //             oppositeLepCharge = 0;
-        //         else if (chg0 == -99)
-        //             oppositeLepCharge = -1;
-        //         else if (chg1 == -99)
-        //             oppositeLepCharge = -2;
-        //         else
-        //             oppositeLepCharge = -3;
-        //     }
-        //     eve->oppositeLepCharge_ = oppositeLepCharge;
-
-        //     /// DIL specific: dR and mass of the dilepton pair
-        //     double mass_leplep = -99;
-        //     if (vec_TLV_lep.size() == 2)
-        //     {
-        //         mass_leplep = sum_lepton_vect.M();
-        //         eve->mass_leplep_ = mass_leplep;
-        //         eve->dR_leplep_ = vec_TLV_lep[0].DeltaR(vec_TLV_lep[1]);
-        //     }
-
-        //     ///////////
-        //     ///
-        //     /// various weights: PU, lepton SF, trigger SF, etc
-        //     ///
-        //     //////////
-        //     // PU scale factor
-        //     double wgtPU = 1;
-        //     eve->wgt_pu_ = wgtPU;
-
-        //     // Lepton scale factor
-        //     float leptonSF = 1.0;
-        //     eve->wgt_lepSF_ = leptonSF;
-
-        //     eve->wgt_lumi_ = intLumi_;
-        //     eve->wgt_xs_ = xSec_; //mySample.xSec;
-        //     eve->wgt_nGen_ = nGen_; //mySample.nGen;
-
-        //     eve->wgt_generator_ = GenEventInfoWeight;
-
-        //     /////////
-        //     ///
-        //     /// Jets
-        //     ///
-        //     ////////
-        //     // Do jets stuff
-
-        //     /// checking PU jet ID
-        //     // for ( unsigned int i=0; i<pfjets->size(); ++i ) {
-        //     //   const pat::Jet & patjet = pfjets->at(i);
-
-        //     //   if(!patjet.hasUserFloat("pileupJetId:fullDiscriminant") || !patjet.hasUserInt("pileupJetId:fullId")) {
-        //     // 	std::cout << "not mvaValue or idflag info for the jet ---" << std::endl;
-        //     // 	continue;
-        //     //   }
-
-        //     //   float mvaValue   = patjet.userFloat("pileupJetId:fullDiscriminant");
-        //     //   int    idflag = patjet.userInt("pileupJetId:fullId");
-
-        //     //   cout << "jet " << i << " pt " << patjet.pt() << " eta " << patjet.eta() << " PU JetID MVA " << mvaValue << " PU JetID flag " << idflag;
-        //     //   if( PileupJetIdentifier::passJetId( idflag, PileupJetIdentifier::kLoose ) ){
-        //     //   	cout << " pass loose wp";
-        //     //   }
-        //     //   if( PileupJetIdentifier::passJetId( idflag, PileupJetIdentifier::kMedium ) ){
-        //     //   	  cout << " pass medium wp";
-        //     //   }
-        //     //   if( PileupJetIdentifier::passJetId( idflag, PileupJetIdentifier::kTight ) ){
-        //     //     cout << " pass tight wp";
-        //     //   }
-        //     //   cout << endl;
-
-        //     // }
-        //     // cout << endl;
-
-        //     //-------
-        //     std::vector<pat::Jet> pfJets_ID = miniAODhelper.GetSelectedJets(*pfjets, 0., 999, jetID::jetLoose, '-');
-        //     /// lepton-jet overlap cleanning, might change the input lepton collections in the future
-        //     std::vector<pat::Jet> pfJets_ID_clean = miniAODhelper.GetDeltaRCleanedJets(pfJets_ID, selectedMuons_loose, selectedElectrons_loose, 0.4);
-
-        //     std::vector<pat::Jet> unCorrectedJets = miniAODhelper.GetUncorrectedJets(pfJets_ID_clean);
-        //     std::vector<pat::Jet> correctedJets_noSys = miniAODhelper.GetCorrectedJets(unCorrectedJets, iEvent, iSetup, genjetCollection);
-        //     /// jet pt threshold, 20GeV for now
-        //     std::vector<pat::Jet> selectedJets_noSys_unsorted = miniAODhelper.GetSelectedJets(correctedJets_noSys, 20., 2.4, jetID::none, '-');
-        //     std::vector<pat::Jet> selectedJets_tag_noSys_unsorted = miniAODhelper.GetSelectedJets(correctedJets_noSys, 20., 2.4, jetID::none, 'M');
-
-        //     // std::vector<pat::Jet> selectedJets_loose_noSys_unsorted = miniAODhelper.GetSelectedJets(correctedJets_noSys, 20., 3.0, jetID::none, '-' );
-        //     // std::vector<pat::Jet> selectedJets_loose_tag_noSys_unsorted = miniAODhelper.GetSelectedJets( correctedJets_noSys, 20., 3.0, jetID::none, 'M' );
-
-        //     // bool for passing jet/tag cuts, first is for tree filling, second is for event counting
-        //     // bool hasNumJetNumTag = false;
-
-        //     double totalWgt = leptonSF * wgtPU; //wgt_lumi;
-
-        //     ///////
-        //     // Loop over systematics: nominal, JESUp, JESDown
-        //     ///////
-        //     bool passingTwoJet = false;
-        //     for (int iSys = 0; iSys < rNumSys; iSys++)
-        //     {
-
-        //         //no sys for data,
-        //         if (isData)
-        //         {
-        //             if (iSys != 0)
-        //                 continue;
-        //         }
-
-        //         eve->wgt_[iSys] = totalWgt;
-
-        //         sysType::sysType iSysType = sysType::NA;
-        //         switch (iSys)
-        //         {
-        //         case 1:
-        //             iSysType = sysType::JESup;
-        //             break;
-        //         case 2:
-        //             iSysType = sysType::JESdown;
-        //             break;
-
-        //         case 3:
-        //             iSysType = sysType::JESFlavorQCDup;
-        //             break;
-        //         case 4:
-        //             iSysType = sysType::JESFlavorQCDdown;
-        //             break;
-
-        //         case 5:
-        //             iSysType = sysType::JESSinglePionHCALup;
-        //             break;
-        //         case 6:
-        //             iSysType = sysType::JESSinglePionHCALdown;
-        //             break;
-
-        //         case 7:
-        //             iSysType = sysType::JESAbsoluteScaleup;
-        //             break;
-        //         case 8:
-        //             iSysType = sysType::JESAbsoluteScaledown;
-        //             break;
-
-        //         case 9:
-        //             iSysType = sysType::JESAbsoluteMPFBiasup;
-        //             break;
-        //         case 10:
-        //             iSysType = sysType::JESAbsoluteMPFBiasdown;
-        //             break;
-
-        //         case 11:
-        //             iSysType = sysType::JESPileUpPtRefup;
-        //             break;
-        //         case 12:
-        //             iSysType = sysType::JESPileUpPtRefdown;
-        //             break;
-        //         ////////
-        //         case 13:
-        //             iSysType = sysType::JESSinglePionECALup;
-        //             break;
-        //         case 14:
-        //             iSysType = sysType::JESSinglePionECALdown;
-        //             break;
-
-        //         case 15:
-        //             iSysType = sysType::JESPileUpPtBBup;
-        //             break;
-        //         case 16:
-        //             iSysType = sysType::JESPileUpPtBBdown;
-        //             break;
-
-        //         case 17:
-        //             iSysType = sysType::JESPileUpPtEC1up;
-        //             break;
-        //         case 18:
-        //             iSysType = sysType::JESPileUpPtEC1down;
-        //             break;
-
-        //         case 19:
-        //             iSysType = sysType::JESPileUpDataMCup;
-        //             break;
-        //         case 20:
-        //             iSysType = sysType::JESPileUpDataMCdown;
-        //             break;
-
-        //         case 21:
-        //             iSysType = sysType::JESRelativeFSRup;
-        //             break;
-        //         case 22:
-        //             iSysType = sysType::JESRelativeFSRdown;
-        //             break;
-
-        //         case 23:
-        //             iSysType = sysType::JESTimePtEtaup;
-        //             break;
-        //         case 24:
-        //             iSysType = sysType::JESTimePtEtadown;
-        //             break;
-
-        //         default:
-        //             iSysType = sysType::NA;
-        //             break;
-        //         }
-
-        //         // nJets/Tags
-        //         // THESE MUST BE INITIALIZED TO -1
-        //         eve->numJets_float_[iSys] = -1;
-        //         eve->numTags_float_[iSys] = -1;
-
-        //         /////////
-        //         ///
-        //         /// Pfjets
-        //         ///
-        //         ////////
-
-        //         std::vector<pat::Jet> correctedJets = (iSys == 0) ? correctedJets_noSys : miniAODhelper.GetCorrectedJets(unCorrectedJets, iEvent, iSetup, genjetCollection, iSysType);
-        //         std::vector<pat::Jet> selectedJets_unsorted = (iSys == 0) ? selectedJets_noSys_unsorted : miniAODhelper.GetSelectedJets(correctedJets, 20., 2.4, jetID::none, '-');
-        //         std::vector<pat::Jet> selectedJets_tag_unsorted = (iSys == 0) ? selectedJets_tag_noSys_unsorted : miniAODhelper.GetSelectedJets(correctedJets, 20., 2.4, jetID::none, 'M');
-
-        //         // Sort jet collections by pT
-        //         std::vector<pat::Jet> selectedJets = miniAODhelper.GetSortedByPt(selectedJets_unsorted);
-        //         std::vector<pat::Jet> selectedJets_tag = miniAODhelper.GetSortedByPt(selectedJets_tag_unsorted);
-
-        //         // Get numJets, numTags
-        //         int numJet = int(selectedJets.size());
-        //         int numTag = int(selectedJets_tag.size());
-
-        //         if (numJet < 2)
-        //             continue; //return;
-        //         passingTwoJet = true;
-        //         // Get Corrected MET (propagating JEC and JER)
-        //         std::vector<pat::Jet> oldJetsForMET = miniAODhelper.GetSelectedJets(*pfjets, 0., 999, jetID::jetMETcorrection, '-');
-        //         std::vector<pat::Jet> oldJetsForMET_uncorr = miniAODhelper.GetUncorrectedJets(oldJetsForMET);
-        //         std::vector<pat::Jet> newJetsForMET = miniAODhelper.GetCorrectedJets(oldJetsForMET_uncorr, iEvent, iSetup, genjetCollection, iSysType);
-        //         std::vector<pat::MET> newMETs = miniAODhelper.CorrectMET(oldJetsForMET, newJetsForMET, *pfmet);
-        //         // std::vector<pat::MET> newMETs_NoHF = miniAODhelper.CorrectMET(oldJetsForMET, newJetsForMET, *pfmetNoHF);
-
-        //         pat::MET correctedMET = newMETs.at(0);
-        //         // TLorentzVector metV(correctedMET.px(),correctedMET.py(),0.0,correctedMET.pt());
-        //         // pat::MET correctedMET_NoHF = newMETs_NoHF.at(0);
-
-        //         // Initialize event vars, selected jets
-        //         double mht_px = 0.;
-        //         double mht_py = 0.;
-
-        //         vecTLorentzVector jetV;
-        //         std::vector<double> csvV;
-        //         std::vector<double> cMVAV;
-        //         std::vector<double> jet_ptV; /// non existing
-        //         std::vector<double> jet_etaV;
-        //         vint jet_flavour_vect;
-        //         vint jet_partonflavour_vect;
-
-        //         vdouble jet_PUID_mvaV;
-        //         vint jet_PUID_flagV;
-        //         vint jet_PUID_passWPLooseV;
-
-        //         // int jeti = 0;
-        //         // Loop over selected jets
-        //         for (std::vector<pat::Jet>::const_iterator iJet = selectedJets.begin(); iJet != selectedJets.end(); iJet++)
-        //         {
-
-        //             jet_ptV.push_back(iJet->pt());
-        //             jet_etaV.push_back(iJet->eta());
-        //             jet_partonflavour_vect.push_back(iJet->partonFlavour());
-        //             jet_flavour_vect.push_back(iJet->hadronFlavour());
-
-        //             // Get jet 4Vector and add to vecTLorentzVector for jets
-        //             TLorentzVector jet0p4;
-        //             jet0p4.SetPxPyPzE(iJet->px(), iJet->py(), iJet->pz(), iJet->energy());
-        //             jetV.push_back(jet0p4);
-
-        //             // MHT
-        //             mht_px += -iJet->px();
-        //             mht_py += -iJet->py();
-
-        //             //      double myCSV = miniAODhelper.GetJetCSV(*iJet, "pfCombinedInclusiveSecondaryVertexV2BJetTags");
-        //             double myCSV = iJet->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags");
-        //             csvV.push_back(myCSV);
-
-        //             //      double mycMVA = miniAODhelper.GetJetCSV(*iJet, "pfCombinedMVABJetTags");
-        //             double mycMVA = iJet->bDiscriminator("pfCombinedMVAV2BJetTags");
-        //             cMVAV.push_back(mycMVA);
-
-        //             //PU jet ID
-        //             if (!iJet->hasUserFloat("pileupJetId:fullDiscriminant") || !iJet->hasUserInt("pileupJetId:fullId"))
-        //             {
-        //                 std::cout << "no mvaValue or idflag info for the jet ---" << std::endl;
-        //             }
-
-        //             float mvaValue = iJet->userFloat("pileupJetId:fullDiscriminant");
-        //             int idflag = iJet->userInt("pileupJetId:fullId");
-
-        //             // cout << "Sys " << iSys << ": jet " << jeti << " pt " << iJet->pt() << " eta " << iJet->eta() << " PU JetID MVA " << mvaValue << " PU JetID flag " << idflag << endl;;
-        //             // jeti++;
-        //             bool passPUIDLoose = PileupJetIdentifier::passJetId(idflag, PileupJetIdentifier::kLoose);
-
-        //             jet_PUID_mvaV.push_back(mvaValue);
-        //             jet_PUID_flagV.push_back(idflag);
-        //             jet_PUID_passWPLooseV.push_back(passPUIDLoose);
-
-        //         } // end loop over iJet
-
-        //         ////
-        //         eve->jet_vect_TLV_[iSys] = jetV;
-        //         eve->jet_CSV_[iSys] = csvV;
-        //         eve->jet_cMVA_[iSys] = cMVAV;
-        //         eve->jet_pt_[iSys] = jet_ptV;
-        //         eve->jet_eta_[iSys] = jet_etaV;
-        //         eve->jet_flavour_[iSys] = jet_flavour_vect;
-        //         eve->jet_partonflavour_[iSys] = jet_partonflavour_vect;
-
-        //         //PU jet ID
-        //         eve->jet_PUID_mva_[iSys] = jet_PUID_mvaV;
-        //         eve->jet_PUID_flag_[iSys] = jet_PUID_flagV;
-        //         eve->jet_PUID_passWPLoose_[iSys] = jet_PUID_passWPLooseV;
-
-        //         // Add lepton 4Vector quantities to MHT
-        //         mht_px += -sum_lepton_vect.Px();
-        //         mht_py += -sum_lepton_vect.Py();
-        //         double MHT = sqrt(mht_px * mht_px + mht_py * mht_py);
-
-        //         bool PassBigDiamondZmask = (MuonElectron || (mass_leplep < (65.5 + 3 * MHT / 8)) || (mass_leplep > (108 - MHT / 4)) || (mass_leplep < (79 - 3 * MHT / 4)) || (mass_leplep > (99 + MHT / 2)));
-        //         eve->PassZmask_ = (PassBigDiamondZmask) ? 1 : 0;
-
-        //         double MET = correctedMET.pt();
-        //         bool PassBigDiamondZmaskMET = (MuonElectron || (mass_leplep < (65.5 + 3 * MET / 8)) || (mass_leplep > (108 - MET / 4)) || (mass_leplep < (79 - 3 * MET / 4)) || (mass_leplep > (99 + MET / 2)));
-        //         eve->PassZmaskMET_ = (PassBigDiamondZmaskMET) ? 1 : 0;
-
-        //         // Compute MHT_
-        //         eve->MHT_[iSys] = MHT;
-        //         // MET
-        //         eve->MET_[iSys] = correctedMET.pt();
-        //         eve->MET_phi_[iSys] = correctedMET.phi();
-        //         // MET_NoHF
-        //         // eve->METNoHF_[iSys]      = correctedMET_NoHF.pt();
-        //         // eve->METNoHF_phi_[iSys]  = correctedMET_NoHF.phi();
-
-        //         // nJets/Tags
-        //         eve->numJets_float_[iSys] = numJet;
-        //         eve->numTags_float_[iSys] = numTag;
-
-        //         // // jet1-4 pT
-        //         // if( selectedJets.size()>0 ) eve->first_jet_pt_[iSys]  = selectedJets.at(0).pt();
-        //         // if( selectedJets.size()>1 ) eve->second_jet_pt_[iSys] = selectedJets.at(1).pt();
-
-        //     } // end loop over systematics
-
-        //     // Fill tree if pass full selection
-        //     if (passingTwoJet)
+        string variation = jesVariations_[i].first;
+        string direction = jesVariations_[i].second;
+
+        std::vector<pat::Jet> jets2;
+        std::vector<pat::Jet> tightJets2;
+        pat::MET met(metOrig);
+
+        bool pass = jetMETSelection(
+            event, rho, lep1, lep2, metOrig, variation, direction, jets2, tightJets2, met);
+
+        jets.push_back(jets2);
+        tightJets.push_back(tightJets2);
+        mets.push_back(met);
+        passJetMETSelection.push_back(pass);
+
+        passOneJetMETSelection |= pass;
+    }
+    if (!passOneJetMETSelection)
+    {
+        return;
+    }
+    // count only the nominal jet met decision
+    if (passJetMETSelection[0])
+    {
+        cutflowHist_->Fill(cutflowBin++);
     }
 
+    // fill hists
+    selectedEventHist_->Fill(histPos, 1.);
+    selectedWeightHist_->Fill(histPos, genWeight);
+
+    // event variables
+    variables_.setInt32("is_data", isData_);
+    variables_.setInt64("event", event.id().event());
+    variables_.setInt32("run", event.id().run());
+    variables_.setInt32("lumi", event.luminosityBlock());
+    variables_.setDouble("gen_weight", genWeight);
+    variables_.setFloat("pu", pu);
+    variables_.setDouble("rho", rho);
+    variables_.setInt32("channel", int32_t(channel));
+
+    // lepton variables
+    for (size_t i = 1; i <= 2; i++)
+    {
+        reco::RecoCandidate* lep = i == 1 ? lep1 : lep2;
+        variables_.setDouble("lep" + std::to_string(i) + "_E", lep->energy());
+        variables_.setDouble("lep" + std::to_string(i) + "_px", lep->px());
+        variables_.setDouble("lep" + std::to_string(i) + "_py", lep->py());
+        variables_.setDouble("lep" + std::to_string(i) + "_pz", lep->pz());
+        variables_.setInt32("lep" + std::to_string(i) + "_charge", lep->charge());
+        variables_.setInt32("lep" + std::to_string(i) + "_pdg", lep->pdgId());
+        double absPdgId = abs(lep->pdgId());
+        if (absPdgId == 11)
+        {
+            pat::Electron* e = dynamic_cast<pat::Electron*>(lep);
+            variables_.setDouble("lep" + std::to_string(i) + "_eta_sc", e->superCluster()->eta());
+            variables_.setFloat("lep" + std::to_string(i) + "_iso", e->userFloat("iso"));
+            variables_.setInt32("lep" + std::to_string(i) + "_tight", e->userInt("tight"));
+        }
+        else if (absPdgId == 13)
+        {
+            pat::Muon* mu = dynamic_cast<pat::Muon*>(lep);
+            variables_.setDouble("lep" + std::to_string(i) + "_eta_sc", mu->eta());
+            variables_.setFloat("lep" + std::to_string(i) + "_iso", mu->userFloat("iso"));
+            variables_.setInt32("lep" + std::to_string(i) + "_tight", mu->userInt("tight"));
+        }
+        else
+        {
+            throw std::runtime_error("cannot handle lepton pdg id " + std::to_string(absPdgId));
+        }
+    }
+
+    // jet and MET variables
+    for (size_t i = 0; i < (isData_ ? 1 : jesVariations_.size()); i++)
+    {
+        string postfix = "";
+        if (!jesVariations_[i].first.empty())
+        {
+            postfix += "_jes_" + jesVariations_[i].first + "_" + jesVariations_[i].second;
+        }
+
+        variables_.setInt32("jetmet_pass" + postfix, passJetMETSelection[i]);
+        variables_.setInt32("n_jets" + postfix, jets[i].size());
+        variables_.setDouble("met_px" + postfix, mets[i].px());
+        variables_.setDouble("met_py" + postfix, mets[i].py());
+
+        // jets
+        for (size_t j = 1; j <= 4; j++)
+        {
+            if (jets[i].size() < j)
+            {
+                break;
+            }
+
+            pat::Jet* jet = &jets[i][j - 1];
+            variables_.setDouble("jet" + std::to_string(j) + "_E" + postfix, jet->energy());
+            variables_.setDouble("jet" + std::to_string(j) + "_px" + postfix, jet->px());
+            variables_.setDouble("jet" + std::to_string(j) + "_py" + postfix, jet->py());
+            variables_.setDouble("jet" + std::to_string(j) + "_pz" + postfix, jet->pz());
+            variables_.setInt32("jet" + std::to_string(j) + "_tight" + postfix, jet->userInt("tight"));
+            variables_.setDouble("jet" + std::to_string(j) + "_csv" + postfix,
+                jet->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"));
+            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix,
+                jet->bDiscriminator("pfDeepCSVJetTags:probb") +
+                jet->bDiscriminator("pfDeepCSVJetTags:probbb"));
+            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_cl" + postfix,
+                jet->bDiscriminator("pfDeepCSVJetTags:probc") /
+                (jet->bDiscriminator("pfDeepCSVJetTags:probc") +
+                 jet->bDiscriminator("pfDeepCSVJetTags:probudsg")));
+            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_cb" + postfix,
+                jet->bDiscriminator("pfDeepCSVJetTags:probc") /
+                (jet->bDiscriminator("pfDeepCSVJetTags:probc") +
+                 jet->bDiscriminator("pfDeepCSVJetTags:probb") +
+                 jet->bDiscriminator("pfDeepCSVJetTags:probbb")));
+        }
+    }
+
+    // finally, fill the tree
     tree_->Fill();
 }
 
-bool CSVTreeMaker::metFilterSelection(const edm::Event& iEvent)
+bool CSVTreeMaker::metFilterSelection(const edm::Event& event)
 {
     // check MET filters
     // unlike triggers all of them have to be accepted
     edm::Handle<edm::TriggerResults> metFilterBitsHandle;
-    iEvent.getByToken(metFilterBitsToken_, metFilterBitsHandle);
-    if (!metFilterBitsHandle.isValid())
-    {
-        return false;
-    }
+    event.getByToken(metFilterBitsToken_, metFilterBitsHandle);
 
-    const edm::TriggerNames& metFilterNames = iEvent.triggerNames(*metFilterBitsHandle);
+    const edm::TriggerNames& metFilterNames = event.triggerNames(*metFilterBitsHandle);
     for (size_t i = 0; i < metFilterBitsHandle->size(); i++)
     {
         string name = metFilterNames.triggerName(i);
@@ -1020,10 +861,10 @@ bool CSVTreeMaker::metFilterSelection(const edm::Event& iEvent)
     return true;
 }
 
-bool CSVTreeMaker::triggerSelection(const edm::Event& iEvent, LeptonChannel& channel)
+bool CSVTreeMaker::triggerSelection(const edm::Event& event, LeptonChannel& channel)
 {
     edm::Handle<edm::TriggerResults> triggerBitsHandle;
-    iEvent.getByToken(triggerBitsToken_, triggerBitsHandle);
+    event.getByToken(triggerBitsToken_, triggerBitsHandle);
     if (!triggerBitsHandle.isValid())
     {
         return false;
@@ -1043,7 +884,7 @@ bool CSVTreeMaker::triggerSelection(const edm::Event& iEvent, LeptonChannel& cha
         triggersToPass = mumuTriggers_;
     }
 
-    const edm::TriggerNames& triggerNames = iEvent.triggerNames(*triggerBitsHandle);
+    const edm::TriggerNames& triggerNames = event.triggerNames(*triggerBitsHandle);
     for (size_t i = 0; i < triggerBitsHandle->size(); ++i)
     {
         if (!triggerBitsHandle->accept(i))
@@ -1061,6 +902,52 @@ bool CSVTreeMaker::triggerSelection(const edm::Event& iEvent, LeptonChannel& cha
     }
 
     return false;
+}
+
+bool CSVTreeMaker::electronSelection(const edm::Event& event, reco::Vertex& vertex,
+    std::vector<pat::Electron>& electrons, std::vector<pat::Electron>& tightElectrons)
+{
+    edm::Handle<std::vector<pat::Electron> > electronsHandle;
+    event.getByToken(electronToken_, electronsHandle);
+
+    std::vector<pat::Electron> electronsCopy(*electronsHandle);
+    for (pat::Electron& electron : electronsCopy)
+    {
+        ElectronType type = electronID(electron, vertex);
+        if (type >= E_LOOSE)
+        {
+            electrons.push_back(electron);
+            if (type == E_TIGHT)
+            {
+                tightElectrons.push_back(electron);
+            }
+        }
+    }
+
+    return true;
+}
+
+bool CSVTreeMaker::muonSelection(const edm::Event& event, reco::Vertex& vertex,
+    std::vector<pat::Muon>& muons, std::vector<pat::Muon>& tightMuons)
+{
+    edm::Handle<std::vector<pat::Muon> > muonsHandle;
+    event.getByToken(muonToken_, muonsHandle);
+
+    std::vector<pat::Muon> muonsCopy(*muonsHandle);
+    for (pat::Muon& muon : muonsCopy)
+    {
+        MuonType type = muonID(muon, vertex);
+        if (type >= M_LOOSE)
+        {
+            muons.push_back(muon);
+            if (type == M_TIGHT)
+            {
+                tightMuons.push_back(muon);
+            }
+        }
+    }
+
+    return true;
 }
 
 bool CSVTreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
@@ -1133,6 +1020,57 @@ bool CSVTreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     return true;
 }
 
+bool CSVTreeMaker::jetMETSelection(const edm::Event& event, double rho,
+    reco::RecoCandidate* lep1, reco::RecoCandidate* lep2, const pat::MET& metOrig,
+    const string& variation, const string& direction, std::vector<pat::Jet>& jets,
+    std::vector<pat::Jet>& tightJets, pat::MET& met)
+{
+    // read and select jets
+    edm::Handle<std::vector<pat::Jet> > jetsHandle;
+    event.getByToken(jetToken_, jetsHandle);
+    if (!jetsHandle.isValid())
+    {
+        return false;
+    }
+
+    // keep track of changes to MET due to jet corrections
+    LorentzVector correctedMetP4(metOrig.p4());
+
+    for (const pat::Jet& jetOrig : *jetsHandle)
+    {
+        pat::Jet jet(jetOrig);
+        correctJet(jet, variation, direction, event.run(), rho);
+
+        JetType type = jetID(jet, lep1, lep2);
+        if (type >= J_LOOSE)
+        {
+            jets.push_back(jet);
+            if (type == J_TIGHT)
+            {
+                tightJets.push_back(jet);
+            }
+
+            // propagate to met
+            correctedMetP4.SetPx(correctedMetP4.Px() - (jet.px() - jetOrig.px()));
+            correctedMetP4.SetPy(correctedMetP4.Py() - (jet.py() - jetOrig.py()));
+        }
+    }
+
+    // propagate the change in px and py to met
+    met.setP4(correctedMetP4);
+
+    if (jets.size() < 2)
+    {
+        return false;
+    }
+
+    // sort jets
+    std::sort(jets.begin(), jets.end(), comparePt);
+    std::sort(tightJets.begin(), tightJets.end(), comparePt);
+
+    return true;
+}
+
 VertexType CSVTreeMaker::vertexID(reco::Vertex& vertex)
 {
     bool isValid = !vertex.isFake() &&
@@ -1180,10 +1118,14 @@ ElectronType CSVTreeMaker::electronID(pat::Electron& electron, reco::Vertex& ver
         return E_INVALID;
     }
 
-    // TODO: VID
+    // TODO: VID + iso as user float
+    electron.addUserFloat("iso", -1., true);
 
     // tight or loose decision only depends on pt
-    return electron.pt() > 25. ? E_TIGHT : E_LOOSE;
+    bool isTight = electron.pt() > 25;
+    electron.addUserInt("tight", isTight, true);
+
+    return isTight ? E_TIGHT : E_LOOSE;
 }
 
 MuonType CSVTreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
@@ -1231,9 +1173,11 @@ MuonType CSVTreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
         return M_INVALID;
     }
 
-
     // tight or loose decision depends on pt, eta and iso
-    return (muon.pt() > 26. && absEta < 2.1 && iso < 0.15)? M_TIGHT : M_LOOSE;
+    bool isTight = muon.pt() > 26. && absEta < 2.1 && iso < 0.15;
+    muon.addUserInt("tight", isTight, true);
+
+    return isTight ? M_TIGHT : M_LOOSE;
 }
 
 JetType CSVTreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2)
@@ -1252,8 +1196,7 @@ JetType CSVTreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::Reco
     }
 
     // PU jet ID
-    // TODO: update to different WP?
-    if (jet.userInt("pileupJetIdUpdated:fullId") < 4)
+    if (jet.userInt("pileupJetId:fullId") < 4)
     {
         return J_INVALID;
     }
@@ -1265,7 +1208,7 @@ JetType CSVTreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::Reco
     }
 
     // loose ID criteria from jetmet POG
-    double passPOGID;
+    bool passPOGID;
     if (absEta <= 2.4)
     {
         passPOGID = jet.neutralHadronEnergyFraction() < 0.99 &&
@@ -1297,19 +1240,120 @@ JetType CSVTreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::Reco
         return J_INVALID;
     }
 
-    // tight or loose decision depends ony on pt
-    return jet.pt() > 30. ? J_TIGHT : J_LOOSE;
+    // tight or loose decision depends only on pt
+    bool isTight = jet.pt() > 30.;
+    jet.addUserInt("tight", isTight, true);
+
+    return isTight ? J_TIGHT : J_LOOSE;
 }
 
-double deltaR(const LorentzVector& v1, const LorentzVector& v2)
+double CSVTreeMaker::readGenWeight(const edm::Event& event)
 {
-    double deltaEta = v1.eta() - v2.eta();
-    double deltaPhi = fabs(v1.phi() - v2.phi());
-    if (deltaPhi > M_PI)
+    edm::Handle<GenEventInfoProduct> genInfoHandle;
+    event.getByToken(genInfoToken_, genInfoHandle);
+    return genInfoHandle->weight();
+}
+
+float CSVTreeMaker::readPU(const edm::Event& event)
+{
+    edm::Handle<std::vector<PileupSummaryInfo> > pileupInfoHandle;
+    event.getByToken(pileupInfoToken_, pileupInfoHandle);
+
+    for (const PileupSummaryInfo& info : *pileupInfoHandle)
     {
-        deltaPhi = 2. * M_PI - deltaPhi;
+        if (info.getBunchCrossing() == 0)
+        {
+            return info.getTrueNumInteractions();
+        }
     }
-    return sqrt(deltaEta * deltaEta + deltaPhi * deltaPhi);
+    throw std::runtime_error("no valid bunch crossing found to read PU infos");
+}
+
+double CSVTreeMaker::readRho(const edm::Event& event)
+{
+    edm::Handle<double> rhoHandle;
+    event.getByToken(rhoToken_, rhoHandle);
+    return *rhoHandle;
+}
+
+void CSVTreeMaker::correctJet(pat::Jet& jet, const string& variation, const string& direction,
+    int64_t run, double rho)
+{
+    // before we start, lookup the proper objects, as all values depend on the run number
+    FactorizedJetCorrector* jetCorrector = nullptr;
+    JetCorrectionUncertainty* jetCorrectorUnc = nullptr;
+    for (size_t i = 0; i < nJESRanges_; i++)
+    {
+        if (run >= jesRanges_[2 * i] && run <= jesRanges_[2 * i + 1])
+        {
+            jetCorrector = jetCorrectors_[i];
+            if (jetCorrectorUncs_.size() > 0)
+            {
+                jetCorrectorUnc = jetCorrectorUncs_[i];
+            }
+        }
+    }
+    if (!jetCorrector)
+    {
+        throw std::runtime_error("no jetCorrector found for run " + std::to_string(run));
+    }
+
+    // first, uncorrect the jet
+    // note: uncorrectFactor would actually lead to the original p4, i.e., before applying any JES
+    // so "p4 * uncorrectFactor = p4_orig"
+    // or "p4 = uncorrectFactor / p4_orig"
+    double uncorrectFactor = jet.jecFactor("Uncorrected");
+    jet.setP4(jet.p4() * uncorrectFactor);
+
+    // then, calculate the new correction factor
+    // so "p4_new = p4 * recorrectFactor"
+    // rho is from fixedGridRhoFastJetAll
+    jetCorrector->setJetPt(jet.pt());
+    jetCorrector->setJetEta(jet.eta());
+    jetCorrector->setJetA(jet.jetArea());
+    jetCorrector->setRho(rho);
+    double recorrectFactor = jetCorrector->getCorrection();
+
+    // apply a variation / uncertainty?
+    if (!variation.empty())
+    {
+        JetCorrectionUncertainty* corr = nullptr;
+        if (variation == "total")
+        {
+            // total variation
+            corr = jetCorrectorUnc;
+        }
+        else
+        {
+            // factorized variation
+            for (size_t i = 0; i < jesUncSources_.size(); i++)
+            {
+                if (jesUncSources_[i] == variation)
+                {
+                    corr = jetCorrectorUncSources_[i];
+                    break;
+                }
+            }
+        }
+        if (!corr)
+        {
+            throw std::runtime_error("could not find jet corrector for variation " + variation);
+        }
+        // update the recorrectFactor accordingly
+        corr->setJetPt(jet.pt());
+        corr->setJetEta(jet.eta());
+        if (direction == "up")
+        {
+            recorrectFactor *= 1. + corr->getUncertainty(true);
+        }
+        else
+        {
+            recorrectFactor *= 1. - corr->getUncertainty(false);
+        }
+    }
+
+    // finally, scale the four-vector
+    jet.setP4(jet.p4() * recorrectFactor);
 }
 
 DEFINE_FWK_MODULE(CSVTreeMaker);

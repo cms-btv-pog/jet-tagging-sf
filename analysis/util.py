@@ -52,6 +52,6 @@ def wget(url, dst, verbose=False):
     cwd = dirname or None
     std = None if verbose else subprocess.PIPE
     cmd = "wget -O {} {}".format(filename, url)
-    code = law.interruptable_popen(cmd, shell=True, executable="/bin/bash", cwd=cwd, stdout=std,
-        stderr=std)[0]
+    code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash", cwd=cwd,
+        stdout=std, stderr=std)[0]
     return code == 0

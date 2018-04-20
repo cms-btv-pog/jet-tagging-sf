@@ -10,6 +10,7 @@
 <use name="DataFormats/RecoCandidate" />
 <use name="DataFormats/VertexReco" />
 <use name="PhysicsTools/Utilities" />
+<use name="CondFormats/JetMETObjects" />
 <use name="SimDataFormats/PileupSummaryInfo" />
 <use name="HLTrigger/HLTcore" />
 <use name="EgammaAnalysis/ElectronTools" />

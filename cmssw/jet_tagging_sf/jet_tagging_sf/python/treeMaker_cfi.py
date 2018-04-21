@@ -1,17 +1,17 @@
 # -*- coding: utf-8 -*-
 
 """
-CSVTreeMaker module initialization file.
+TreeMaker module initialization file.
 """
 
 
-__all__ = ["csvTreeMaker"]
+__all__ = ["treeMaker"]
 
 
 import FWCore.ParameterSet.Config as cms
 
 
-csvTreeMaker = cms.EDAnalyzer("CSVTreeMaker",
+treeMaker = cms.EDAnalyzer("TreeMaker",
     verbose=cms.untracked.bool(False),
     isData=cms.bool(False),
     leptonChannel=cms.string(""),

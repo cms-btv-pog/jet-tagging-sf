@@ -10,7 +10,7 @@ import law
 import luigi
 import six
 
-from analysis.base import AnalysisTask, DatasetTask, GridWorkflow
+from analysis.tasks.base import AnalysisTask, DatasetTask, GridWorkflow
 from analysis.util import wget
 
 
@@ -177,14 +177,24 @@ class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 ("jesUncSources", self.config_inst.get_aux("jes_sources")),
                 ("maxEvents", 20000)
             ]
+
+            # triggers
             for channel_inst, triggers in self.config_inst.get_aux("triggers").items():
+                # special rules may apply for real datasets as triggers can be run dependent
+                if self.dataset_inst.is_data:
+                    d_ch = self.config_inst.get_aux("dataset_channels")[self.dataset_inst]
+                    if d_ch == channel_inst:
+                        triggers = self.config_inst.get_aux("data_triggers").get(
+                            self.dataset_inst, triggers)
                 args.append((channel_inst.name + "Triggers", triggers))
+
+            # lepton channel for data
             if self.dataset_inst.is_data:
                 ch = self.config_inst.get_aux("dataset_channels")[self.dataset_inst].name
                 args.append(("leptonChannel", ch))
 
             # build the cmsRun command
-            cmd = "cmsRun " + law.util.rel_path(__file__, "csvTreeMaker_cfg.py")
+            cmd = "cmsRun " + law.util.rel_path(__file__, "../cmssw/treeMaker_ICHEP18_cfg.py")
             cmd += " " + " ".join(cmsRunArg(*tpl) for tpl in args)
 
             tmp_dir = law.LocalDirectoryTarget(is_tmp=True)

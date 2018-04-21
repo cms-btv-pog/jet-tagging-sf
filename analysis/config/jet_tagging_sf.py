@@ -1,86 +1,45 @@
 # -*- coding: utf-8 -*-
 
-
-__all__ = ["campaign", "analysis"]
+"""
+Definition of the analysis for extracting jet tagging scale factors
+as well as its configurations for different campaigns.
+"""
 
 
 import order as od
 import scinum as sn
 
+from analysis.config.processes import process_data_ee, process_data_emu, process_data_mumu, \
+    process_tt_dl, process_dy_lep, process_st_tW, process_WW_sl
 
-# constants
-BR_W_HAD = sn.Number(0.6741, {"br_w": 0.0027})
-BR_W_LEP = 1 - BR_W_HAD
-BR_WW_SL = 2 * BR_W_HAD.mul(BR_W_LEP, rho=-1, inplace=False)
-BR_WW_DL = BR_W_LEP**2
-BR_WW_FH = BR_W_HAD**2
 
-# campaign
-campaign = od.Campaign("2017_13Tev_25ns", 1, ecm=13000, bx=25)
+# define the analysis
+analysis = od.Analysis("jet_tagging_sf", 1)
 
-# processes
-process_data_ee = od.Process(
-    "data_ee", 1,
-    is_data=True,
-    label="data",
-)
 
-process_tt = od.Process(
-    "tt", 10,
-    label=r"$t\bar{t}$ + Jets",
-    xsecs={
-        13: sn.Number(831.76, {
-            "scale": (19.77, 29.20),
-            "pdf": 35.06,
-            "mtop": (23.18, 22.45),
-        }),
-    },
-)
-
-process_tt_dl = od.Process(
-    "tt_dl", 12,
-    label=r"$t\bar{t}$ + Jets, DL",
-    xsecs={
-        13: process_tt.get_xsec(13) * BR_WW_DL,
-    },
-)
-
-# datasets
-dataset_data_ee = od.Dataset(
-    "data_ee", 1,
-    campaign=campaign,
-    is_data=True,
-    n_files=759,
-    n_events=58088760,
-    keys=["/DoubleEG/Run2017B-17Nov2017-v1/MINIAOD"],
-)
-
-dataset_tt_dl = od.Dataset(
-    "tt_dl", 12,
-    campaign=campaign,
-    n_files=164 + 1230,
-    n_events=8705576 + 69705626,
-    keys=[
-        "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAOD-94X_mc2017_realistic_v10-v2/MINIAODSIM",
-        "/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAOD-94X_mc2017_realistic_v10-v1/MINIAODSIM",
-    ],
-)
-
-# link processes to datasets
-dataset_data_ee.add_process(process_data_ee)
-dataset_tt_dl.add_process(process_tt_dl)
-
-# add the analysis and a config for the 2017 campaign
-analysis = od.Analysis("jet-tagging-sf", 1)
-cfg = analysis.add_config(campaign=campaign)
+# setup the config for ICHEP 2018
+from analysis.config.campaign_ICHEP18 import campaign as campaign_ICHEP18
+config_ICHEP18 = cfg = analysis.add_config(campaign=campaign_ICHEP18)
 
 # link processes
 cfg.add_process(process_data_ee)
+cfg.add_process(process_data_emu)
+cfg.add_process(process_data_mumu)
 cfg.add_process(process_tt_dl)
+cfg.add_process(process_dy_lep)
+cfg.add_process(process_st_tW)
+cfg.add_process(process_WW_sl)
 
 # add datasets
-cfg.add_dataset(dataset_data_ee)
-cfg.add_dataset(dataset_tt_dl)
+dataset_names = [
+    "data_B_ee", "data_C_ee", "data_D_ee", "data_E_ee", "data_F_ee",
+    "data_B_emu", "data_C_emu", "data_D_emu", "data_E_emu", "data_F_emu",
+    "data_B_mumu", "data_C_mumu", "data_D_mumu", "data_E_mumu", "data_F_mumu",
+    "tt_dl", "dy_lep_10To50", "dy_lep_50ToInf", "st_tW_t", "st_tW_tbar", "WW_sl",
+]
+for dataset_name in dataset_names:
+    dataset = campaign_ICHEP18.get_dataset(dataset_name)
+    cfg.add_dataset(dataset)
 
 # define channels
 ch_ee = cfg.add_channel("ee", 1)
@@ -89,7 +48,9 @@ ch_mumu = cfg.add_channel("mumu", 3)
 
 # store channels per real dataset
 cfg.set_aux("dataset_channels", {
-    dataset_data_ee: ch_ee,
+    dataset: cfg.get_channel(dataset.name.split("_")[-1])
+    for dataset in cfg.datasets.values()
+    if dataset.is_data
 })
 
 # run ranges
@@ -114,15 +75,26 @@ cfg.set_aux("normtag_file", "/afs/cern.ch/user/l/lumipro/public/Normtags/normtag
 # triggers
 cfg.set_aux("triggers", {
     ch_ee: [
+        "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_v*",
         "HLT_Ele23_Ele12_CaloIdL_TrackIdL_IsoVL_DZ_v*",
     ],
     ch_emu: [
         "HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_v*",
-        "HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_v*",
+        "HLT_Mu23_TrkIsoVVL_Ele12_CaloIdL_TrackIdL_IsoVL_DZ_v*",
+        "HLT_Mu12_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_v*",
+        "HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_v*",
     ],
     ch_mumu: [
+        # note: the 2017B mumu dataset uses a different trigger
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*",
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*",
+    ],
+})
+
+# special triggers per real dataset
+cfg.set_aux("data_triggers", {
+    cfg.get_dataset("data_B_mumu"): [
         "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v*",
-        "HLT_Mu17_TrkIsoVVL_TkMu8_TrkIsoVVL_DZ_v*",
     ],
 })
 

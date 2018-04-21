@@ -10,6 +10,19 @@ action() {
     export JTSF_SOFTWARE="$JTSF_DATA/software"
     export JTSF_STORE="$JTSF_DATA/store"
     export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
+    [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="ICHEP18"
+
+
+    #
+    # CMSSW setup
+    #
+
+    if [ "$JTSF_CMSSW_SETUP" = "ICHEP18" ]; then
+        source "$JTSF_BASE/cmssw/setup_ICHEP18.sh"
+    else
+        2>&1 echo "unknown JTSF_CMSSW_SETUP '$JTSF_CMSSW_SETUP'"
+        return "1"
+    fi
 
 
     #
@@ -30,31 +43,7 @@ action() {
 
 
     #
-    # CMSSW setup
-    #
-
-    source "/cvmfs/cms.cern.ch/cmsset_default.sh"
-    export SCRAM_ARCH="slc6_amd64_gcc630"
-    export CMSSW_VERSION="CMSSW_9_4_6_patch1"
-    export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
-
-    if [ ! -d "$CMSSW_BASE" ]; then
-        mkdir -p "$( dirname "$CMSSW_BASE" )"
-        cd "$( dirname "$CMSSW_BASE" )"
-        scramv1 project CMSSW "$CMSSW_VERSION"
-        cd "$CMSSW_BASE/src"
-        eval `scramv1 runtime -sh`
-        scram b
-        cd "$JTSF_BASE"
-    else
-        cd "$CMSSW_BASE/src"
-        eval `scramv1 runtime -sh`
-        cd "$JTSF_BASE"
-    fi
-
-
-    #
-    # install minimal software stack once
+    # minimal software stack
     #
 
     # software paths

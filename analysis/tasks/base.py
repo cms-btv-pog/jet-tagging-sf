@@ -11,8 +11,8 @@ import shutil
 import law
 import luigi
 
+from analysis.config.jet_tagging_sf import analysis
 from analysis.util import calc_checksum
-from analysis.config_2017 import analysis as analysis_2017, campaign as campaign_2017
 
 
 law.contrib.load("cms", "git", "glite", "tasks", "wlcg")
@@ -24,13 +24,14 @@ class AnalysisTask(law.Task):
 
     outputs_siblings = True
 
+    # the campaign is hardcoded for the moment
+    campaign = "2017_Run2_pp_13TeV_ICHEP18"
+
     def __init__(self, *args, **kwargs):
         super(AnalysisTask, self).__init__(*args, **kwargs)
 
-        self.analysis_inst = analysis_2017
-        self.campaign_inst = campaign_2017
-
-        self.config_inst = self.analysis_inst.get_config(self.campaign_inst.id)
+        self.analysis_inst = analysis
+        self.config_inst = self.analysis_inst.get_config(self.campaign)
 
     def store_parts(self):
         parts = (self.__class__.__name__, self.config_inst.name)

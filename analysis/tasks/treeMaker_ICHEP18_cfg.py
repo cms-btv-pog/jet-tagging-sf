@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 """
-Config file to create CSV SF tuples.
+Config file to create jet tagging scale factor trees.
 """
 
 
@@ -134,7 +134,7 @@ try:
         raise Exception("a lepton channel is required when running on real data")
 
     # create the process and a sequence for additional modules
-    process = cms.Process("CSVSF")
+    process = cms.Process("JTSF")
     seq = cms.Sequence()
 
     # some default collections
@@ -154,8 +154,8 @@ try:
 
     # good run and lumi selection
     if options.isData and options.lumiFile:
-        lumi_list = LumiList(filename=options.lumiFile)
-        process.source.lumisToProcess = lumi_list.getVLuminosityBlockRange()
+        lumiList = LumiList(filename=options.lumiFile)
+        process.source.lumisToProcess = lumiList.getVLuminosityBlockRange()
 
     # standard seuquences with global tag
     if options.globalTag:
@@ -169,28 +169,28 @@ try:
     process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 
     # configure the tfile service
-    output_file = options.__getattr__("outputFile", noTags=True)
-    process.TFileService = cms.Service("TFileService", fileName=cms.string(output_file))
+    outputFile = options.__getattr__("outputFile", noTags=True)
+    process.TFileService = cms.Service("TFileService", fileName=cms.string(outputFile))
 
-    # load and configure the csv tree maker
-    process.load("jet_tagging_sf.jet_tagging_sf.csvTreeMaker_cfi")
-    process.csvTreeMaker.verbose = cms.untracked.bool(False)
-    process.csvTreeMaker.isData = cms.bool(options.isData)
-    process.csvTreeMaker.leptonChannel = cms.string(options.leptonChannel)
-    process.csvTreeMaker.eeTriggers = cms.vstring(options.eeTriggers)
-    process.csvTreeMaker.emuTriggers = cms.vstring(options.emuTriggers)
-    process.csvTreeMaker.mumuTriggers = cms.vstring(options.mumuTriggers)
-    process.csvTreeMaker.metFilters = cms.vstring(options.metFilters)
-    process.csvTreeMaker.jesFiles = cms.vstring(options.jesFiles)
-    process.csvTreeMaker.jesRanges = cms.vint32(options.jesRanges)
-    process.csvTreeMaker.jesUncFiles = cms.vstring(options.jesUncFiles)
-    process.csvTreeMaker.jesUncSrcFile = cms.string(options.jesUncSrcFile)
-    process.csvTreeMaker.jesUncSources = cms.vstring(options.jesUncSources)
-    process.csvTreeMaker.metFilterBitsCollection = metFilterBitsCollection
-    process.csvTreeMaker.electronCollection = electronCollection
-    process.csvTreeMaker.muonCollection = muonCollection
-    process.csvTreeMaker.metCollection = metCollection
-    process.csvTreeMaker.jetCollection = jetCollection
+    # load and configure the tree maker
+    process.load("jet_tagging_sf.jet_tagging_sf.treeMaker_cfi")
+    process.treeMaker.verbose = cms.untracked.bool(False)
+    process.treeMaker.isData = cms.bool(options.isData)
+    process.treeMaker.leptonChannel = cms.string(options.leptonChannel)
+    process.treeMaker.eeTriggers = cms.vstring(options.eeTriggers)
+    process.treeMaker.emuTriggers = cms.vstring(options.emuTriggers)
+    process.treeMaker.mumuTriggers = cms.vstring(options.mumuTriggers)
+    process.treeMaker.metFilters = cms.vstring(options.metFilters)
+    process.treeMaker.jesFiles = cms.vstring(options.jesFiles)
+    process.treeMaker.jesRanges = cms.vint32(options.jesRanges)
+    process.treeMaker.jesUncFiles = cms.vstring(options.jesUncFiles)
+    process.treeMaker.jesUncSrcFile = cms.string(options.jesUncSrcFile)
+    process.treeMaker.jesUncSources = cms.vstring(options.jesUncSources)
+    process.treeMaker.metFilterBitsCollection = metFilterBitsCollection
+    process.treeMaker.electronCollection = electronCollection
+    process.treeMaker.muonCollection = muonCollection
+    process.treeMaker.metCollection = metCollection
+    process.treeMaker.jetCollection = jetCollection
 
     # additional configuration
     process.maxEvents = cms.untracked.PSet(input=cms.untracked.int32(options.maxEvents))
@@ -201,7 +201,7 @@ try:
     )
 
     # tell the process what to run
-    process.p = cms.Path(seq + process.csvTreeMaker)
+    process.p = cms.Path(seq + process.treeMaker)
 
 except:
     import traceback

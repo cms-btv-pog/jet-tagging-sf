@@ -1,6 +1,6 @@
 /*
  * CMSSW module that does some event selection and outputs a tree that can be used to measure
- * b-tagging scale factors.
+ * jet tagging scale factors.
  *
  * Authors:
  *   - Marcel Rieger
@@ -274,11 +274,11 @@ void Variables::reset()
     }
 }
 
-class CSVTreeMaker : public edm::EDAnalyzer
+class TreeMaker : public edm::EDAnalyzer
 {
 public:
-    explicit CSVTreeMaker(const edm::ParameterSet&);
-    ~CSVTreeMaker();
+    explicit TreeMaker(const edm::ParameterSet&);
+    ~TreeMaker();
 
 private:
     // interface methods
@@ -359,7 +359,7 @@ private:
     std::vector<JetCorrectionUncertainty*> jetCorrectorUncSources_; // per source, one for all ranges
 };
 
-CSVTreeMaker::CSVTreeMaker(const edm::ParameterSet& iConfig)
+TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     : verbose_(iConfig.getUntrackedParameter<bool>("verbose"))
     , isData_(iConfig.getParameter<bool>("isData"))
     , leptonChannel_(iConfig.getParameter<string>("leptonChannel"))
@@ -393,14 +393,14 @@ CSVTreeMaker::CSVTreeMaker(const edm::ParameterSet& iConfig)
 {
     if (verbose_)
     {
-        std::cout << "running CSVTreeMaker in verbose mode" << std::endl;
+        std::cout << "running TreeMaker in verbose mode" << std::endl;
     }
 
     setupJESObjects();
     setupVariables();
 }
 
-CSVTreeMaker::~CSVTreeMaker()
+TreeMaker::~TreeMaker()
 {
     if (tree_)
     {
@@ -434,7 +434,7 @@ CSVTreeMaker::~CSVTreeMaker()
     }
 }
 
-void CSVTreeMaker::setupJESObjects()
+void TreeMaker::setupJESObjects()
 {
     if (jesFiles_.size() == 0)
     {
@@ -510,7 +510,7 @@ void CSVTreeMaker::setupJESObjects()
     }
 }
 
-void CSVTreeMaker::setupVariables()
+void TreeMaker::setupVariables()
 {
     // event variables
     variables_.addInt32("is_data");
@@ -558,15 +558,17 @@ void CSVTreeMaker::setupVariables()
             variables_.addDouble("jet" + std::to_string(j) + "_py" + postfix);
             variables_.addDouble("jet" + std::to_string(j) + "_pz" + postfix);
             variables_.addInt32("jet" + std::to_string(j) + "_tight" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_csv" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_csvv2" + postfix);
             variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_cl" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_cb" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_cc" + postfix);
+            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix);
         }
     }
 }
 
-void CSVTreeMaker::beginJob()
+void TreeMaker::beginJob()
 {
     edm::Service<TFileService> fs;
 
@@ -612,7 +614,7 @@ void CSVTreeMaker::beginJob()
     std::cout << "total variables: " << variables_.size() << std::endl;
 }
 
-void CSVTreeMaker::endJob()
+void TreeMaker::endJob()
 {
     tree_->Write();
     eventHist_->Write();
@@ -628,7 +630,7 @@ void CSVTreeMaker::endJob()
     std::cout << "sum selected weights: " << selectedWeightHist_->Integral() << std::endl;
 }
 
-void CSVTreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
+void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
 {
     variables_.reset();
 
@@ -817,20 +819,18 @@ void CSVTreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetu
             variables_.setDouble("jet" + std::to_string(j) + "_py" + postfix, jet->py());
             variables_.setDouble("jet" + std::to_string(j) + "_pz" + postfix, jet->pz());
             variables_.setInt32("jet" + std::to_string(j) + "_tight" + postfix, jet->userInt("tight"));
-            variables_.setDouble("jet" + std::to_string(j) + "_csv" + postfix,
+            variables_.setDouble("jet" + std::to_string(j) + "_csvv2" + postfix,
                 jet->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"));
             variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix,
-                jet->bDiscriminator("pfDeepCSVJetTags:probb") +
+                jet->bDiscriminator("pfDeepCSVJetTags:probb"));
+            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix,
                 jet->bDiscriminator("pfDeepCSVJetTags:probbb"));
-            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_cl" + postfix,
-                jet->bDiscriminator("pfDeepCSVJetTags:probc") /
-                (jet->bDiscriminator("pfDeepCSVJetTags:probc") +
-                 jet->bDiscriminator("pfDeepCSVJetTags:probudsg")));
-            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_cb" + postfix,
-                jet->bDiscriminator("pfDeepCSVJetTags:probc") /
-                (jet->bDiscriminator("pfDeepCSVJetTags:probc") +
-                 jet->bDiscriminator("pfDeepCSVJetTags:probb") +
-                 jet->bDiscriminator("pfDeepCSVJetTags:probbb")));
+            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix,
+                jet->bDiscriminator("pfDeepCSVJetTags:probc"));
+            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_cc" + postfix,
+                jet->bDiscriminator("pfDeepCSVJetTags:probcc"));
+            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix,
+                jet->bDiscriminator("pfDeepCSVJetTags:probudsg"));
         }
     }
 
@@ -838,7 +838,7 @@ void CSVTreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetu
     tree_->Fill();
 }
 
-bool CSVTreeMaker::metFilterSelection(const edm::Event& event)
+bool TreeMaker::metFilterSelection(const edm::Event& event)
 {
     // check MET filters
     // unlike triggers all of them have to be accepted
@@ -861,7 +861,7 @@ bool CSVTreeMaker::metFilterSelection(const edm::Event& event)
     return true;
 }
 
-bool CSVTreeMaker::triggerSelection(const edm::Event& event, LeptonChannel& channel)
+bool TreeMaker::triggerSelection(const edm::Event& event, LeptonChannel& channel)
 {
     edm::Handle<edm::TriggerResults> triggerBitsHandle;
     event.getByToken(triggerBitsToken_, triggerBitsHandle);
@@ -904,7 +904,7 @@ bool CSVTreeMaker::triggerSelection(const edm::Event& event, LeptonChannel& chan
     return false;
 }
 
-bool CSVTreeMaker::electronSelection(const edm::Event& event, reco::Vertex& vertex,
+bool TreeMaker::electronSelection(const edm::Event& event, reco::Vertex& vertex,
     std::vector<pat::Electron>& electrons, std::vector<pat::Electron>& tightElectrons)
 {
     edm::Handle<std::vector<pat::Electron> > electronsHandle;
@@ -927,7 +927,7 @@ bool CSVTreeMaker::electronSelection(const edm::Event& event, reco::Vertex& vert
     return true;
 }
 
-bool CSVTreeMaker::muonSelection(const edm::Event& event, reco::Vertex& vertex,
+bool TreeMaker::muonSelection(const edm::Event& event, reco::Vertex& vertex,
     std::vector<pat::Muon>& muons, std::vector<pat::Muon>& tightMuons)
 {
     edm::Handle<std::vector<pat::Muon> > muonsHandle;
@@ -950,7 +950,7 @@ bool CSVTreeMaker::muonSelection(const edm::Event& event, reco::Vertex& vertex,
     return true;
 }
 
-bool CSVTreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
+bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     std::vector<pat::Electron>& tightElectrons, std::vector<pat::Muon>& muons,
     std::vector<pat::Muon>& tightMuons, reco::RecoCandidate*& lep1,
     reco::RecoCandidate*& lep2, LeptonChannel& channel)
@@ -1020,7 +1020,7 @@ bool CSVTreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     return true;
 }
 
-bool CSVTreeMaker::jetMETSelection(const edm::Event& event, double rho,
+bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
     reco::RecoCandidate* lep1, reco::RecoCandidate* lep2, const pat::MET& metOrig,
     const string& variation, const string& direction, std::vector<pat::Jet>& jets,
     std::vector<pat::Jet>& tightJets, pat::MET& met)
@@ -1071,7 +1071,7 @@ bool CSVTreeMaker::jetMETSelection(const edm::Event& event, double rho,
     return true;
 }
 
-VertexType CSVTreeMaker::vertexID(reco::Vertex& vertex)
+VertexType TreeMaker::vertexID(reco::Vertex& vertex)
 {
     bool isValid = !vertex.isFake() &&
         vertex.ndof() >= 4.0 &&
@@ -1080,7 +1080,7 @@ VertexType CSVTreeMaker::vertexID(reco::Vertex& vertex)
     return isValid ? V_VALID : V_INVALID;
 }
 
-ElectronType CSVTreeMaker::electronID(pat::Electron& electron, reco::Vertex& vertex)
+ElectronType TreeMaker::electronID(pat::Electron& electron, reco::Vertex& vertex)
 {
     // loose pt cut
     if (electron.pt() <= 15.)
@@ -1128,7 +1128,7 @@ ElectronType CSVTreeMaker::electronID(pat::Electron& electron, reco::Vertex& ver
     return isTight ? E_TIGHT : E_LOOSE;
 }
 
-MuonType CSVTreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
+MuonType TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
 {
     // loose pt cut
     if (muon.pt() <= 15.)
@@ -1180,7 +1180,7 @@ MuonType CSVTreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
     return isTight ? M_TIGHT : M_LOOSE;
 }
 
-JetType CSVTreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2)
+JetType TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2)
 {
     // loose pt cut
     if (jet.pt() <= 20.)
@@ -1247,14 +1247,14 @@ JetType CSVTreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::Reco
     return isTight ? J_TIGHT : J_LOOSE;
 }
 
-double CSVTreeMaker::readGenWeight(const edm::Event& event)
+double TreeMaker::readGenWeight(const edm::Event& event)
 {
     edm::Handle<GenEventInfoProduct> genInfoHandle;
     event.getByToken(genInfoToken_, genInfoHandle);
     return genInfoHandle->weight();
 }
 
-float CSVTreeMaker::readPU(const edm::Event& event)
+float TreeMaker::readPU(const edm::Event& event)
 {
     edm::Handle<std::vector<PileupSummaryInfo> > pileupInfoHandle;
     event.getByToken(pileupInfoToken_, pileupInfoHandle);
@@ -1269,14 +1269,14 @@ float CSVTreeMaker::readPU(const edm::Event& event)
     throw std::runtime_error("no valid bunch crossing found to read PU infos");
 }
 
-double CSVTreeMaker::readRho(const edm::Event& event)
+double TreeMaker::readRho(const edm::Event& event)
 {
     edm::Handle<double> rhoHandle;
     event.getByToken(rhoToken_, rhoHandle);
     return *rhoHandle;
 }
 
-void CSVTreeMaker::correctJet(pat::Jet& jet, const string& variation, const string& direction,
+void TreeMaker::correctJet(pat::Jet& jet, const string& variation, const string& direction,
     int64_t run, double rho)
 {
     // before we start, lookup the proper objects, as all values depend on the run number
@@ -1356,4 +1356,4 @@ void CSVTreeMaker::correctJet(pat::Jet& jet, const string& variation, const stri
     jet.setP4(jet.p4() * recorrectFactor);
 }
 
-DEFINE_FWK_MODULE(CSVTreeMaker);
+DEFINE_FWK_MODULE(TreeMaker);

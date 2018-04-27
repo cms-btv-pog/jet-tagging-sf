@@ -19,8 +19,6 @@
 #include "FWCore/ParameterSet/interface/ParameterSet.h"
 #include "FWCore/ServiceRegistry/interface/Service.h"
 
-#include "CommonTools/UtilAlgos/interface/TFileService.h"
-
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
@@ -54,8 +52,9 @@
 
 #include "JetMETCorrections/Objects/interface/JetCorrector.h"
 
-#include "TH1F.h"
+#include "TFile.h"
 #include "TTree.h"
+#include "TH1F.h"
 
 typedef std::string string;
 typedef std::vector<string> vstring;
@@ -65,27 +64,27 @@ typedef math::XYZTLorentzVector LorentzVector;
 
 double EMPTY_VALUE = -1e5;
 
-enum VertexType
+enum VertexID
 {
     V_INVALID = 0,
     V_VALID
 };
 
-enum ElectronType
+enum ElectronID
 {
     E_INVALID = 0,
     E_LOOSE,
     E_TIGHT
 };
 
-enum MuonType
+enum MuonID
 {
     M_INVALID = 0,
     M_LOOSE,
     M_TIGHT
 };
 
-enum JetType
+enum JetID
 {
     J_INVALID = 0,
     J_LOOSE,
@@ -104,16 +103,52 @@ double deltaR(const LorentzVector& v1, const LorentzVector& v2)
 {
     double deltaEta = v1.eta() - v2.eta();
     double deltaPhi = fabs(v1.phi() - v2.phi());
-    if (deltaPhi > M_PI)
-    {
-        deltaPhi = 2. * M_PI - deltaPhi;
-    }
+    if (deltaPhi > M_PI) deltaPhi = 2. * M_PI - deltaPhi;
     return sqrt(deltaEta * deltaEta + deltaPhi * deltaPhi);
 }
 
 bool comparePt(const pat::Jet& jet1, const pat::Jet& jet2)
 {
-    return jet1.pt() < jet2.pt();
+    return jet1.pt() > jet2.pt();
+}
+
+float electronEffectiveArea(const pat::Electron& electron)
+{
+    // numbers from https://github.com/lsoffi/cmssw/blob/CMSSW_9_4_0_pre3_TnP/RecoEgamma/ElectronIdentification/data/Fall17/effAreaElectrons_cone03_pfNeuHadronsAndPhotons_92X.txt
+    double absSCEta = fabs(electron.superCluster()->eta());
+
+    if (absSCEta <= 1.0)
+    {
+        return 0.1566;
+    }
+    else if (absSCEta <= 1.479)
+    {
+        return 0.1626;
+    }
+    else if (absSCEta <= 2.0)
+    {
+        return 0.1073;
+    }
+    else if (absSCEta <= 2.2)
+    {
+        return 0.0854;
+    }
+    else if (absSCEta <= 2.3)
+    {
+        return 0.1051;
+    }
+    else if (absSCEta <= 2.4)
+    {
+        return 0.1204;
+    }
+    else if (absSCEta <= 5.0)
+    {
+        return 0.1524;
+    }
+    else
+    {
+        return 0.;
+    }
 }
 
 class Variables
@@ -294,7 +329,7 @@ private:
     // selection methods
     bool metFilterSelection(const edm::Event&);
     bool triggerSelection(const edm::Event&, LeptonChannel&);
-    bool electronSelection(const edm::Event&, reco::Vertex&, std::vector<pat::Electron>&,
+    bool electronSelection(const edm::Event&, reco::Vertex&, double, std::vector<pat::Electron>&,
         std::vector<pat::Electron>&);
     bool muonSelection(const edm::Event&, reco::Vertex&, std::vector<pat::Muon>&,
         std::vector<pat::Muon>&);
@@ -304,10 +339,10 @@ private:
     bool jetMETSelection(const edm::Event&, double, reco::RecoCandidate*, reco::RecoCandidate*,
         const pat::MET&, const string&, const string&, std::vector<pat::Jet>&,
         std::vector<pat::Jet>&, pat::MET&);
-    VertexType vertexID(reco::Vertex&);
-    ElectronType electronID(pat::Electron&, reco::Vertex&);
-    MuonType muonID(pat::Muon&, reco::Vertex&);
-    JetType jetID(pat::Jet&, reco::RecoCandidate*, reco::RecoCandidate*);
+    VertexID vertexID(reco::Vertex&);
+    ElectronID electronID(pat::Electron&, reco::Vertex&, double);
+    MuonID muonID(pat::Muon&, reco::Vertex&);
+    JetID jetID(pat::Jet&, reco::RecoCandidate*, reco::RecoCandidate*);
 
     // random helpers
     double readGenWeight(const edm::Event&);
@@ -317,6 +352,8 @@ private:
 
     // options
     bool verbose_;
+    string outputFile_;
+    string metaDataFile_;
     bool isData_;
     string leptonChannel_;
     vstring eeTriggers_;
@@ -341,10 +378,11 @@ private:
     edm::EDGetTokenT<std::vector<pat::MET> > metToken_;
     edm::EDGetTokenT<std::vector<pat::Jet> > jetToken_;
     edm::EDGetTokenT<double> rhoToken_;
-    edm::EDGetTokenT<edm::ValueMap<bool> > eleVIDToken_;
 
     // additional members
     Variables variables_;
+    TFile* tfile_;
+    TFile* tfileMeta_;
     TTree* tree_;
     TH1F* eventHist_;
     TH1F* selectedEventHist_;
@@ -361,6 +399,8 @@ private:
 
 TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     : verbose_(iConfig.getUntrackedParameter<bool>("verbose"))
+    , outputFile_(iConfig.getParameter<string>("outputFile"))
+    , metaDataFile_(iConfig.getParameter<string>("metaDataFile"))
     , isData_(iConfig.getParameter<bool>("isData"))
     , leptonChannel_(iConfig.getParameter<string>("leptonChannel"))
     , eeTriggers_(iConfig.getParameter<vstring>("eeTriggers"))
@@ -383,7 +423,8 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , metToken_(consumes<std::vector<pat::MET> >(iConfig.getParameter<edm::InputTag>("metCollection")))
     , jetToken_(consumes<std::vector<pat::Jet> >(iConfig.getParameter<edm::InputTag>("jetCollection")))
     , rhoToken_(consumes<double>(iConfig.getParameter<edm::InputTag>("rhoCollection")))
-    , eleVIDToken_(consumes<edm::ValueMap<bool> >(iConfig.getParameter<edm::InputTag>("eleVIDCollection")))
+    , tfile_(0)
+    , tfileMeta_(0)
     , tree_(0)
     , eventHist_(0)
     , selectedEventHist_(0)
@@ -402,36 +443,6 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
 
 TreeMaker::~TreeMaker()
 {
-    if (tree_)
-    {
-        delete tree_;
-        tree_ = 0;
-    }
-    if (eventHist_)
-    {
-        delete eventHist_;
-        eventHist_ = 0;
-    }
-    if (selectedEventHist_)
-    {
-        delete selectedEventHist_;
-        selectedEventHist_ = 0;
-    }
-    if (weightHist_)
-    {
-        delete weightHist_;
-        weightHist_ = 0;
-    }
-    if (selectedWeightHist_)
-    {
-        delete selectedWeightHist_;
-        selectedWeightHist_ = 0;
-    }
-    if (cutflowHist_)
-    {
-        delete cutflowHist_;
-        cutflowHist_ = 0;
-    }
 }
 
 void TreeMaker::setupJESObjects()
@@ -558,11 +569,11 @@ void TreeMaker::setupVariables()
             variables_.addDouble("jet" + std::to_string(j) + "_py" + postfix);
             variables_.addDouble("jet" + std::to_string(j) + "_pz" + postfix);
             variables_.addInt32("jet" + std::to_string(j) + "_tight" + postfix);
+            variables_.addInt32("jet" + std::to_string(j) + "_flavor" + postfix);
             variables_.addDouble("jet" + std::to_string(j) + "_csvv2" + postfix);
             variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix);
             variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix);
             variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_cc" + postfix);
             variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix);
         }
     }
@@ -570,18 +581,20 @@ void TreeMaker::setupVariables()
 
 void TreeMaker::beginJob()
 {
-    edm::Service<TFileService> fs;
+    // create the tree
+    tfile_ = new TFile(outputFile_.c_str(), "RECREATE");
+    tfile_->cd();
+    tree_ = new TTree("tree", "tree");
 
     // create the counting histograms, 2 bins each to separate information for events with positive
     // or negative weights
-    eventHist_ = fs->make<TH1F>("events", "", 2, -1., 1.);
-    selectedEventHist_ = fs->make<TH1F>("selected_events", "", 2, -1., 1.);
-    weightHist_ = fs->make<TH1F>("event_weights", "", 2, -1., 1.);
-    selectedWeightHist_ = fs->make<TH1F>("selected_event_weights", "", 2, -1., 1.);
-    cutflowHist_ = fs->make<TH1F>("cutflow", "", 6, 0., 6.);
-
-    // create the tree
-    tree_ = fs->make<TTree>("tree", "tree");
+    tfileMeta_ = new TFile(metaDataFile_.c_str(), "RECREATE");
+    tfileMeta_->cd();
+    eventHist_ = new TH1F("events", "", 2, -1., 1.);
+    selectedEventHist_ = new TH1F("selected_events", "", 2, -1., 1.);
+    weightHist_ = new TH1F("event_weights", "", 2, -1., 1.);
+    selectedWeightHist_ = new TH1F("selected_event_weights", "", 2, -1., 1.);
+    cutflowHist_ = new TH1F("cutflow", "", 6, 0., 6.);
 
     // add branches based on added variables
     for (size_t i = 0; i < variables_.size(); i++)
@@ -616,18 +629,23 @@ void TreeMaker::beginJob()
 
 void TreeMaker::endJob()
 {
-    tree_->Write();
-    eventHist_->Write();
-    selectedEventHist_->Write();
-    weightHist_->Write();
-    selectedWeightHist_->Write();
-    cutflowHist_->Write();
-
     // log some stats
     std::cout << "total events        : " << eventHist_->Integral() << std::endl;
     std::cout << "selected events     : " << selectedEventHist_->Integral() << std::endl;
     std::cout << "sum weights         : " << weightHist_->Integral() << std::endl;
     std::cout << "sum selected weights: " << selectedWeightHist_->Integral() << std::endl;
+
+    tfile_->cd();
+    tree_->Write();
+    tfile_->Close();
+
+    tfileMeta_->cd();
+    eventHist_->Write();
+    selectedEventHist_->Write();
+    weightHist_->Write();
+    selectedWeightHist_->Write();
+    cutflowHist_->Write();
+    tfileMeta_->Close();
 }
 
 void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
@@ -673,7 +691,7 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     // read and select electrons
     std::vector<pat::Electron> electrons;
     std::vector<pat::Electron> tightElectrons;
-    if (!electronSelection(event, vertex, electrons, tightElectrons))
+    if (!electronSelection(event, vertex, rho, electrons, tightElectrons))
     {
         return;
     }
@@ -818,7 +836,10 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
             variables_.setDouble("jet" + std::to_string(j) + "_px" + postfix, jet->px());
             variables_.setDouble("jet" + std::to_string(j) + "_py" + postfix, jet->py());
             variables_.setDouble("jet" + std::to_string(j) + "_pz" + postfix, jet->pz());
-            variables_.setInt32("jet" + std::to_string(j) + "_tight" + postfix, jet->userInt("tight"));
+            variables_.setInt32("jet" + std::to_string(j) + "_tight" + postfix,
+                jet->userInt("tight"));
+            variables_.setInt32("jet" + std::to_string(j) + "_flavor" + postfix,
+                jet->hadronFlavour());
             variables_.setDouble("jet" + std::to_string(j) + "_csvv2" + postfix,
                 jet->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"));
             variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix,
@@ -827,8 +848,6 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
                 jet->bDiscriminator("pfDeepCSVJetTags:probbb"));
             variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix,
                 jet->bDiscriminator("pfDeepCSVJetTags:probc"));
-            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_cc" + postfix,
-                jet->bDiscriminator("pfDeepCSVJetTags:probcc"));
             variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix,
                 jet->bDiscriminator("pfDeepCSVJetTags:probudsg"));
         }
@@ -904,7 +923,7 @@ bool TreeMaker::triggerSelection(const edm::Event& event, LeptonChannel& channel
     return false;
 }
 
-bool TreeMaker::electronSelection(const edm::Event& event, reco::Vertex& vertex,
+bool TreeMaker::electronSelection(const edm::Event& event, reco::Vertex& vertex, double rho,
     std::vector<pat::Electron>& electrons, std::vector<pat::Electron>& tightElectrons)
 {
     edm::Handle<std::vector<pat::Electron> > electronsHandle;
@@ -913,7 +932,7 @@ bool TreeMaker::electronSelection(const edm::Event& event, reco::Vertex& vertex,
     std::vector<pat::Electron> electronsCopy(*electronsHandle);
     for (pat::Electron& electron : electronsCopy)
     {
-        ElectronType type = electronID(electron, vertex);
+        ElectronID type = electronID(electron, vertex, rho);
         if (type >= E_LOOSE)
         {
             electrons.push_back(electron);
@@ -936,7 +955,7 @@ bool TreeMaker::muonSelection(const edm::Event& event, reco::Vertex& vertex,
     std::vector<pat::Muon> muonsCopy(*muonsHandle);
     for (pat::Muon& muon : muonsCopy)
     {
-        MuonType type = muonID(muon, vertex);
+        MuonID type = muonID(muon, vertex);
         if (type >= M_LOOSE)
         {
             muons.push_back(muon);
@@ -1041,7 +1060,7 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
         pat::Jet jet(jetOrig);
         correctJet(jet, variation, direction, event.run(), rho);
 
-        JetType type = jetID(jet, lep1, lep2);
+        JetID type = jetID(jet, lep1, lep2);
         if (type >= J_LOOSE)
         {
             jets.push_back(jet);
@@ -1071,7 +1090,7 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
     return true;
 }
 
-VertexType TreeMaker::vertexID(reco::Vertex& vertex)
+VertexID TreeMaker::vertexID(reco::Vertex& vertex)
 {
     bool isValid = !vertex.isFake() &&
         vertex.ndof() >= 4.0 &&
@@ -1080,7 +1099,7 @@ VertexType TreeMaker::vertexID(reco::Vertex& vertex)
     return isValid ? V_VALID : V_INVALID;
 }
 
-ElectronType TreeMaker::electronID(pat::Electron& electron, reco::Vertex& vertex)
+ElectronID TreeMaker::electronID(pat::Electron& electron, reco::Vertex& vertex, double rho)
 {
     // loose pt cut
     if (electron.pt() <= 15.)
@@ -1118,8 +1137,18 @@ ElectronType TreeMaker::electronID(pat::Electron& electron, reco::Vertex& vertex
         return E_INVALID;
     }
 
-    // TODO: VID + iso as user float
-    electron.addUserFloat("iso", -1., true);
+    // electron VID
+    if (electron.electronID("cutBasedElectronID-Fall17-94X-V1-tight") != 1.)
+    {
+        return E_INVALID;
+    }
+
+    // calculate the relative isolation for later use
+    const auto& isoVars = electron.pfIsolationVariables();
+    float effArea = electronEffectiveArea(electron);
+    float neutralSum = isoVars.sumNeutralHadronEt + isoVars.sumPhotonEt - rho * effArea;
+    float iso = (isoVars.sumChargedHadronPt + fmax(0.0, neutralSum)) / electron.pt();
+    electron.addUserFloat("iso", iso, true);
 
     // tight or loose decision only depends on pt
     bool isTight = electron.pt() > 25;
@@ -1128,7 +1157,7 @@ ElectronType TreeMaker::electronID(pat::Electron& electron, reco::Vertex& vertex
     return isTight ? E_TIGHT : E_LOOSE;
 }
 
-MuonType TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
+MuonID TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
 {
     // loose pt cut
     if (muon.pt() <= 15.)
@@ -1145,8 +1174,8 @@ MuonType TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
 
     // loose isolation cut
     const auto& isoVars = muon.pfIsolationR04();
-    float neutralSumPt = isoVars.sumNeutralHadronEt + isoVars.sumPhotonEt - 0.5 * isoVars.sumPUPt;
-    float iso = (isoVars.sumChargedHadronPt + fmax(0.0, neutralSumPt)) / muon.pt();
+    float neutralSum = isoVars.sumNeutralHadronEt + isoVars.sumPhotonEt - 0.5 * isoVars.sumPUPt;
+    float iso = (isoVars.sumChargedHadronPt + fmax(0.0, neutralSum)) / muon.pt();
     muon.addUserFloat("iso", iso, true);
     if (iso >= 0.25)
     {
@@ -1180,7 +1209,7 @@ MuonType TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
     return isTight ? M_TIGHT : M_LOOSE;
 }
 
-JetType TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2)
+JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2)
 {
     // loose pt cut
     if (jet.pt() <= 20.)

@@ -13,6 +13,8 @@ import FWCore.ParameterSet.Config as cms
 
 treeMaker = cms.EDAnalyzer("TreeMaker",
     verbose=cms.untracked.bool(False),
+    outputFile=cms.string("output.root"),
+    metaDataFile=cms.string("meta.root"),
     isData=cms.bool(False),
     leptonChannel=cms.string(""),
     eeTriggers=cms.vstring(),
@@ -35,5 +37,4 @@ treeMaker = cms.EDAnalyzer("TreeMaker",
     metCollection=cms.InputTag("slimmedMETs"),
     jetCollection=cms.InputTag("slimmedJets"),
     rhoCollection=cms.InputTag("fixedGridRhoFastjetAll"),
-    eleVIDCollection=cms.InputTag("egmGsfElectronIDs:cutBasedElectronID-Fall17-94X-V1-tight"),
 )

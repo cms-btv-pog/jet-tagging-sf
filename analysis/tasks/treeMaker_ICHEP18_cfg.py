@@ -19,9 +19,16 @@ try:
     # set defaults of common options
     options.setDefault("inputFiles", "root://xrootd-cms.infn.it//store/data/Run2017B/DoubleEG/MINIAOD/17Nov2017-v1/20000/065312BE-A3D5-E711-A0C7-0CC47A1E0DCC.root")
     options.setDefault("outputFile", "output.root")
-    options.setDefault("maxEvents", 100)
+    options.setDefault("maxEvents", -1)
 
     # add custom options
+    options.register(
+        "metaDataFile",
+        "",
+        VarParsing.multiplicity.singleton,
+        VarParsing.varType.string,
+        "path to the meta data file to write",
+    )
     options.register(
         "globalTag",
         "",
@@ -168,13 +175,34 @@ try:
     # particle data table
     process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
 
-    # configure the tfile service
-    outputFile = options.__getattr__("outputFile", noTags=True)
-    process.TFileService = cms.Service("TFileService", fileName=cms.string(outputFile))
+    # electron ID on uncorrected electrons
+    # no option to configure the electron collection available here
+    from RecoEgamma.EgammaTools.EgammaPostRecoTools import setupEgammaPostRecoSeq
+    setupEgammaPostRecoSeq(
+        process,
+        isMiniAOD=True,
+        applyEnergyCorrections=False,
+        applyVIDOnCorrectedEgamma=False,
+    )
+    seq += process.egammaScaleSmearSeq
+    seq += process.egammaPostRecoSeq
+    electronCollection = cms.InputTag("slimmedElectrons", "", process.name_())
+
+    # electron energy calibration
+    from RecoEgamma.EgammaTools.calibratedEgammas_cff import calibratedPatElectrons
+    process.correctedElectrons = calibratedPatElectrons.clone(
+        src=electronCollection,
+        produceCalibratedObjs=cms.bool(True),
+        semiDeterministic=cms.bool(True),
+    )
+    seq += process.correctedElectrons
+    electronCollection = cms.InputTag("correctedElectrons", "", process.name_())
 
     # load and configure the tree maker
     process.load("jet_tagging_sf.jet_tagging_sf.treeMaker_cfi")
     process.treeMaker.verbose = cms.untracked.bool(False)
+    process.treeMaker.outputFile = cms.string(options.__getattr__("outputFile", noTags=True))
+    process.treeMaker.metaDataFile = cms.string(options.metaDataFile)
     process.treeMaker.isData = cms.bool(options.isData)
     process.treeMaker.leptonChannel = cms.string(options.leptonChannel)
     process.treeMaker.eeTriggers = cms.vstring(options.eeTriggers)
@@ -195,6 +223,7 @@ try:
     # additional configuration
     process.maxEvents = cms.untracked.PSet(input=cms.untracked.int32(options.maxEvents))
 
+    # process options
     process.options = cms.untracked.PSet(
         allowUnscheduled=cms.untracked.bool(True),
         wantSummary=cms.untracked.bool(options.summary),

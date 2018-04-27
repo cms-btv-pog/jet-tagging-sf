@@ -10,12 +10,13 @@ import shutil
 
 import law
 import luigi
+import six
 
 from analysis.config.jet_tagging_sf import analysis
 from analysis.util import calc_checksum
 
 
-law.contrib.load("cms", "git", "glite", "tasks", "wlcg")
+law.contrib.load("cms", "git", "glite", "tasks", "root", "wlcg")
 
 
 class AnalysisTask(law.Task):
@@ -32,6 +33,10 @@ class AnalysisTask(law.Task):
 
         self.analysis_inst = analysis
         self.config_inst = self.analysis_inst.get_config(self.campaign)
+
+    def get_version(self, task_cls):
+        family = task_cls if isinstance(task_cls, six.string_types) else task_cls.get_task_family()
+        return self.config_inst.get_aux("versions")[family]
 
     def store_parts(self):
         parts = (self.__class__.__name__, self.config_inst.name)
@@ -56,7 +61,7 @@ class AnalysisTask(law.Task):
 
 class DatasetTask(AnalysisTask):
 
-    dataset = luigi.Parameter(default="data_ee")
+    dataset = luigi.Parameter(default="data_B_ee")
 
     def __init__(self, *args, **kwargs):
         super(DatasetTask, self).__init__(*args, **kwargs)
@@ -84,10 +89,18 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow):
             "ce05-lcg.cr.cnaf.infn.it:8443/cream-lsf-cms",
             "ce06-lcg.cr.cnaf.infn.it:8443/cream-lsf-cms",
         ],
+        "IRFU": "node74.datagrid.cea.fr:8443/cream-pbs-cms",
+        "IIHE": "cream02.iihe.ac.be:8443/cream-pbs-cms",
+        "CIEMAT": [
+            "creamce02.ciemat.es:8443/cream-pbs-medium",
+            "creamce03.ciemat.es:8443/cream-pbs-medium",
+        ],
     }
 
     grid_ce = law.CSVParameter(default=["RWTH"], significant=False, description="target computing "
         "element(s)")
+
+    exclude_params_branch = {"grid_ce"}
 
     @classmethod
     def modify_param_values(cls, params):
@@ -120,12 +133,17 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow):
         config = law.GLiteWorkflow.glite_job_config(self, config, job_num, branches)
         reqs = self.glite_workflow_requires()
         config.vo = "cms:/cms/dcms"
-        config.render_variables["cmssw_base"] = reqs["cmssw"].output().dir.url()
+        config.render_variables["jtsf_cmssw_setup"] = os.getenv("JTSF_CMSSW_SETUP")
+        config.render_variables["scram_arch"] = os.getenv("SCRAM_ARCH")
+        config.render_variables["cmssw_base_url"] = reqs["cmssw"].output().dir.url()
         config.render_variables["cmssw_version"] = os.getenv("CMSSW_VERSION")
-        config.render_variables["software_base"] = reqs["software"].output().dir.url()
+        config.render_variables["software_base_url"] = reqs["software"].output().dir.url()
         config.render_variables["repo_checksum"] = reqs["repo"].checksum
         config.render_variables["repo_base"] = reqs["repo"].output().dir.url()
         return config
+
+    def glite_output_postfix(self):
+        return "_{}To{}".format(self.start_branch, self.end_branch)
 
 
 class InstallCMSSWCode(AnalysisTask):
@@ -188,8 +206,8 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
         self.has_run = False
 
     def complete(self):
-        if self.force_upload:
-            return self.has_run
+        if self.force_upload and not self.has_run:
+            return False
         else:
             return super(UploadCMSSW, self).complete()
 

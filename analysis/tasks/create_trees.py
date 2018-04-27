@@ -4,14 +4,13 @@ import os
 import subprocess
 import collections
 import shutil
-import random
 
 import law
 import luigi
 import six
 
 from analysis.tasks.base import AnalysisTask, DatasetTask, GridWorkflow
-from analysis.util import wget
+from analysis.util import wget, determine_xrd_redirector
 
 
 class GetDatasetLFNs(DatasetTask, law.TransferLocalFile):
@@ -118,7 +117,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
     def localize(self, **kwargs):
         # load the archive and unpack it into a temporary directory
         tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
-        random.choice(self.output().targets).load(tmp_dir, **kwargs)
+        self.output().random_target().load(tmp_dir, **kwargs)
 
         def abspath(path):
             h = self.create_path_hash(path)
@@ -129,7 +128,12 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
 
 class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
+    max_events = luigi.IntParameter(default=law.NO_INT)
+
     def workflow_requires(self):
+        if self.cancel_jobs or self.cleanup_jobs:
+            return {}
+
         return self.requires_from_branch()
 
     def requires(self):
@@ -139,11 +143,17 @@ class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
         }
 
     def output(self):
-        return self.wlcg_target("tree_{}.root".format(self.branch))
+        return {
+            "tree": self.wlcg_target("tree_{}.root".format(self.branch)),
+            "meta": self.wlcg_target("meta_{}.root".format(self.branch)),
+        }
 
     def run(self):
-        lfn = random.choice(self.input()["lfns"].targets).load()[self.branch_data]
+        lfn = self.input()["lfns"].random_target().load()[self.branch_data]
         setup_files_dir, setup_files = self.requires()["files"].localize()
+
+        # determine the xrd redirector
+        redirector = determine_xrd_redirector(lfn)
 
         # manage jes files
         data_src = self.dataset_inst.data_source
@@ -162,10 +172,12 @@ class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
         def cmsRunArg(key, value):
             return " ".join("{}={}".format(key, v) for v in law.util.make_list(value))
 
-        with self.output().localize("w") as tmp_output:
+        output = self.output()
+        with output["tree"].localize("w") as tmp_tree, output["meta"].localize("w") as tmp_meta:
             args = [
-                ("inputFiles", "root://xrootd-cms.infn.it/{}".format(lfn)),
-                ("outputFile", tmp_output.path),
+                ("inputFiles", "root://{}/{}".format(redirector, lfn)),
+                ("outputFile", tmp_tree.path),
+                ("metaDataFile", tmp_meta.path),
                 ("isData", self.dataset_inst.is_data),
                 ("globalTag", self.config_inst.get_aux("global_tag")[data_src]),
                 ("lumiFile", setup_files["lumi_file"]),
@@ -175,7 +187,6 @@ class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 ("jesUncFiles", jes_unc_files),
                 ("jesUncSrcFile", jes_unc_src_file),
                 ("jesUncSources", self.config_inst.get_aux("jes_sources")),
-                ("maxEvents", 20000)
             ]
 
             # triggers
@@ -193,8 +204,13 @@ class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 ch = self.config_inst.get_aux("dataset_channels")[self.dataset_inst].name
                 args.append(("leptonChannel", ch))
 
+            # max events
+            if not law.is_no_param(self.max_events):
+                args.append(("maxEvents", self.max_events))
+
             # build the cmsRun command
-            cmd = "cmsRun " + law.util.rel_path(__file__, "../cmssw/treeMaker_ICHEP18_cfg.py")
+            cfg_file = "treeMaker_{}_cfg.py".format(os.getenv("JTSF_CMSSW_SETUP"))
+            cmd = "cmsRun " + law.util.rel_path(__file__, cfg_file)
             cmd += " " + " ".join(cmsRunArg(*tpl) for tpl in args)
 
             tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
@@ -206,5 +222,38 @@ class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
             if code != 0:
                 raise Exception("cmsRun failed")
 
-            if not tmp_output.exists():
+            if not tmp_tree.exists():
                 raise Exception("output file not exising after cmsRun")
+
+
+class MergeMetaData(DatasetTask):
+
+    def requires(self):
+        return CreateTrees.req(self, version=self.get_version(CreateTrees), _prefer_cli=["version"])
+
+    def output(self):
+        return self.wlcg_target("stats.json")
+
+    def run(self):
+        stats = {}
+
+        coll = self.input()["collection"]
+        for b, inputs in enumerate(coll.targets.values()):
+            inp = inputs["meta"]
+
+            if b % 25 == 0:
+                self.publish_message("loading output of branch {} / {}".format(b, len(coll)))
+
+            with inp.load(formatter="root", cache=False) as tfile:
+                for key in tfile.GetListOfKeys():
+                    key = key.GetName()
+                    obj = tfile.Get(key)
+                    if not obj.__class__.__name__.startswith("TH1"):
+                        continue
+
+                    n_bins = obj.GetNbinsX()
+                    values = stats.setdefault(key, n_bins * [0.])
+                    for i in range(n_bins):
+                        values[i] += obj.GetBinContent(i + 1)
+
+        self.output().dump(stats, formatter="json", indent=4)

@@ -1,11 +1,13 @@
 # -*- coding: utf-8 -*-
 
 
-__all__ = ["calc_checksum", "wget"]
+__all__ = ["calc_checksum", "wget", "call_thread", "determine_xrd_redirector"]
 
 
 import os
 import subprocess
+import threading
+import Queue
 
 import law
 
@@ -56,3 +58,50 @@ def wget(url, dst, verbose=False):
     code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash", cwd=cwd,
         stdout=std, stderr=std)[0]
     return code == 0
+
+
+def call_thread(func, args=(), kwargs=None, timeout=None):
+    """
+    Execute a function *func* in a thread and aborts the call when *timeout* is reached. *args* and
+    *kwargs* are forwarded to the function. The return value is a 3-tuple:
+    ``(func(), err, timeout satisified)``.
+    """
+    def wrapper(q, *args, **kwargs):
+        try:
+            ret = func(*args, **kwargs), None
+        except Exception as e:
+            ret = None, str(e)
+        q.put(ret)
+
+    q = Queue.Queue(1)
+
+    thread = threading.Thread(target=wrapper, args=(q,) + args, kwargs=kwargs)
+    thread.start()
+    thread.join(timeout)
+
+    if thread.is_alive():
+        return None, None, True
+    else:
+        return q.get() + (False,)
+
+
+def determine_xrd_redirector(lfn, timeout=30):
+    import ROOT
+    ROOT.gROOT.SetBatch()
+
+    redirectors = ["xrootd-cms.infn.it", "cms-xrd-global.cern.ch", "cmsxrootd.fnal.gov"]
+    pfn = lambda rdr: "root://%s/%s" % (rdr, lfn)
+
+    def check(pfn):
+        t = ROOT.TFile.Open(pfn)
+        t.Close()
+
+    for rdr in 2 * redirectors:
+        _, err, timedout = call_thread(check, (pfn(rdr),), timeout=timeout)
+        if not timedout and err is None:
+            redirector = rdr
+            break
+    else:
+        raise Exception("could not determine redirector to load %s" % lfn)
+
+    return redirector

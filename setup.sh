@@ -6,10 +6,11 @@ action() {
     #
 
     export JTSF_BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && /bin/pwd )"
+
     [ -z "$JTSF_DATA" ] && export JTSF_DATA="/user/public/jet-tagging-sf"
-    export JTSF_SOFTWARE="$JTSF_DATA/software"
-    export JTSF_STORE="$JTSF_DATA/store"
-    export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
+    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/software"
+    [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
+    [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
     [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="ICHEP18"
 
 
@@ -18,7 +19,7 @@ action() {
     #
 
     if [ "$JTSF_CMSSW_SETUP" = "ICHEP18" ]; then
-        source "$JTSF_BASE/cmssw/setup_ICHEP18.sh"
+        source "$JTSF_BASE/cmssw/setup_ICHEP18.sh" || return "$?"
     else
         2>&1 echo "unknown JTSF_CMSSW_SETUP '$JTSF_CMSSW_SETUP'"
         return "1"
@@ -30,7 +31,7 @@ action() {
     #
 
     _install_pip() {
-        pip install --ignore-installed --prefix "$JTSF_SOFTWARE" "$1"
+        pip install --ignore-installed --prefix "$JTSF_SOFTWARE" "$@"
     }
 
     _addpy() {
@@ -59,7 +60,8 @@ action() {
         _install_pip six
         _install_pip scinum
         _install_pip order
-        LAW_INSTALL_CUSTOM_SCRIPT=1 _install_pip git+https://github.com/riga/law.git
+        _install_pip --no-dependencies uproot
+        LAW_INSTALL_CUSTOM_SCRIPT="1" _install_pip git+https://github.com/riga/law.git
 
         # gfal2
         cd "$JTSF_SOFTWARE"
@@ -69,8 +71,8 @@ action() {
         cd "$JTSF_BASE"
     fi
 
-    # source gfal2
-    source "$JTSF_SOFTWARE/gfal2/setup.sh"
+    # setup gfal2 separately
+    source "$JTSF_SOFTWARE/gfal2/setup.sh" || return "$?"
 
 
     #
@@ -80,7 +82,7 @@ action() {
     # add _this_ repo
     _addpy "$JTSF_BASE"
 
-    # law setup
+    # law and luigi setup
     export LAW_HOME="$JTSF_BASE/.law"
     export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
     export LUIGI_CONFIG_PATH="$JTSF_BASE/luigi.cfg"

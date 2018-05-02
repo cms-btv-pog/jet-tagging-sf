@@ -41,7 +41,7 @@ process_tt = od.Process(
     },
 )
 
-process_tt_dl = od.Process(
+process_tt_dl = process_tt.add_process(
     "tt_dl", 12,
     label=r"$t\bar{t}$ + Jets, DL",
     xsecs={

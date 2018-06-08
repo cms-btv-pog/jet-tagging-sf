@@ -7,6 +7,7 @@ __all__ = ["AnalysisTask", "DatasetTask", "GridWorkflow"]
 import re
 import os
 import shutil
+import collections
 
 import law
 import luigi
@@ -16,7 +17,7 @@ from analysis.config.jet_tagging_sf import analysis
 from analysis.util import calc_checksum
 
 
-law.contrib.load("cms", "git", "glite", "tasks", "root", "wlcg")
+law.contrib.load("arc", "cms", "git", "glite", "tasks", "root", "wlcg")
 
 
 class AnalysisTask(law.Task):
@@ -79,7 +80,7 @@ class DatasetTask(AnalysisTask):
         return "_{}To{}".format(self.start_branch, self.end_branch)
 
 
-class GridWorkflow(AnalysisTask, law.GLiteWorkflow):
+class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
 
     glite_ce_map = {
         "RWTH": "grid-ce.physik.rwth-aachen.de:8443/cream-pbs-cms",
@@ -96,6 +97,9 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow):
             "creamce03.ciemat.es:8443/cream-pbs-medium",
         ],
     }
+    arc_ce_map = {
+        "DESY": "grid-arcce0.desy.de",
+    }
 
     grid_ce = law.CSVParameter(default=["RWTH"], significant=False, description="target computing "
         "element(s)")
@@ -107,17 +111,31 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow):
         params = AnalysisTask.modify_param_values(params)
         if "workflow" in params and law.is_no_param(params["workflow"]):
             grid_ce = params["grid_ce"]
+            workflow = "arc" if grid_ce[0] in cls.arc_ce_map else "glite"
             ces = []
             for ce in grid_ce:
-                ces.append(cls.glite_ce_map.get(ce, ce))
-            params["glite_ce"] = tuple(law.util.flatten(ces))
+                ces.append(getattr(cls, workflow + "_ce_map").get(ce, ce))
+            params[workflow + "_ce"] = tuple(law.util.flatten(ces))
+            params["workflow"] = workflow
         return params
 
-    def glite_workflow_requires(self):
-        reqs = law.GLiteWorkflow.glite_workflow_requires(self)
+    def _setup_workflow_requires(self, reqs):
         reqs["cmssw"] = UploadCMSSW.req(self, replicas=10, _prefer_cli=["replicas"])
         reqs["software"] = UploadSoftware.req(self, replicas=10, _prefer_cli=["replicas"])
         reqs["repo"] = UploadRepo.req(self, replicas=10, _prefer_cli=["replicas"])
+
+    def _setup_render_variables(self, config, reqs):
+        config.render_variables["jtsf_cmssw_setup"] = os.getenv("JTSF_CMSSW_SETUP")
+        config.render_variables["scram_arch"] = os.getenv("SCRAM_ARCH")
+        config.render_variables["cmssw_base_url"] = reqs["cmssw"].output().dir.url()
+        config.render_variables["cmssw_version"] = os.getenv("CMSSW_VERSION")
+        config.render_variables["software_base_url"] = reqs["software"].output().dir.url()
+        config.render_variables["repo_checksum"] = reqs["repo"].checksum
+        config.render_variables["repo_base"] = reqs["repo"].output().dir.url()
+
+    def glite_workflow_requires(self):
+        reqs = law.GLiteWorkflow.glite_workflow_requires(self)
+        self._setup_workflow_requires(reqs)
         return reqs
 
     def glite_output_directory(self):
@@ -131,19 +149,28 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow):
 
     def glite_job_config(self, config, job_num, branches):
         config = law.GLiteWorkflow.glite_job_config(self, config, job_num, branches)
-        reqs = self.glite_workflow_requires()
+        self._setup_render_variables(config, self.glite_workflow_requires())
         config.vo = "cms:/cms/dcms"
-        config.render_variables["jtsf_cmssw_setup"] = os.getenv("JTSF_CMSSW_SETUP")
-        config.render_variables["scram_arch"] = os.getenv("SCRAM_ARCH")
-        config.render_variables["cmssw_base_url"] = reqs["cmssw"].output().dir.url()
-        config.render_variables["cmssw_version"] = os.getenv("CMSSW_VERSION")
-        config.render_variables["software_base_url"] = reqs["software"].output().dir.url()
-        config.render_variables["repo_checksum"] = reqs["repo"].checksum
-        config.render_variables["repo_base"] = reqs["repo"].output().dir.url()
         return config
 
-    def glite_output_postfix(self):
-        return "_{}To{}".format(self.start_branch, self.end_branch)
+    def arc_workflow_requires(self):
+        reqs = law.ARCWorkflow.arc_workflow_requires(self)
+        self._setup_workflow_requires(reqs)
+        return reqs
+
+    def arc_output_directory(self):
+        return self.glite_output_directory()
+
+    def arc_output_uri(self):
+        return self.glite_output_uri()
+
+    def arc_bootstrap_file(self):
+        return self.glite_bootstrap_file()
+
+    def arc_job_config(self, config, job_num, branches):
+        config = law.ARCWorkflow.arc_job_config(self, config, job_num, branches)
+        self._setup_render_variables(config, self.arc_workflow_requires())
+        return config
 
 
 class InstallCMSSWCode(AnalysisTask):

@@ -84,7 +84,6 @@ action() {
 
     # law and luigi setup
     export LAW_HOME="$JTSF_BASE/.law"
-    export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
     export LUIGI_CONFIG_PATH="$JTSF_BASE/luigi.cfg"
     source "$( law completion )"
 }

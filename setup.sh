@@ -7,11 +7,17 @@ action() {
 
     export JTSF_BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && /bin/pwd )"
 
-    [ -z "$JTSF_DATA" ] && export JTSF_DATA="/user/public/jet-tagging-sf"
-    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/software"
-    [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
-    [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
-    [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="ICHEP18"
+    [ -z "$JTSF_DATA" ] && JTSF_DATA="/user/public/jet-tagging-sf"
+    [ -z "$JTSF_SOFTWARE" ] && JTSF_SOFTWARE="$JTSF_DATA/software"
+    [ -z "$JTSF_STORE" ] && JTSF_STORE="$JTSF_DATA/store"
+    [ -z "$JTSF_LOCAL_CACHE" ] && JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
+    [ -z "$JTSF_CMSSW_SETUP" ] && JTSF_CMSSW_SETUP="ICHEP18"
+
+    export JTSF_DATA
+    export JTSF_SOFTWARE
+    export JTSF_STORE
+    export JTSF_LOCAL_CACHE
+    export JTSF_CMSSW_SETUP
 
 
     #
@@ -84,7 +90,7 @@ action() {
 
     # law and luigi setup
     export LAW_HOME="$JTSF_BASE/.law"
-    export LUIGI_CONFIG_PATH="$JTSF_BASE/luigi.cfg"
+    export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
     source "$( law completion )"
 }
 action "$@"

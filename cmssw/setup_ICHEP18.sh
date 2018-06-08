@@ -6,7 +6,7 @@ action() {
     [ -z "$scram_cores" ] && scram_cores="1"
 
     export SCRAM_ARCH="slc6_amd64_gcc630"
-    export CMSSW_VERSION="CMSSW_9_4_6_patch1"
+    export CMSSW_VERSION="CMSSW_9_4_8"
     export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
@@ -23,20 +23,10 @@ action() {
         # custom topics
         #
 
-        # CutBased ID
-        git cms-merge-topic lsoffi:CMSSW_9_4_0_pre3_TnP
-
         # ECAL scale and resolution corrections
         # https://twiki.cern.ch/twiki/bin/viewauth/CMS/Egamma2017DataRecommendations
         git cms-merge-topic cms-egamma:EgammaPostRecoTools_940
-
-        # electron ID and tool files
-        git clone https://github.com/lsoffi/RecoEgamma-ElectronIdentification.git \
-            -b CMSSW_9_4_0_pre3_TnP \
-            "$CMSSW_BASE/external/$SCRAM_ARCH/data/RecoEgamma/ElectronIdentification/data"
-        git clone https://github.com/Sam-Harper/EgammaAnalysis-ElectronTools.git \
-            -b ReReco17NovScaleAndSmearing \
-            "$CMSSW_BASE/external/$SCRAM_ARCH/data/EgammaAnalysis/ElectronTools/data"
+        git cms-merge-topic cms-egamma:Egamma80XMiniAODV2_946
 
         scram b -j "$scram_cores"
 

@@ -169,11 +169,11 @@ try:
         process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
         process.GlobalTag.globaltag = options.globalTag
 
-    # geometry sequences
+    # standard and geometry sequences
     process.load("Configuration.StandardSequences.GeometryDB_cff")
-
-    # particle data table
-    process.load("SimGeneral.HepPDTESSource.pythiapdt_cfi")
+    process.load("Configuration.StandardSequences.Services_cff")
+    process.load("Configuration.StandardSequences.MagneticField_cff")
+    process.load("Geometry.CaloEventSetup.CaloTowerConstituents_cfi")
 
     # electron ID on uncorrected electrons
     # no option to configure the electron collection available here
@@ -183,6 +183,7 @@ try:
         isMiniAOD=True,
         applyEnergyCorrections=False,
         applyVIDOnCorrectedEgamma=False,
+        era="2017-Nov17ReReco",
     )
     seq += process.egammaScaleSmearSeq
     seq += process.egammaPostRecoSeq

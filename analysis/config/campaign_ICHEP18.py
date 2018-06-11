@@ -180,7 +180,7 @@ dataset_tt_dl = od.Dataset(
     ],
 )
 
-# TODO: update to 12Apr2018 version
+# TODO: update to 12Apr2018 version of amcatnloFXFX
 dataset_dy_lep_10To50 = od.Dataset(
     "dy_lep_10To50", 221,
     campaign=campaign,
@@ -189,15 +189,14 @@ dataset_dy_lep_10To50 = od.Dataset(
     keys=["/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAOD-94X_mc2017_realistic_v10-v2/MINIAODSIM"],
 )
 
-# TODO: update to 12Apr2018 version
 dataset_dy_lep_50ToInf = od.Dataset(
     "dy_lep_50ToInf", 222,
     campaign=campaign,
-    n_files=372 + 2752,
-    n_events=26923935 + 185998625,
+    n_files=305 + 2126,
+    n_events=27413121 + 182359906,
     keys=[
-        "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIFall17MiniAOD-94X_mc2017_realistic_v10-v1/MINIAODSIM",
-        "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIFall17MiniAOD-94X_mc2017_realistic_v10_ext1-v1/MINIAODSIM",
+        "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+        "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
     ],
 )
 
@@ -217,13 +216,12 @@ dataset_st_tW_tbar = od.Dataset(
     keys=["/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM"],
 )
 
-# TODO: update to 12Apr2018 version
 dataset_WW_sl = od.Dataset(
     "WW_sl", 42,
     campaign=campaign,
-    n_files=50,
-    n_events=1818828,
-    keys=["/WWTo2L2Nu_NNPDF31_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAOD-94X_mc2017_realistic_v10-v1/MINIAODSIM"],
+    n_files=25,
+    n_events=2000000,
+    keys=["/WWTo2L2Nu_NNPDF31_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM"],
 )
 
 # link processes to datasets
@@ -233,6 +231,7 @@ for d in datasets_data_emu:
     d.add_process(process_data_emu)
 for d in datasets_data_mumu:
     d.add_process(process_data_mumu)
+
 dataset_tt_dl.add_process(process_tt_dl)
 dataset_dy_lep_10To50.add_process(process_dy_lep_10To50)
 dataset_dy_lep_50ToInf.add_process(process_dy_lep_50ToInf)

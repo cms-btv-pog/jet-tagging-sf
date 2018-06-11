@@ -145,12 +145,11 @@ try:
     seq = cms.Sequence()
 
     # some default collections
-    defaultProcess = "RECO" if options.isData else "PAT"
-    electronCollection = cms.InputTag("slimmedElectrons", "", defaultProcess)
-    muonCollection = cms.InputTag("slimmedMuons", "", defaultProcess)
-    metCollection = cms.InputTag("slimmedMETs", "", defaultProcess)
-    jetCollection = cms.InputTag("slimmedJets", "", defaultProcess)
-    metFilterBitsCollection = cms.InputTag("TriggerResults", "", defaultProcess)
+    electronCollection = cms.InputTag("slimmedElectrons")
+    muonCollection = cms.InputTag("slimmedMuons")
+    metCollection = cms.InputTag("slimmedMETs")
+    jetCollection = cms.InputTag("slimmedJets")
+    metFilterBitsCollection = cms.InputTag("TriggerResults", "", "RECO")
 
     # message logger
     process.load("FWCore.MessageLogger.MessageLogger_cfi")

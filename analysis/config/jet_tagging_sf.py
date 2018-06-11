@@ -25,17 +25,20 @@ config_ICHEP18 = cfg = analysis.add_config(campaign=campaign_ICHEP18)
 cfg.add_process(process_data_ee)
 cfg.add_process(process_data_emu)
 cfg.add_process(process_data_mumu)
-cfg.add_process(process_tt_dl)
-cfg.add_process(process_dy_lep)
+# cfg.add_process(process_tt_dl)  # tmp
+# cfg.add_process(process_dy_lep)  # tmp
 cfg.add_process(process_st_tW)
-cfg.add_process(process_WW_sl)
+# cfg.add_process(process_WW_sl)  # tmp
 
 # add datasets
+# dataset_names = [  # tmp
+#     "data_B_ee", "data_C_ee", "data_D_ee", "data_E_ee", "data_F_ee",
+#     "data_B_emu", "data_C_emu", "data_D_emu", "data_E_emu", "data_F_emu",
+#     "data_B_mumu", "data_C_mumu", "data_D_mumu", "data_E_mumu", "data_F_mumu",
+#     "tt_dl", "dy_lep_10To50", "dy_lep_50ToInf", "st_tW_t", "st_tW_tbar", "WW_sl",
+# ]
 dataset_names = [
-    "data_B_ee", "data_C_ee", "data_D_ee", "data_E_ee", "data_F_ee",
-    "data_B_emu", "data_C_emu", "data_D_emu", "data_E_emu", "data_F_emu",
-    "data_B_mumu", "data_C_mumu", "data_D_mumu", "data_E_mumu", "data_F_mumu",
-    "tt_dl", "dy_lep_10To50", "dy_lep_50ToInf", "st_tW_t", "st_tW_tbar", "WW_sl",
+    "data_B_ee", "data_B_emu", "data_B_mumu", "st_tW_t",
 ]
 for dataset_name in dataset_names:
     dataset = campaign_ICHEP18.get_dataset(dataset_name)
@@ -144,6 +147,19 @@ cfg.set_aux("jes_sources", [
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF",
 ])
 
+# file merging information (stage -> dataset -> files after merging)
+# TODO: this should be measured, see #5
+cfg.set_aux("file_merging", {
+    "trees": {
+        "data_B_ee": 1,
+        "data_B_emu": 1,
+        "data_B_mumu": 1,
+        "st_tW_t": 1,
+    }
+})
+
+
+# versions
 cfg.set_aux("versions", {
     "CreateTrees": "prod1",
 })

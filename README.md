@@ -14,6 +14,9 @@ law db
 law run InstallCMSSWCode
 ```
 
+To let the tasks talk to a central luigi scheduler, you need to set `$JRST_SCHEDULER_HOST`.
+
+
 ### Create Trees
 
 ```shell

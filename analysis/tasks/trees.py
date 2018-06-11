@@ -226,6 +226,63 @@ class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 raise Exception("output file not exising after cmsRun")
 
 
+class MergeTrees(DatasetTask, law.CascadeMerge):
+
+    merge_factor = 8
+
+    def create_branch_map(self):
+        return law.CascadeMerge.create_branch_map(self)
+
+    def cascade_workflow_requires(self, **kwargs):
+        return CreateTrees.req(self, version=self.get_version(CreateTrees), _prefer_cli=["version"],
+            **kwargs)
+
+    def cascade_requires(self, start_leaf, end_leaf):
+        return [self.cascade_workflow_requires(branch=l) for l in range(start_leaf, end_leaf)]
+
+    def trace_cascade_inputs(self, inputs):
+        return [inp["tree"] for inp in inputs]
+
+    def cascade_output(self):
+        n_trees = self.config_inst.get_aux("file_merging")["trees"].get(self.dataset, 1)
+        return law.SiblingFileCollection([
+            self.wlcg_target("tree_{}.root".format(i)) for i in range(n_trees)
+        ])
+
+    def merge(self, inputs, output):
+        tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
+        tmp_dir.touch()
+
+        # fetch inputs
+        with self.publish_step("fetching inputs ..."):
+            def fetch(inp):
+                inp.copy_to_local(tmp_dir, cache=False)
+                return inp.basename
+
+            def callback(i):
+                self.publish_message("fetch file {} / {}".format(i + 1, len(inputs)))
+
+            bases = law.util.map_verbose(fetch, inputs, every=5, callback=callback)
+
+        # merge using hadd
+        with self.publish_step("merging ..."):
+            with output.localize("w", cache=False) as tmp_out:
+                cmd = "hadd -O -n 0 -d {} {} {}".format(tmp_dir.path, tmp_out.path, " ".join(bases))
+                code, _, _ = law.util.interruptable_popen(cmd, shell="True", executable="/bin/bash",
+                    cwd=tmp_dir.path)
+                if code != 0:
+                    raise Exception("hadd failed")
+
+                self.publish_message("merged file size: {:.2f} {}".format(
+                    *law.util.human_bytes(os.stat(tmp_out.path).st_size)))
+
+    def glite_output_postfix(self):
+        return "_{}_{}".format(self.cascade_tree, self.cascade_depth)
+
+    def arc_output_postfix(self):
+        return self.glite_output_postfix()
+
+
 class MergeMetaData(DatasetTask):
 
     def requires(self):
@@ -237,14 +294,8 @@ class MergeMetaData(DatasetTask):
     def run(self):
         stats = {}
 
-        coll = self.input()["collection"]
-        for b, inputs in enumerate(coll.targets.values()):
-            inp = inputs["meta"]
-
-            if b % 25 == 0:
-                self.publish_message("loading output of branch {} / {}".format(b, len(coll)))
-
-            with inp.load(formatter="root", cache=False) as tfile:
+        def load(inp):
+            with inp["meta"].load(formatter="root", cache=False) as tfile:
                 for key in tfile.GetListOfKeys():
                     key = key.GetName()
                     obj = tfile.Get(key)
@@ -256,6 +307,14 @@ class MergeMetaData(DatasetTask):
                     for i in range(n_bins):
                         values[i] += obj.GetBinContent(i + 1)
 
+        def callback(i):
+            self.publish_message("loading meta data {} / {}".format(i + 1, len(coll)))
+            self.publish_progress(100. * (i + 1) / len(coll))
+
+        coll = self.input()["collection"]
+        law.util.map_verbose(load, coll.targets.values(), every=25, callback=callback)
+
+        # manual formatting of some entries
         for key in ["events", "event_weights", "selected_events", "selected_event_weights"]:
             stats[key] = {
                 "sum": stats[key][0] + stats[key][1],

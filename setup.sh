@@ -37,7 +37,7 @@ action() {
     #
 
     _install_pip() {
-        pip install --ignore-installed --prefix "$JTSF_SOFTWARE" "$@"
+        pip install --ignore-installed --no-cache-dir --prefix "$JTSF_SOFTWARE" "$@"
     }
 
     _addpy() {
@@ -62,11 +62,11 @@ action() {
         echo "installing development software in $JTSF_SOFTWARE"
         mkdir -p "$JTSF_SOFTWARE"
 
-        _install_pip luigi
         _install_pip six
         _install_pip scinum
         _install_pip order
         _install_pip --no-dependencies uproot
+        _install_pip luigi
         LAW_INSTALL_CUSTOM_SCRIPT="1" _install_pip git+https://github.com/riga/law.git
 
         # gfal2
@@ -92,5 +92,9 @@ action() {
     export LAW_HOME="$JTSF_BASE/.law"
     export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
     source "$( law completion )"
+
+    if [ -z "$JTSF_SCHEDULER_HOST" ]; then
+        2>&1 echo "NOTE: \$JTSF_SCHEDULER_HOST is not set, use '--local-scheduler' in your tasks!"
+    fi
 }
 action "$@"

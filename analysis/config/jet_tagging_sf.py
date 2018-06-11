@@ -115,7 +115,7 @@ cfg.set_aux("metFilters", {
 })
 
 # JER
-cfg.set_aux("jer_version", "Spring16_25nsV10")
+cfg.set_aux("jer_version", "Summer16_25nsV1")
 
 # JES
 cfg.set_aux("jes_version", {

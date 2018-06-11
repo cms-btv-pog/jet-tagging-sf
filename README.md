@@ -24,7 +24,7 @@ law run CreateTrees --dataset data_B_ee --version prod1 --grid-ce CNAF --poll-in
 ### Available Grid CEs
 
 - `RWTH`
-- `RWTH\_short`
+- `RWTH_short`
 - `DESY`
 - `CNAF`
 - `IRFU`

@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# flake8: noqa
 
 """
 Defintion of the campaign and datasets for 2017 data for ICHEP 2018.

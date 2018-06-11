@@ -256,4 +256,11 @@ class MergeMetaData(DatasetTask):
                     for i in range(n_bins):
                         values[i] += obj.GetBinContent(i + 1)
 
+        for key in ["events", "event_weights", "selected_events", "selected_event_weights"]:
+            stats[key] = {
+                "sum": stats[key][0] + stats[key][1],
+                "positive": stats[key][1],
+                "negative": stats[key][0],
+            }
+
         self.output().dump(stats, formatter="json", indent=4)

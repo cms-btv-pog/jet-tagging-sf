@@ -126,7 +126,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         return tmp_dir, law.util.map_struct(abspath, self.source_files)
 
 
-class CreateTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
+class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     max_events = luigi.IntParameter(default=law.NO_INT)
 
@@ -234,7 +234,7 @@ class MergeTrees(DatasetTask, law.CascadeMerge):
         return law.CascadeMerge.create_branch_map(self)
 
     def cascade_workflow_requires(self, **kwargs):
-        return CreateTrees.req(self, version=self.get_version(CreateTrees), _prefer_cli=["version"],
+        return WriteTrees.req(self, version=self.get_version(WriteTrees), _prefer_cli=["version"],
             **kwargs)
 
     def cascade_requires(self, start_leaf, end_leaf):
@@ -286,7 +286,7 @@ class MergeTrees(DatasetTask, law.CascadeMerge):
 class MergeMetaData(DatasetTask):
 
     def requires(self):
-        return CreateTrees.req(self, version=self.get_version(CreateTrees), _prefer_cli=["version"])
+        return WriteTrees.req(self, version=self.get_version(WriteTrees), _prefer_cli=["version"])
 
     def output(self):
         return self.wlcg_target("stats.json")

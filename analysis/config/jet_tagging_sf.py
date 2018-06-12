@@ -25,7 +25,7 @@ config_ICHEP18 = cfg = analysis.add_config(campaign=campaign_ICHEP18)
 cfg.add_process(process_data_ee)
 cfg.add_process(process_data_emu)
 cfg.add_process(process_data_mumu)
-# cfg.add_process(process_tt_dl)  # tmp
+cfg.add_process(process_tt_dl)
 # cfg.add_process(process_dy_lep)  # tmp
 cfg.add_process(process_st_tW)
 # cfg.add_process(process_WW_sl)  # tmp
@@ -38,7 +38,7 @@ cfg.add_process(process_st_tW)
 #     "tt_dl", "dy_lep_10To50", "dy_lep_50ToInf", "st_tW_t", "st_tW_tbar", "WW_sl",
 # ]
 dataset_names = [
-    "data_B_ee", "data_B_emu", "data_B_mumu", "st_tW_t",
+    "data_B_ee", "data_B_emu", "data_B_mumu", "tt_dl", "st_tW_t",
 ]
 for dataset_name in dataset_names:
     dataset = campaign_ICHEP18.get_dataset(dataset_name)
@@ -161,5 +161,5 @@ cfg.set_aux("file_merging", {
 
 # versions
 cfg.set_aux("versions", {
-    "CreateTrees": "prod1",
+    "WriteTrees": "prod1",
 })

@@ -148,16 +148,15 @@ cfg.set_aux("jes_sources", [
 ])
 
 # file merging information (stage -> dataset -> files after merging)
-# TODO: this should be measured, see #5
 cfg.set_aux("file_merging", {
     "trees": {
         "data_B_ee": 1,
         "data_B_emu": 1,
         "data_B_mumu": 1,
+        "tt_dl": 74,
         "st_tW_t": 1,
     }
 })
-
 
 # versions
 cfg.set_aux("versions", {

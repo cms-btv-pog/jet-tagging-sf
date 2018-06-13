@@ -1,9 +1,12 @@
 # -*- coding: utf-8 -*-
 
 import os
+import re
+import json
+import math
+import shutil
 import subprocess
 import collections
-import shutil
 
 import law
 import luigi
@@ -323,3 +326,61 @@ class MergeMetaData(DatasetTask):
             }
 
         self.output().dump(stats, formatter="json", indent=4)
+
+
+class MeasureTreeSizes(AnalysisTask):
+
+    merged_size = luigi.FloatParameter(default=2.0, description="target size of merged tree files "
+        "in GB")
+
+    def __init__(self, *args, **kwargs):
+        super(MeasureTreeSizes, self).__init__(*args, **kwargs)
+
+        self.has_run = False
+
+    def complete(self):
+        return self.has_run
+
+    def run(self):
+        merged_files = collections.OrderedDict()
+
+        for dataset in self.config_inst.datasets.names():
+            print(" dataset {} ".format(dataset).center(80, "-"))
+
+            # determine the full url to the remote directory, split it into uberftp door and path
+            task = WriteTrees.req(self, dataset=dataset)
+            url = task.output()["collection"].dir.url()
+            m = re.match(r"^.+//(.*)\:\d+/.+(/pnfs/.+)$", url)
+            if not m:
+                print("cannot parse url for dataset {}: {}".format(dataset, url))
+                continue
+            door, path = m.groups()
+
+            # run uberftp to fetch the sizes per file in bytes
+            cmd = "uberftp -glob on {} 'ls {}/tree_*.root'".format(door, path)
+            cmd += " | grep root | awk -F ' ' '{print $4}'"
+            code, out, _ = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash",
+                stdout=subprocess.PIPE)
+            if code != 0:
+                print("uberftp command failed")
+                continue
+            sizes = [int(s) for s in out.strip().split()]
+
+            # calculate the number of files after merging
+            n = len(sizes)
+            sum_sizes = sum(sizes)
+            mean_size = sum_sizes / float(n)
+            target_size = self.merged_size * 1024.**3
+            merge_factor = n if mean_size == 0 else min(n, int(round(target_size / mean_size)))
+            merged_files[dataset] = int(math.ceil(n / float(merge_factor)))
+
+            print("sum         : {:.2f} {}".format(*law.util.human_bytes(sum_sizes)))
+            print("mean        : {:.2f} {}".format(*law.util.human_bytes(mean_size)))
+            print("merge factor: {}".format(merge_factor))
+            print("merged files: {}".format(merged_files[dataset]))
+
+        # some output
+        print(" number of files after merging ".center(80, "="))
+        print(json.dumps(merged_files, indent=4, separators=(",", ": ")))
+
+        self.has_run = True

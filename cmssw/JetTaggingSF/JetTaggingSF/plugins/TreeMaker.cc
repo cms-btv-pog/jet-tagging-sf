@@ -412,12 +412,17 @@ void TreeMaker::setupVariables()
             varMap_.addDouble("jet" + std::to_string(j) + "_py" + postfix);
             varMap_.addDouble("jet" + std::to_string(j) + "_pz" + postfix);
             varMap_.addInt32("jet" + std::to_string(j) + "_tight" + postfix);
-            varMap_.addInt32("jet" + std::to_string(j) + "_flavor" + postfix);
-            varMap_.addDouble("jet" + std::to_string(j) + "_csvv2" + postfix);
-            varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix);
-            varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix);
-            varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix);
-            varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix);
+
+            // jet variables that are not subject to systematic variations should only be saved once
+            if (i == 0)
+            {
+                varMap_.addInt32("jet" + std::to_string(j) + "_flavor" + postfix);
+                varMap_.addDouble("jet" + std::to_string(j) + "_csvv2" + postfix);
+                varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix);
+                varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix);
+                varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix);
+                varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix);
+            }
         }
     }
 }

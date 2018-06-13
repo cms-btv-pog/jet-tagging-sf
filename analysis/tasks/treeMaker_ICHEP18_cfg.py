@@ -199,7 +199,7 @@ try:
     electronCollection = cms.InputTag("correctedElectrons", "", process.name_())
 
     # load and configure the tree maker
-    process.load("jet_tagging_sf.jet_tagging_sf.treeMaker_cfi")
+    process.load("JetTaggingSF.JetTaggingSF.treeMaker_cfi")
     process.treeMaker.verbose = cms.untracked.bool(False)
     process.treeMaker.outputFile = cms.string(options.__getattr__("outputFile", noTags=True))
     process.treeMaker.metaDataFile = cms.string(options.metaDataFile)

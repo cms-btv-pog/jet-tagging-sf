@@ -4,7 +4,6 @@
  *
  * Authors:
  *   - Marcel Rieger
- *   - David Schmidt
  */
 
 #include <memory>
@@ -55,6 +54,8 @@
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1F.h"
+
+#include "JetTaggingSF/JetTaggingSF/interface/VarMap.h"
 
 typedef std::string string;
 typedef std::vector<string> vstring;
@@ -151,164 +152,6 @@ float electronEffectiveArea(const pat::Electron& electron)
     }
 }
 
-class Variables
-{
-public:
-    Variables()
-    {
-    }
-
-    ~Variables()
-    {
-    }
-
-    void addFloat(const string);
-    void addDouble(const string);
-    void addInt32(const string);
-    void addInt64(const string);
-    void reset();
-
-    inline size_t size() const
-    {
-        return names_.size();
-    }
-
-    inline string getName(size_t i) const
-    {
-        return names_[i];
-    }
-
-    inline bool contains(const string name) const
-    {
-        return std::find(names_.begin(), names_.end(), name) != names_.end();
-    }
-
-    inline string getFlag(const string name)
-    {
-        return typeFlags_[name];
-    }
-
-    inline void setFloat(const string name, float value)
-    {
-        floatValues_[name] = value;
-    }
-
-    inline void setDouble(const string name, double value)
-    {
-        doubleValues_[name] = value;
-    }
-
-    inline void setInt32(const string name, int32_t value)
-    {
-        int32Values_[name] = value;
-    }
-
-    inline void setInt64(const string name, int64_t value)
-    {
-        int64Values_[name] = value;
-    }
-
-    inline float& getFloat(const string name)
-    {
-        return floatValues_[name];
-    }
-
-    inline double& getDouble(const string name)
-    {
-        return doubleValues_[name];
-    }
-
-    inline int32_t& getInt32(const string name)
-    {
-        return int32Values_[name];
-    }
-
-    inline int64_t& getInt64(const string name)
-    {
-        return int64Values_[name];
-    }
-
-private:
-    float emptyFloat = -1e5;
-    double emptyDouble = -1e5;
-    int32_t emptyInt32 = int32_t(-1e5);
-    int64_t emptyInt64 = int64_t(-1e5);
-
-    vstring names_;
-    std::map<string, string> typeFlags_;
-    std::map<string, float> floatValues_;
-    std::map<string, double> doubleValues_;
-    std::map<string, int32_t> int32Values_;
-    std::map<string, int64_t> int64Values_;
-
-    inline void complainOnDuplicate(const string name) const
-    {
-        if (contains(name))
-        {
-            throw std::runtime_error("duplicate variable " + name);
-        }
-    }
-};
-
-void Variables::addFloat(const string name)
-{
-    complainOnDuplicate(name);
-    names_.push_back(name);
-    floatValues_[name] = emptyFloat;
-    typeFlags_[name] = "F";
-}
-
-void Variables::addDouble(const string name)
-{
-    complainOnDuplicate(name);
-    names_.push_back(name);
-    doubleValues_[name] = emptyDouble;
-    typeFlags_[name] = "D";
-}
-
-void Variables::addInt32(const string name)
-{
-    complainOnDuplicate(name);
-    names_.push_back(name);
-    int32Values_[name] = emptyInt32;
-    typeFlags_[name] = "I";
-}
-
-void Variables::addInt64(const string name)
-{
-    complainOnDuplicate(name);
-    names_.push_back(name);
-    int64Values_[name] = emptyInt64;
-    typeFlags_[name] = "L";
-}
-
-void Variables::reset()
-{
-    std::map<string, float>::iterator itFloat;
-    for (itFloat = floatValues_.begin(); itFloat != floatValues_.end(); itFloat++)
-    {
-        itFloat->second = emptyFloat;
-    }
-
-    std::map<string, double>::iterator itDouble;
-    for (itDouble = doubleValues_.begin(); itDouble != doubleValues_.end(); itDouble++)
-    {
-        itDouble->second = emptyDouble;
-    }
-
-    std::map<string, int32_t>::iterator itInt32;
-    for (itInt32 = int32Values_.begin(); itInt32 != int32Values_.end(); itInt32++)
-    {
-        itInt32->second = emptyInt32;
-    }
-
-    std::map<string, int64_t>::iterator itInt64;
-    for (itInt64 = int64Values_.begin(); itInt64 != int64Values_.end(); itInt64++)
-    {
-        itInt64->second = emptyInt64;
-    }
-}
-
 class TreeMaker : public edm::EDAnalyzer
 {
 public:
@@ -380,7 +223,7 @@ private:
     edm::EDGetTokenT<double> rhoToken_;
 
     // additional members
-    Variables variables_;
+    VarMap varMap_;
     TFile* tfile_;
     TFile* tfileMeta_;
     TTree* tree_;
@@ -524,27 +367,27 @@ void TreeMaker::setupJESObjects()
 void TreeMaker::setupVariables()
 {
     // event variables
-    variables_.addInt32("is_data");
-    variables_.addInt64("event");
-    variables_.addInt32("run");
-    variables_.addInt32("lumi");
-    variables_.addDouble("gen_weight");
-    variables_.addFloat("pu");
-    variables_.addDouble("rho");
-    variables_.addInt32("channel");
+    varMap_.addInt32("is_data");
+    varMap_.addInt64("event");
+    varMap_.addInt32("run");
+    varMap_.addInt32("lumi");
+    varMap_.addDouble("gen_weight");
+    varMap_.addFloat("pu");
+    varMap_.addDouble("rho");
+    varMap_.addInt32("channel");
 
     // leptons
     for (size_t i = 1; i <= 2; i++)
     {
-        variables_.addDouble("lep" + std::to_string(i) + "_E");
-        variables_.addDouble("lep" + std::to_string(i) + "_px");
-        variables_.addDouble("lep" + std::to_string(i) + "_py");
-        variables_.addDouble("lep" + std::to_string(i) + "_pz");
-        variables_.addInt32("lep" + std::to_string(i) + "_charge");
-        variables_.addInt32("lep" + std::to_string(i) + "_pdg");
-        variables_.addFloat("lep" + std::to_string(i) + "_iso");
-        variables_.addInt32("lep" + std::to_string(i) + "_tight");
-        variables_.addDouble("lep" + std::to_string(i) + "_eta_sc");
+        varMap_.addDouble("lep" + std::to_string(i) + "_E");
+        varMap_.addDouble("lep" + std::to_string(i) + "_px");
+        varMap_.addDouble("lep" + std::to_string(i) + "_py");
+        varMap_.addDouble("lep" + std::to_string(i) + "_pz");
+        varMap_.addInt32("lep" + std::to_string(i) + "_charge");
+        varMap_.addInt32("lep" + std::to_string(i) + "_pdg");
+        varMap_.addFloat("lep" + std::to_string(i) + "_iso");
+        varMap_.addInt32("lep" + std::to_string(i) + "_tight");
+        varMap_.addDouble("lep" + std::to_string(i) + "_eta_sc");
     }
 
     // jet and MET and other JES dependent variables
@@ -556,25 +399,25 @@ void TreeMaker::setupVariables()
             postfix += "_jes_" + jesVariations_[i].first + "_" + jesVariations_[i].second;
         }
 
-        variables_.addInt32("jetmet_pass" + postfix);
-        variables_.addInt32("n_jets" + postfix);
-        variables_.addDouble("met_px" + postfix);
-        variables_.addDouble("met_py" + postfix);
+        varMap_.addInt32("jetmet_pass" + postfix);
+        varMap_.addInt32("n_jets" + postfix);
+        varMap_.addDouble("met_px" + postfix);
+        varMap_.addDouble("met_py" + postfix);
 
         // jets
         for (size_t j = 1; j <= 4; j++)
         {
-            variables_.addDouble("jet" + std::to_string(j) + "_E" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_px" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_py" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_pz" + postfix);
-            variables_.addInt32("jet" + std::to_string(j) + "_tight" + postfix);
-            variables_.addInt32("jet" + std::to_string(j) + "_flavor" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_csvv2" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix);
-            variables_.addDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_E" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_px" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_py" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_pz" + postfix);
+            varMap_.addInt32("jet" + std::to_string(j) + "_tight" + postfix);
+            varMap_.addInt32("jet" + std::to_string(j) + "_flavor" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_csvv2" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix);
         }
     }
 }
@@ -597,10 +440,10 @@ void TreeMaker::beginJob()
     cutflowHist_ = new TH1F("cutflow", "", 6, 0., 6.);
 
     // add branches based on added variables
-    for (size_t i = 0; i < variables_.size(); i++)
+    for (size_t i = 0; i < varMap_.size(); i++)
     {
-        string name = variables_.getName(i);
-        string typeFlag = variables_.getFlag(name);
+        string name = varMap_.getName(i);
+        string typeFlag = varMap_.getFlag(name);
 
         if (verbose_)
         {
@@ -609,22 +452,22 @@ void TreeMaker::beginJob()
 
         if (typeFlag == "F")
         {
-            tree_->Branch(name.c_str(), &variables_.getFloat(name), (name + "/F").c_str());
+            tree_->Branch(name.c_str(), &varMap_.getFloat(name), (name + "/F").c_str());
         }
         else if (typeFlag == "D")
         {
-            tree_->Branch(name.c_str(), &variables_.getDouble(name), (name + "/D").c_str());
+            tree_->Branch(name.c_str(), &varMap_.getDouble(name), (name + "/D").c_str());
         }
         else if (typeFlag == "I")
         {
-            tree_->Branch(name.c_str(), &variables_.getInt32(name), (name + "/I").c_str());
+            tree_->Branch(name.c_str(), &varMap_.getInt32(name), (name + "/I").c_str());
         }
         else if (typeFlag == "L")
         {
-            tree_->Branch(name.c_str(), &variables_.getInt64(name), (name + "/L").c_str());
+            tree_->Branch(name.c_str(), &varMap_.getInt64(name), (name + "/L").c_str());
         }
     }
-    std::cout << "total variables: " << variables_.size() << std::endl;
+    std::cout << "total variables: " << varMap_.size() << std::endl;
 }
 
 void TreeMaker::endJob()
@@ -650,7 +493,7 @@ void TreeMaker::endJob()
 
 void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
 {
-    variables_.reset();
+    varMap_.reset();
 
     // start cutflow
     double cutflowBin = 0.5;
@@ -769,39 +612,39 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     selectedWeightHist_->Fill(histPos, genWeight);
 
     // event variables
-    variables_.setInt32("is_data", isData_);
-    variables_.setInt64("event", event.id().event());
-    variables_.setInt32("run", event.id().run());
-    variables_.setInt32("lumi", event.luminosityBlock());
-    variables_.setDouble("gen_weight", genWeight);
-    variables_.setFloat("pu", pu);
-    variables_.setDouble("rho", rho);
-    variables_.setInt32("channel", int32_t(channel));
+    varMap_.setInt32("is_data", isData_);
+    varMap_.setInt64("event", event.id().event());
+    varMap_.setInt32("run", event.id().run());
+    varMap_.setInt32("lumi", event.luminosityBlock());
+    varMap_.setDouble("gen_weight", genWeight);
+    varMap_.setFloat("pu", pu);
+    varMap_.setDouble("rho", rho);
+    varMap_.setInt32("channel", int32_t(channel));
 
     // lepton variables
     for (size_t i = 1; i <= 2; i++)
     {
         reco::RecoCandidate* lep = i == 1 ? lep1 : lep2;
-        variables_.setDouble("lep" + std::to_string(i) + "_E", lep->energy());
-        variables_.setDouble("lep" + std::to_string(i) + "_px", lep->px());
-        variables_.setDouble("lep" + std::to_string(i) + "_py", lep->py());
-        variables_.setDouble("lep" + std::to_string(i) + "_pz", lep->pz());
-        variables_.setInt32("lep" + std::to_string(i) + "_charge", lep->charge());
-        variables_.setInt32("lep" + std::to_string(i) + "_pdg", lep->pdgId());
+        varMap_.setDouble("lep" + std::to_string(i) + "_E", lep->energy());
+        varMap_.setDouble("lep" + std::to_string(i) + "_px", lep->px());
+        varMap_.setDouble("lep" + std::to_string(i) + "_py", lep->py());
+        varMap_.setDouble("lep" + std::to_string(i) + "_pz", lep->pz());
+        varMap_.setInt32("lep" + std::to_string(i) + "_charge", lep->charge());
+        varMap_.setInt32("lep" + std::to_string(i) + "_pdg", lep->pdgId());
         double absPdgId = abs(lep->pdgId());
         if (absPdgId == 11)
         {
             pat::Electron* e = dynamic_cast<pat::Electron*>(lep);
-            variables_.setDouble("lep" + std::to_string(i) + "_eta_sc", e->superCluster()->eta());
-            variables_.setFloat("lep" + std::to_string(i) + "_iso", e->userFloat("iso"));
-            variables_.setInt32("lep" + std::to_string(i) + "_tight", e->userInt("tight"));
+            varMap_.setDouble("lep" + std::to_string(i) + "_eta_sc", e->superCluster()->eta());
+            varMap_.setFloat("lep" + std::to_string(i) + "_iso", e->userFloat("iso"));
+            varMap_.setInt32("lep" + std::to_string(i) + "_tight", e->userInt("tight"));
         }
         else if (absPdgId == 13)
         {
             pat::Muon* mu = dynamic_cast<pat::Muon*>(lep);
-            variables_.setDouble("lep" + std::to_string(i) + "_eta_sc", mu->eta());
-            variables_.setFloat("lep" + std::to_string(i) + "_iso", mu->userFloat("iso"));
-            variables_.setInt32("lep" + std::to_string(i) + "_tight", mu->userInt("tight"));
+            varMap_.setDouble("lep" + std::to_string(i) + "_eta_sc", mu->eta());
+            varMap_.setFloat("lep" + std::to_string(i) + "_iso", mu->userFloat("iso"));
+            varMap_.setInt32("lep" + std::to_string(i) + "_tight", mu->userInt("tight"));
         }
         else
         {
@@ -818,10 +661,10 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
             postfix += "_jes_" + jesVariations_[i].first + "_" + jesVariations_[i].second;
         }
 
-        variables_.setInt32("jetmet_pass" + postfix, passJetMETSelection[i]);
-        variables_.setInt32("n_jets" + postfix, jets[i].size());
-        variables_.setDouble("met_px" + postfix, mets[i].px());
-        variables_.setDouble("met_py" + postfix, mets[i].py());
+        varMap_.setInt32("jetmet_pass" + postfix, passJetMETSelection[i]);
+        varMap_.setInt32("n_jets" + postfix, jets[i].size());
+        varMap_.setDouble("met_px" + postfix, mets[i].px());
+        varMap_.setDouble("met_py" + postfix, mets[i].py());
 
         // jets
         for (size_t j = 1; j <= 4; j++)
@@ -832,23 +675,23 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
             }
 
             pat::Jet* jet = &jets[i][j - 1];
-            variables_.setDouble("jet" + std::to_string(j) + "_E" + postfix, jet->energy());
-            variables_.setDouble("jet" + std::to_string(j) + "_px" + postfix, jet->px());
-            variables_.setDouble("jet" + std::to_string(j) + "_py" + postfix, jet->py());
-            variables_.setDouble("jet" + std::to_string(j) + "_pz" + postfix, jet->pz());
-            variables_.setInt32("jet" + std::to_string(j) + "_tight" + postfix,
+            varMap_.setDouble("jet" + std::to_string(j) + "_E" + postfix, jet->energy());
+            varMap_.setDouble("jet" + std::to_string(j) + "_px" + postfix, jet->px());
+            varMap_.setDouble("jet" + std::to_string(j) + "_py" + postfix, jet->py());
+            varMap_.setDouble("jet" + std::to_string(j) + "_pz" + postfix, jet->pz());
+            varMap_.setInt32("jet" + std::to_string(j) + "_tight" + postfix,
                 jet->userInt("tight"));
-            variables_.setInt32("jet" + std::to_string(j) + "_flavor" + postfix,
+            varMap_.setInt32("jet" + std::to_string(j) + "_flavor" + postfix,
                 jet->hadronFlavour());
-            variables_.setDouble("jet" + std::to_string(j) + "_csvv2" + postfix,
+            varMap_.setDouble("jet" + std::to_string(j) + "_csvv2" + postfix,
                 jet->bDiscriminator("pfCombinedInclusiveSecondaryVertexV2BJetTags"));
-            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix,
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix,
                 jet->bDiscriminator("pfDeepCSVJetTags:probb"));
-            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix,
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix,
                 jet->bDiscriminator("pfDeepCSVJetTags:probbb"));
-            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix,
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix,
                 jet->bDiscriminator("pfDeepCSVJetTags:probc"));
-            variables_.setDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix,
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix,
                 jet->bDiscriminator("pfDeepCSVJetTags:probudsg"));
         }
     }

@@ -195,7 +195,7 @@ class InstallCMSSWCode(AnalysisTask):
 
     def run(self):
         # copy the current cmssw code to the CMSSW_BASE directory
-        for subsystem in ["jet_tagging_sf"]:
+        for subsystem in ["JetTaggingSF"]:
             src = os.path.join(os.getenv("JTSF_BASE"), "cmssw", subsystem)
             dst = os.path.join(os.getenv("CMSSW_BASE"), "src", subsystem)
             if os.path.exists(dst):

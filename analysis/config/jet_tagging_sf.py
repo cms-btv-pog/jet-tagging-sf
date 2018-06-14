@@ -56,6 +56,105 @@ cfg.set_aux("dataset_channels", {
     if dataset.is_data
 })
 
+# define nested categories (flavor -> pt bin -> eta bin)
+flavor_info = [
+    ("b", "abs(jet1_flavor) == 5"),
+    ("c", "abs(jet1_flavor) == 4"),
+    ("udsg", "abs(jet1_flavor) != 5 && abs(jet1_flavor) != 4"),
+]
+pt_info = {
+    "b": [
+        ("20To30", "jet1_pt > 20 && jet1_pt <= 30"),
+        ("30To50", "jet1_pt > 30 && jet1_pt <= 50"),
+        ("50To70", "jet1_pt > 50 && jet1_pt <= 70"),
+        ("70To100", "jet1_pt > 70 && jet1_pt <= 100"),
+        ("100ToInf", "jet1_pt > 100"),
+    ],
+    "c": [
+        ("20To30", "jet1_pt > 20 && jet1_pt <= 30"),
+        ("30To50", "jet1_pt > 30 && jet1_pt <= 50"),
+        ("50To70", "jet1_pt > 50 && jet1_pt <= 70"),
+        ("70To100", "jet1_pt > 70 && jet1_pt <= 100"),
+        ("100ToInf", "jet1_pt > 100"),
+    ],
+    "udsg": [
+        ("20To30", "jet1_pt > 20 && jet1_pt <= 30"),
+        ("30To40", "jet1_pt > 30 && jet1_pt <= 40"),
+        ("40To60", "jet1_pt > 40 && jet1_pt <= 60"),
+        ("60ToInf", "jet1_pt > 60"),
+    ]
+}
+eta_info = {
+    "b": [
+        ("0To2p4", "jet1_eta <= 2.4"),
+    ],
+    "c": [
+        ("0To2p4", "jet1_eta <= 2.4"),
+    ],
+    "udsg": [
+        ("0To0p8", "jet1_eta <= 0.8"),
+        ("0p8To1p6", "jet1_eta > 0.8 && jet1_eta <= 1.6"),
+        ("1p6To2p4", "jet1_eta > 1.6 && jet1_eta <= 2.4"),
+    ]
+}
+for ch in [ch_ee, ch_emu, ch_mumu]:
+    # TODO: maybe start with phase-space categories, such as "measurement" and "closure"
+    # flavor loop
+    for f_name, f_sel in flavor_info:
+        f_cat = ch.add_category(
+            name="{}__{}".format(ch.name, f_name),
+            label="{} flavor".format(f_name),
+            selection="channel == {} && {}".format(ch.id, f_sel),
+        )
+        # pt loop
+        for pt_name, pt_sel in pt_info[f_name]:
+            pt_cat = f_cat.add_category(
+                name="{}__pt{}".format(f_cat.name, pt_name),
+                label="{}, pt {}".format(f_cat.label, pt_name),
+                selection="{} && {}".format(f_cat.selection, pt_sel),
+            )
+            # eta loop
+            for eta_name, eta_sel in eta_info[f_name]:
+                eta_cat = pt_cat.add_category(
+                    name="{}__eta{}".format(pt_cat.name, eta_name),
+                    label="{}, eta {}".format(pt_cat.label, eta_name),
+                    selection="{} && {}".format(pt_cat.selection, eta_sel),
+                )
+
+# variables
+cfg.add_variable(
+    name="jet1_pt",
+    expression="jet1_pt",
+    binning=(25, 0., 500.,),
+    unit="GeV",
+    x_title="Jet_{1} p_{T}",
+)
+cfg.add_variable(
+    name="jet1_deepcsv_b",
+    expression="jet1_deepcsv_b",
+    binning=(25, 0., 1.,),
+    x_title="Jet_{1} prob_{b}",
+)
+cfg.add_variable(
+    name="jet1_deepcsv_bb",
+    expression="jet1_deepcsv_bb",
+    binning=(25, 0., 1.,),
+    x_title="Jet_{1} prob_{bb}",
+)
+cfg.add_variable(
+    name="jet1_deepcsv_bcomb",
+    expression="jet1_deepcsv_b + jet1_deepcsv_bb",
+    binning=(25, 0., 1.,),
+    x_title="Jet_{1} prob_{b+bb}",
+)
+
+# luminosities per channel, TODO
+cfg.set_aux("lumi", {
+    ch_ee: 40.,
+    ch_emu: 40.,
+    ch_mumu: 40.,
+})
+
 # run ranges
 rr = cfg.set_aux("run_ranges", {
     "B": (297046, 299329),
@@ -161,4 +260,6 @@ cfg.set_aux("file_merging", {
 # versions
 cfg.set_aux("versions", {
     "WriteTrees": "prod1",
+    "MergeTrees": "prod1",
+    "MergeMetaData": "prod1",
 })

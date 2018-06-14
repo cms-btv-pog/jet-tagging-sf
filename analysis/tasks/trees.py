@@ -2,6 +2,7 @@
 
 import os
 import re
+import sys
 import json
 import math
 import shutil
@@ -216,20 +217,26 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
             cmd = "cmsRun " + law.util.rel_path(__file__, cfg_file)
             cmd += " " + " ".join(cmsRunArg(*tpl) for tpl in args)
 
+            # create the temporary dir to run in
             tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
             tmp_dir.touch()
 
             print("running command: {}".format(cmd))
-            code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash",
-                cwd=tmp_dir.path)[0]
-            if code != 0:
-                raise Exception("cmsRun failed")
+            for obj in law.util.live_popen(cmd, shell=True, executable="/bin/bash",
+                    cwd=tmp_dir.path):
+                if isinstance(obj, six.string_types):
+                    print(obj)
+                    if obj.startswith("Begin processing the"):
+                        self._publish_message(obj)
+                else:
+                    if obj.returncode != 0:
+                        raise Exception("cmsRun failed")
 
             if not tmp_tree.exists():
                 raise Exception("output file not exising after cmsRun")
 
 
-class MergeTrees(DatasetTask, law.CascadeMerge):
+class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
 
     merge_factor = 8
 

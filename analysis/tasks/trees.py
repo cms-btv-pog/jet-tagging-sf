@@ -222,7 +222,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
             tmp_dir.touch()
 
             print("running command: {}".format(cmd))
-            for obj in law.util.live_popen(cmd, shell=True, executable="/bin/bash",
+            for obj in law.util.readable_popen(cmd, shell=True, executable="/bin/bash",
                     cwd=tmp_dir.path):
                 if isinstance(obj, six.string_types):
                     print(obj)

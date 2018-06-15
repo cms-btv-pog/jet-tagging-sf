@@ -2,6 +2,7 @@
 
 
 import os
+import collections
 
 import law
 import luigi
@@ -136,19 +137,41 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                         progress(i)
 
 
-class MergeHistograms(DatasetTask, law.CascadeMerge):
+class MergeHistograms(AnalysisTask, law.CascadeMerge):
 
     merge_factor = 8  # TODO: optimize
 
     def create_branch_map(self):
         return law.CascadeMerge.create_branch_map(self)
 
-    def cascade_workflow_requires(self, **kwargs):
-        return WriteHistograms.req(self, version=self.get_version(WriteHistograms),
-            _prefer_cli=["version", "workflow"], **kwargs)
+    def cascade_workflow_requires(self):
+        reqs = collections.OrderedDict()
+
+        for dataset in self.config_inst.datasets:
+            reqs[dataset.name] = WriteHistograms.req(self,
+                version=self.get_version(WriteHistograms), _prefer_cli=["version", "workflow"])
+
+        return reqs
+
+    def trace_cascade_workflow_inputs(self, inputs):
+        targets = []
+        for d in inputs.values():
+            targets.extend(list(d["collection"].targets.values()))
+        return targets
 
     def cascade_requires(self, start_leaf, end_leaf):
-        return [self.cascade_workflow_requires(branch=l) for l in range(start_leaf, end_leaf)]
+        slices = []
+        for dataset in self.config_inst.datasets:
+            file_merging = WriteHistograms.file_merging
+            n_files = self.config_inst.get_aux("file_merging")[file_merging].get(dataset.name, 1)
+            slices.extend([(dataset, i) for i in range(n_files)])
+
+        target_slices = slices[start_leaf:end_leaf]
+        return [
+            WriteHistograms.req(self, dataset=d.name, branch=l,
+                version=self.get_version(WriteHistograms), _prefer_cli=["version"])
+            for d, l in target_slices
+        ]
 
     def cascade_output(self):
         return self.wlcg_target("hists.root")

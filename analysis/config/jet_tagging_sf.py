@@ -249,11 +249,7 @@ cfg.set_aux("jes_sources", [
 # file merging information (stage -> dataset -> files after merging)
 cfg.set_aux("file_merging", {
     "trees": {
-        "data_B_ee": 1,
-        "data_B_emu": 1,
-        "data_B_mumu": 1,
         "tt_dl": 74,
-        "st_tW_t": 1,
     }
 })
 
@@ -262,4 +258,5 @@ cfg.set_aux("versions", {
     "WriteTrees": "prod1",
     "MergeTrees": "prod1",
     "MergeMetaData": "prod1",
+    "WriteHistograms": "dev1",
 })

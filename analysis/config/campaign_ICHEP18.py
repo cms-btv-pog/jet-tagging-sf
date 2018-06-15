@@ -8,9 +8,10 @@ Defintion of the campaign and datasets for 2017 data for ICHEP 2018.
 
 import order as od
 
-from analysis.config.processes import process_data_ee, process_data_emu, process_data_mumu, \
-    process_tt_dl, process_dy_lep_10To50, process_dy_lep_50ToInf, process_st_tW_t, \
-    process_st_tW_tbar, process_WW_sl
+from analysis.config.processes import (
+    process_data_ee, process_data_emu, process_data_mumu, process_tt_dl, process_dy_lep_10To50,
+    process_dy_lep_50ToInf, process_st_tW_t, process_st_tW_tbar, process_WW_sl,
+)
 
 
 # campaign

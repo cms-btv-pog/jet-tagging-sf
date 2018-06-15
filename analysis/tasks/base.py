@@ -64,6 +64,8 @@ class DatasetTask(AnalysisTask):
 
     dataset = luigi.Parameter(default="data_B_ee")
 
+    file_merging = None
+
     def __init__(self, *args, **kwargs):
         super(DatasetTask, self).__init__(*args, **kwargs)
 
@@ -73,7 +75,14 @@ class DatasetTask(AnalysisTask):
         return super(DatasetTask, self).store_parts() + (self.dataset,)
 
     def create_branch_map(self):
-        return list(range(self.dataset_inst.n_files))
+        merging_info = self.config_inst.get_aux("file_merging")
+        if isinstance(self.file_merging, six.integer_types):
+            n = self.file_merging
+        elif self.file_merging in merging_info:
+            n = merging_info[self.file_merging].get(self.dataset_inst.name, 1)
+        else:
+            n = self.dataset_inst.n_files
+        return list(range(n))
 
     def glite_output_postfix(self):
         self.get_branch_map()
@@ -99,6 +108,7 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
     }
     arc_ce_map = {
         "DESY": "grid-arcce0.desy.de",
+        "KIT": ["arc-{}-kit.gridka.de".format(i) for i in range(1, 6 + 1)],
     }
 
     grid_ce = law.CSVParameter(default=["RWTH"], significant=False, description="target computing "

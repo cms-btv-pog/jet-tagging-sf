@@ -278,8 +278,8 @@ class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
         with self.publish_step("merging ..."):
             with output.localize("w", cache=False) as tmp_out:
                 cmd = "hadd -O -n 0 -d {} {} {}".format(tmp_dir.path, tmp_out.path, " ".join(bases))
-                code, _, _ = law.util.interruptable_popen(cmd, shell="True", executable="/bin/bash",
-                    cwd=tmp_dir.path)
+                code = law.util.interruptable_popen(cmd, shell="True", executable="/bin/bash",
+                    cwd=tmp_dir.path)[0]
                 if code != 0:
                     raise Exception("hadd failed")
 

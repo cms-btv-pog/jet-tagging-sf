@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 
+
+import os
+
 import law
 import luigi
 import six
@@ -131,3 +134,59 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 hist.Write()
 
                         progress(i)
+
+
+class MergeHistograms(DatasetTask, law.CascadeMerge):
+
+    merge_factor = 8  # TODO: optimize
+
+    def create_branch_map(self):
+        return law.CascadeMerge.create_branch_map(self)
+
+    def cascade_workflow_requires(self, **kwargs):
+        return WriteHistograms.req(self, version=self.get_version(WriteHistograms),
+            _prefer_cli=["version", "workflow"], **kwargs)
+
+    def cascade_requires(self, start_leaf, end_leaf):
+        return [self.cascade_workflow_requires(branch=l) for l in range(start_leaf, end_leaf)]
+
+    def cascade_output(self):
+        return self.wlcg_target("hists.root")
+
+    def merge(self, inputs, output):
+        tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
+        tmp_dir.touch()
+
+        with output.localize("w") as tmp_out:
+            # fetch inputs
+            with self.publish_step("fetching inputs ..."):
+                def fetch(inp):
+                    inp.copy_to_local(tmp_dir, cache=False)
+                    return inp.basename
+
+                def callback(i):
+                    self.publish_message("fetch file {} / {}".format(i + 1, len(inputs)))
+
+                bases = law.util.map_verbose(fetch, inputs, every=5, callback=callback)
+
+            with self.publish_step("merging ..."):
+                if len(bases) == 1:
+                    self.publish_message("only 1 file to merge")
+                    tmp_out.path = tmp_dir.child(bases[0]).path
+                else:
+                    # merge using hadd
+                    bases = " ".join(bases)
+                    cmd = "hadd -n 0 -d {} {} {}".format(tmp_dir.path, tmp_out.path, bases)
+                    code = law.util.interruptable_popen(cmd, shell="True", executable="/bin/bash",
+                        cwd=tmp_dir.path)[0]
+                    if code != 0:
+                        raise Exception("hadd failed")
+
+                    self.publish_message("merged file size: {:.2f} {}".format(
+                        *law.util.human_bytes(os.stat(tmp_out.path).st_size)))
+
+    def glite_output_postfix(self):
+        return "_{}_{}".format(self.cascade_tree, self.cascade_depth)
+
+    def arc_output_postfix(self):
+        return self.glite_output_postfix()

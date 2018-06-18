@@ -7,7 +7,14 @@ action() {
 
     export JTSF_BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && /bin/pwd )"
 
-    [ -z "$JTSF_DATA" ] && JTSF_DATA="/user/public/jet-tagging-sf"
+    if [ -z "$JTSF_DATA" ]; then
+        # lxplus
+        if [[ "$( hostname )" = lxplus*.cern.ch ]]; then
+            JTSF_DATA="$JTSF_BASE/.data"
+        else
+            JTSF_DATA="/user/public/jet-tagging-sf"
+        fi
+    fi
     [ -z "$JTSF_SOFTWARE" ] && JTSF_SOFTWARE="$JTSF_DATA/software"
     [ -z "$JTSF_STORE" ] && JTSF_STORE="$JTSF_DATA/store"
     [ -z "$JTSF_LOCAL_CACHE" ] && JTSF_LOCAL_CACHE="$JTSF_DATA/cache"

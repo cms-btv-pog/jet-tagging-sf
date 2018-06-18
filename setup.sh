@@ -81,6 +81,7 @@ action() {
         jtsf_install_pip --no-dependencies uproot
         jtsf_install_pip order
         LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip git+https://github.com/riga/law.git
+        jtsf_install_pip git+https://github.com/riga/luigi.git@fix/dynamicParamKwargs
 
         # gfal2
         cd "$JTSF_SOFTWARE"

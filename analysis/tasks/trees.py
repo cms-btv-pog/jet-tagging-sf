@@ -254,7 +254,7 @@ class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
         return [inp["tree"] for inp in inputs]
 
     def cascade_output(self):
-        n_trees = self.config_inst.get_aux("file_merging")["trees"].get(self.dataset, 1)
+        n_trees = self.config_inst.get_aux("get_file_merging")("trees", self.dataset)
         return law.SiblingFileCollection([
             self.wlcg_target("tree_{}.root".format(i)) for i in range(n_trees)
         ])

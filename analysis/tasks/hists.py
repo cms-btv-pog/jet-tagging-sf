@@ -148,7 +148,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
         reqs = collections.OrderedDict()
 
         for dataset in self.config_inst.datasets:
-            reqs[dataset.name] = WriteHistograms.req(self,
+            reqs[dataset.name] = WriteHistograms.req(self, dataset=dataset.name,
                 version=self.get_version(WriteHistograms), _prefer_cli=["version", "workflow"])
 
         return reqs
@@ -163,7 +163,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
         slices = []
         for dataset in self.config_inst.datasets:
             file_merging = WriteHistograms.file_merging
-            n_files = self.config_inst.get_aux("file_merging")[file_merging].get(dataset.name, 1)
+            n_files = self.config_inst.get_aux("get_file_merging")(file_merging, dataset)
             slices.extend([(dataset, i) for i in range(n_files)])
 
         target_slices = slices[start_leaf:end_leaf]

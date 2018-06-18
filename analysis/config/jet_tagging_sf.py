@@ -122,51 +122,51 @@ def get_phasespace_info(idx=1, btagger="deepcsv_bcomb", et_miss=30., z_window=10
 
     hf_cuts, lf_cuts = [], []
     # jet tagging requirement
-    hf_cuts.append("jet{}_{} > {}".format(btagger, idx, CSVT))
-    lf_cuts.append("jet{}_{} < {}".format(btagger, idx, CSVL))
+    hf_cuts.append("jet{}_{} > {}".format(btagger, idx, csv_tight))
+    lf_cuts.append("jet{}_{} < {}".format(btagger, idx, csv_loose))
 
-    #ET-miss requirement
+    # ET-miss requirement
     hf_cuts.append(" > {}".format(et_miss))
     lf_cuts.append(" < {}".format(et_miss))
 
     # z-mass window
-    hf_cuts.append("abs(m_ll - {}) > {}".format(Z_MASS, z_window))
-    lf_cuts.append("abs(m_ll - {}) < {}".format(Z_MASS, z_window))
+    hf_cuts.append("abs(m_ll - {}) > {}".format(Z_MASS.nominal, z_window))
+    lf_cuts.append("abs(m_ll - {}) < {}".format(Z_MASS.nominal, z_window))
 
     # z peak diamond
     lf_cuts.append("pass_z_peak == 0")
 
     return [
-        ("HF": " && ".join(HF_cuts))
-        ("LF": " && ".join(LF_cuts))
+        ("HF", " && ".join(hf_cuts)),
+        ("LF", " && ".join(lf_cuts)),
     ]
 
 for ch in [ch_ee, ch_emu, ch_mumu]:
     # TODO: maybe start with phase-space categories, such as "measurement" and "closure"
     for i_tag_jet, i_probe_jet in zip([1, 2], [2, 1]):
         # phase space region loop
-        for p_name, p_sel in get_phasespace_info(iTagJet):
+        for p_name, p_sel in get_phasespace_info(i_tag_jet):
             p_cat = ch.add_category(
                 name="{}__{}".format(ch.name, p_name),
                 label="{} region".format(p_name),
                 selection="channel == {} && {}".format(ch.id, p_sel),
             )
             # flavor loop
-            for f_name, f_sel in get_flavor_info(iProbeJet):
+            for f_name, f_sel in get_flavor_info(i_probe_jet):
                 f_cat = p_cat.add_category(
                     name="{}__{}".format(p_cat.name, f_name),
                     label="{} flavor".format(f_name),
                     selection="{} && {}".format(p_cat.selection, f_sel),
                 )
                 # pt loop
-                for pt_name, pt_sel in get_pt_info(iProbeJet)[f_name]:
+                for pt_name, pt_sel in get_pt_info(i_probe_jet)[f_name]:
                     pt_cat = f_cat.add_category(
                         name="{}__pt{}".format(f_cat.name, pt_name),
                         label="{}, pt {}".format(f_cat.label, pt_name),
                         selection="{} && {}".format(f_cat.selection, pt_sel),
                     )
                     # eta loop
-                    for eta_name, eta_sel in get_eta_info(iProbeJet)[f_name]:
+                    for eta_name, eta_sel in get_eta_info(i_probe_jet)[f_name]:
                         eta_cat = pt_cat.add_category(
                             name="{}__eta{}".format(pt_cat.name, eta_name),
                             label="{}, eta {}".format(pt_cat.label, eta_name),

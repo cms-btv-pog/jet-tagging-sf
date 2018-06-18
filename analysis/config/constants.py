@@ -9,7 +9,7 @@ import scinum as sn
 
 # constants
 N_LEPS = sn.Number(3)
-Z_MASS = 91.
+Z_MASS = sn.Number(91.1876, {"z_mass": 0.0021})
 BR_W_HAD = sn.Number(0.6741, {"br_w": 0.0027})
 BR_W_LEP = 1 - BR_W_HAD
 BR_WW_SL = 2 * BR_W_HAD.mul(BR_W_LEP, rho=-1, inplace=False)

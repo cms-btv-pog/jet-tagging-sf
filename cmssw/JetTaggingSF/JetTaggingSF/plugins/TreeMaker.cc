@@ -389,6 +389,7 @@ void TreeMaker::setupVariables()
         varMap_.addInt32("lep" + std::to_string(i) + "_tight");
         varMap_.addDouble("lep" + std::to_string(i) + "_eta_sc");
     }
+    varMap_.addDouble("m_ll");
 
     // jet and MET and other JES dependent variables
     for (size_t i = 0; i < (isData_ ? 1 : jesVariations_.size()); i++)
@@ -401,8 +402,10 @@ void TreeMaker::setupVariables()
 
         varMap_.addInt32("jetmet_pass" + postfix);
         varMap_.addInt32("n_jets" + postfix);
+        varMap_.addInt32("pass_z_mask" + postfix);
         varMap_.addDouble("met_px" + postfix);
         varMap_.addDouble("met_py" + postfix);
+        varMap_.addDouble("mht" + postfix);
 
         // jets
         for (size_t j = 1; j <= 4; j++)
@@ -656,6 +659,8 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
             throw std::runtime_error("cannot handle lepton pdg id " + std::to_string(absPdgId));
         }
     }
+    double m_ll = (lep1.p4() + lep2.p4()).M();
+    varMap_.setDouble("m_ll", m_ll);
 
     // jet and MET variables
     for (size_t i = 0; i < (isData_ ? 1 : jesVariations_.size()); i++)
@@ -672,6 +677,25 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
         varMap_.setDouble("met_py" + postfix, mets[i].py());
 
         // jets
+        double mht_px = 0.;
+        double mht_py = 0.;
+        mht_px += lep1.px() + lep2.px();
+        mht_py += lep1.py() + lep2.py();
+        for (size_t j = 1; j <= jets[i].size(); j++)
+        {
+            mht_px += jets[i][j - 1].px();
+            mht_py += jets[i][j - 1].py();
+        }
+
+        double mht = sqrt( mht_px*mht_px + mht_py*mht_py );
+        varMap_.setDouble("mht" + postfix, mht);
+
+        bool pass_z_mask = (m_ll < (65.5 + 3*mht/8)) ||
+                           (m_ll > (108 - mht/4)) ||
+                           (m_ll < (79 - 3*mht/4)) ||
+                           (m_ll > (99 + mht/2));
+        varMap_.setInt32("pass_z_mask" + postfix, (int)pass_z_mask);
+
         for (size_t j = 1; j <= 4; j++)
         {
             if (jets[i].size() < j)

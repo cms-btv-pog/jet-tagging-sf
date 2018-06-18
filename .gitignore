@@ -10,8 +10,9 @@ MANIFEST
 __pycache__
 dist
 build
-data
 software
 tmp
+data
+.data
 .law
 .ropeproject

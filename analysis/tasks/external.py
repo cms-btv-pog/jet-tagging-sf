@@ -133,6 +133,8 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
 class CalculateLumi(AnalysisTask):
 
     channel = luigi.Parameter(default="ee", description="analysis channel")
+    period = luigi.Parameter(default=law.NO_STR, description="character denoting the data "
+        "taking period, default: empty")
     version = None
 
     def __init__(self, *args, **kwargs):
@@ -140,6 +142,11 @@ class CalculateLumi(AnalysisTask):
 
         # get the channel instance
         self.channel_inst = self.config_inst.get_channel(self.channel)
+
+        # get the run range if period is set
+        self.run_range = None
+        if self.period != law.NO_STR:
+            self.run_range = self.config_inst.get_aux("run_ranges")[self.period]
 
         self.has_run = False
 
@@ -150,6 +157,9 @@ class CalculateLumi(AnalysisTask):
         return DownloadSetupFiles.req(self)
 
     def run(self):
+        if not law.util.check_bool_flag(os.getenv("JTSF_ON_LXPLUS")):
+            raise Exception("{} must run on lxplus".format(self.__class__.__name__))
+
         triggers = self.config_inst.get_aux("triggers")[self.channel_inst]
         setup_files_dir, setup_files = self.requires().localize()
         uid = str(uuid.uuid4())
@@ -159,67 +169,65 @@ class CalculateLumi(AnalysisTask):
         tmp.touch()
 
         # build the command
+        triggers_str = " ".join(triggers)
+        begin_end = "--begin {} --end {}".format(*self.run_range) if self.run_range else ""
         cmd = """
             export PATH="$( pwd )/bin:/afs/cern.ch/cms/lumi/brilconda/bin:$PATH"
             export PYTHONPATH="$( pwd )/lib/python2.7/site-packages:$PYTHONPATH"
             source activate root
-            pip install --prefix . --upgrade brilws
+            pip install --prefix . --ignore-installed brilws
             >&2 echo "using brilcalc $( brilcalc --version ) from $( which brilcalc )"
             >&2 echo "lumi file: {lumi_file}"
             >&2 echo "norm file: {normtag_file}"
             >&2 echo "triggers : {triggers}"
+            >&2 echo "run range: {begin_end}"
             for HLTPATH in {triggers}; do
-                >&2 echo "calculate lumi for trigger path $HLTPATH"
+                >&2 echo "calculate lumi for trigger path $HLTPATH ..."
                 brilcalc lumi \
                     -u /pb \
                     --hltpath "$HLTPATH" \
                     --normtag "{normtag_file}" \
                     -i "{lumi_file}" \
-                    -b "STABLE BEAMS" || exit "$?"
-                    echo "{uid}"
+                    -b "STABLE BEAMS" \
+                    {begin_end} \
+                || exit "$?"
+                echo "{uid}"
+                >&2 echo "done"
             done
         """.format(lumi_file=setup_files["lumi_file"], normtag_file=setup_files["normtag_file"],
-                triggers=" ".join(triggers[:1]), uid=uid)
+                triggers=triggers_str, begin_end=begin_end, uid=uid)
 
         # run the command
         code, out, _ = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash",
-            stdout=None, cwd=tmp.path)
+            stdout=subprocess.PIPE, cwd=tmp.path)
         if code != 0:
             raise Exception("brilcalc failed")
 
-        # print("you might need to enter your lxplus password multiple times")
-        # p = Popen(cmd, stdout=PIPE, stderr=sys.stderr, shell=True, executable="/bin/bash")
-        # out = p.communicate()[0]
-        # if p.returncode != 0:
-        #     raise Exception("lumi calculation query failed (%s)" % p.returncode)
+        # parse the output
+        blocks = out.split(uid)[:-1]
+        lumi_data = {}
+        for trigger, block in zip(triggers, blocks):
+            lines = block[:block.find("#Summary")].strip().split("\n")[:-1]
 
-        # lumiData = OrderedDict()
-        # for trigger, result in zip(triggers, out.strip().split(uid)):
-        #     print("trigger: %s" % trigger)
-        #     print(result)
-        #     idx = result.find("#Summary")
+            # traverse backwards until a line does not start with "|"
+            # columns: run:fill, time, ncms, hltpath, delivered, recorded
+            while lines:
+                line = lines.pop().strip()
+                if not line.startswith("|"):
+                    break
 
-        #     # parse output
-        #     lines = result[:idx+1].split("\n")
-        #     lineIdxs = [i for i, line in enumerate(lines) if line.startswith("+")]
-        #     startLine = lineIdxs[1] + 1
-        #     endLine = lineIdxs[-1]
-        #     lines = lines[startLine:endLine]
-        #     for line in lines:
-        #         elems = [elem.strip() for elem in line.split("|")[1:-1]]
+                parts = [p.strip() for p in line.split("|")[1:-1]]
+                run = int(parts[0].split(":")[0])
+                path = parts[3]
+                lumi = float(parts[5])
+                lumi_data.setdefault(run, {})[path] = lumi
 
-        #         run = int(elems[0].split(":")[0])
-        #         lumi = float(elems[5])
-        #         _trigger = elems[3]
-        #         lumiData.setdefault(run, {})[_trigger] = lumi
+        # calculate the lumi
+        lumi = 0.
+        for data in lumi_data.values():
+            # data is a dict "hlt path -> lumi" per run
+            # multiple elements mean that multiple, OR-connected triggers were active in that run
+            # in this case, use the maximum as smaller values result from prescales
+            lumi += max(list(data.values()))
 
-        # # some summaries
-        # ll = LumiList(lumiData)
-        # print("\nLuminosities [/pb]:")
-        # for trigger in triggers:
-        #     print("%s: %.3f" % (trigger, ll.get(hltPath=trigger)))
-        # print("Total: %.3f\n" % ll.get())
-
-        # with self.output().localTmp() as tmp:
-        #     with tmp.open("w") as f:
-        #         json.dump(lumiData, f, indent=4)
+        self.publish_message("Integrated luminosity: {} /pb".format(lumi))

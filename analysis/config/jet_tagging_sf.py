@@ -214,11 +214,11 @@ cfg.add_variable(
     x_title="Jet_{1} prob_{b+bb}",
 )
 
-# luminosities per channel, TODO
+# luminosities per channel in /pb
 cfg.set_aux("lumi", {
-    ch_ee: 40.,
-    ch_emu: 40.,
-    ch_mumu: 40.,
+    ch_ee: 41296.082,
+    ch_emu: 41296.082,
+    ch_mumu: 41296.082,
 })
 
 # run ranges

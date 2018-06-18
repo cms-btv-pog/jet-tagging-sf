@@ -10,8 +10,10 @@ action() {
     if [ -z "$JTSF_DATA" ]; then
         # lxplus
         if [[ "$( hostname )" = lxplus*.cern.ch ]]; then
+            JTSF_ON_LXPLUS="1"
             JTSF_DATA="$JTSF_BASE/.data"
         else
+            JTSF_ON_LXPLUS="0"
             JTSF_DATA="/user/public/jet-tagging-sf"
         fi
     fi
@@ -21,6 +23,7 @@ action() {
     [ -z "$JTSF_CMSSW_SETUP" ] && JTSF_CMSSW_SETUP="ICHEP18"
 
     export JTSF_DATA
+    export JTSF_ON_LXPLUS
     export JTSF_SOFTWARE
     export JTSF_STORE
     export JTSF_LOCAL_CACHE

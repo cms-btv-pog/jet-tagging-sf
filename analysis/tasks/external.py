@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
+import uuid
 import shutil
 import subprocess
 import collections
@@ -117,10 +118,108 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
     def localize(self, **kwargs):
         # load the archive and unpack it into a temporary directory
         tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
-        self.output().random_target().load(tmp_dir, **kwargs)
+        output = self.output()
+        if self.replicas >= 1:
+            output = output.random_target()
+        output.load(tmp_dir, **kwargs)
 
         def abspath(path):
             h = self.create_path_hash(path)
             return h and os.path.join(tmp_dir.path, h)
 
         return tmp_dir, law.util.map_struct(abspath, self.source_files)
+
+
+class CalculateLumi(AnalysisTask):
+
+    channel = luigi.Parameter(default="ee", description="analysis channel")
+    version = None
+
+    def __init__(self, *args, **kwargs):
+        super(CalculateLumi, self).__init__(*args, **kwargs)
+
+        # get the channel instance
+        self.channel_inst = self.config_inst.get_channel(self.channel)
+
+        self.has_run = False
+
+    def complete(self):
+        return self.has_run
+
+    def requires(self):
+        return DownloadSetupFiles.req(self)
+
+    def run(self):
+        triggers = self.config_inst.get_aux("triggers")[self.channel_inst]
+        setup_files_dir, setup_files = self.requires().localize()
+        uid = str(uuid.uuid4())
+
+        # a tmp dir
+        tmp = law.LocalDirectoryTarget(is_tmp=True)
+        tmp.touch()
+
+        # build the command
+        cmd = """
+            export PATH="$( pwd )/bin:/afs/cern.ch/cms/lumi/brilconda/bin:$PATH"
+            export PYTHONPATH="$( pwd )/lib/python2.7/site-packages:$PYTHONPATH"
+            source activate root
+            pip install --prefix . --upgrade brilws
+            >&2 echo "using brilcalc $( brilcalc --version ) from $( which brilcalc )"
+            >&2 echo "lumi file: {lumi_file}"
+            >&2 echo "norm file: {normtag_file}"
+            >&2 echo "triggers : {triggers}"
+            for HLTPATH in {triggers}; do
+                >&2 echo "calculate lumi for trigger path $HLTPATH"
+                brilcalc lumi \
+                    -u /pb \
+                    --hltpath "$HLTPATH" \
+                    --normtag "{normtag_file}" \
+                    -i "{lumi_file}" \
+                    -b "STABLE BEAMS" || exit "$?"
+                    echo "{uid}"
+            done
+        """.format(lumi_file=setup_files["lumi_file"], normtag_file=setup_files["normtag_file"],
+                triggers=" ".join(triggers[:1]), uid=uid)
+
+        # run the command
+        code, out, _ = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash",
+            stdout=None, cwd=tmp.path)
+        if code != 0:
+            raise Exception("brilcalc failed")
+
+        # print("you might need to enter your lxplus password multiple times")
+        # p = Popen(cmd, stdout=PIPE, stderr=sys.stderr, shell=True, executable="/bin/bash")
+        # out = p.communicate()[0]
+        # if p.returncode != 0:
+        #     raise Exception("lumi calculation query failed (%s)" % p.returncode)
+
+        # lumiData = OrderedDict()
+        # for trigger, result in zip(triggers, out.strip().split(uid)):
+        #     print("trigger: %s" % trigger)
+        #     print(result)
+        #     idx = result.find("#Summary")
+
+        #     # parse output
+        #     lines = result[:idx+1].split("\n")
+        #     lineIdxs = [i for i, line in enumerate(lines) if line.startswith("+")]
+        #     startLine = lineIdxs[1] + 1
+        #     endLine = lineIdxs[-1]
+        #     lines = lines[startLine:endLine]
+        #     for line in lines:
+        #         elems = [elem.strip() for elem in line.split("|")[1:-1]]
+
+        #         run = int(elems[0].split(":")[0])
+        #         lumi = float(elems[5])
+        #         _trigger = elems[3]
+        #         lumiData.setdefault(run, {})[_trigger] = lumi
+
+        # # some summaries
+        # ll = LumiList(lumiData)
+        # print("\nLuminosities [/pb]:")
+        # for trigger in triggers:
+        #     print("%s: %.3f" % (trigger, ll.get(hltPath=trigger)))
+        # print("Total: %.3f\n" % ll.get())
+
+        # with self.output().localTmp() as tmp:
+        #     with tmp.open("w") as f:
+        #         json.dump(lumiData, f, indent=4)

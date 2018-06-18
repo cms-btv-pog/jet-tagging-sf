@@ -1,4 +1,5 @@
 # -*- coding: utf-8 -*-
+# flake8: noqa
 
 """
 Definition of the analysis for extracting jet tagging scale factors
@@ -8,6 +9,7 @@ as well as its configurations for different campaigns.
 
 import order as od
 import scinum as sn
+import six
 
 from analysis.config.processes import process_data_ee, process_data_emu, process_data_mumu, \
     process_tt_dl, process_dy_lep, process_st_tW, process_WW_sl
@@ -253,10 +255,16 @@ cfg.set_aux("file_merging", {
     }
 })
 
+def get_file_merging(key, dataset):
+    dataset_name = dataset if isinstance(dataset, six.string_types) else dataset.name
+    return cfg.get_aux("file_merging")[key].get(dataset_name, 1)
+
+cfg.set_aux("get_file_merging", get_file_merging)
+
 # versions
 cfg.set_aux("versions", {
     "WriteTrees": "prod1",
     "MergeTrees": "prod1",
     "MergeMetaData": "prod1",
-    "WriteHistograms": "dev1",
+    "WriteHistograms": "prod1",
 })

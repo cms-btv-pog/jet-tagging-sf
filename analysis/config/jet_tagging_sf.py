@@ -133,8 +133,8 @@ def get_phasespace_info(idx=1, btagger="deepcsv_bcomb", et_miss=30., z_window=10
     lf_cuts.append(" < {}".format(et_miss))
 
     # z-mass window
-    hf_cuts.append("abs(m_ll - {}) > {}".format(Z_MASS.nominal, z_window))
-    lf_cuts.append("abs(m_ll - {}) < {}".format(Z_MASS.nominal, z_window))
+    hf_cuts.append("abs(mll - {}) > {}".format(Z_MASS.nominal, z_window))
+    lf_cuts.append("abs(mll - {}) < {}".format(Z_MASS.nominal, z_window))
 
     # z peak diamond
     lf_cuts.append("pass_z_peak == 0")

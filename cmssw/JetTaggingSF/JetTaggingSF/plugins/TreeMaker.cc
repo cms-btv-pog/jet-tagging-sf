@@ -659,7 +659,7 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
             throw std::runtime_error("cannot handle lepton pdg id " + std::to_string(absPdgId));
         }
     }
-    double mll = (lep1.p4() + lep2.p4()).M();
+    double mll = (lep1->p4() + lep2->p4()).M();
     varMap_.setDouble("mll", mll);
 
     // jet and MET variables
@@ -679,8 +679,8 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
         // jets
         double mht_x = 0.;
         double mht_y = 0.;
-        mht_x += lep1.px() + lep2.px();
-        mht_y += lep1.py() + lep2.py();
+        mht_x += lep1->px() + lep2->px();
+        mht_y += lep1->py() + lep2->py();
         for (size_t j = 1; j <= jets[i].size(); j++)
         {
             mht_x += jets[i][j - 1].px();

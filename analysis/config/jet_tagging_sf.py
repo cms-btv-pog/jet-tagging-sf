@@ -7,9 +7,12 @@ as well as its configurations for different campaigns.
 """
 
 
+import re
+
 import order as od
 import scinum as sn
 import six
+from order.util import join_root_selection
 
 from analysis.config.constants import Z_MASS
 from analysis.config.processes import process_data_ee, process_data_emu, process_data_mumu, \
@@ -137,41 +140,52 @@ def get_phasespace_info(idx=1, btagger="deepcsv_bcomb", et_miss=30., z_window=10
     lf_cuts.append("pass_z_peak == 0")
 
     return [
-        ("HF", " && ".join(hf_cuts)),
-        ("LF", " && ".join(lf_cuts)),
+        ("HF", join_root_selection(hf_cuts)),
+        ("LF", join_root_selection(lf_cuts)),
     ]
 
 for ch in [ch_ee, ch_emu, ch_mumu]:
     # TODO: maybe start with phase-space categories, such as "measurement" and "closure"
-    for i_tag_jet, i_probe_jet in zip([1, 2], [2, 1]):
+    for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
         # phase space region loop
-        for p_name, p_sel in get_phasespace_info(i_tag_jet):
-            p_cat = ch.add_category(
-                name="{}__{}__{}".format(ch.name, p_name, i_tag_jet),
-                label="{} region (tag jet1)".format(p_name),
-                selection="channel == {} && {}".format(ch.id, p_sel),
+        for ps_name, ps_sel in get_phasespace_info(i_tag_jet):
+            ps_cat = ch.add_category(
+                name="{}__{}__j{}".format(ch.name, ps_name, i_tag_jet),
+                label="{} region (j{} tagged)".format(ps_name, i_tag_jet),
+                selection="channel == {} && {}".format(ch.id, ps_sel),
             )
             # flavor loop
-            for f_name, f_sel in get_flavor_info(i_probe_jet):
-                f_cat = p_cat.add_category(
-                    name="{}__{}".format(p_cat.name, f_name),
-                    label="{} flavor".format(f_name),
-                    selection="{} && {}".format(p_cat.selection, f_sel),
+            for fl_name, fl_sel in get_flavor_info(i_probe_jet):
+                fl_cat = ps_cat.add_category(
+                    name="{}__{}".format(ps_cat.name, fl_name),
+                    label="{}, {} flavor".format(ps_cat.label, fl_name),
+                    selection="{} && {}".format(ps_cat.selection, fl_sel),
                 )
                 # pt loop
-                for pt_name, pt_sel in get_pt_info(i_probe_jet)[f_name]:
-                    pt_cat = f_cat.add_category(
-                        name="{}__pt{}".format(f_cat.name, pt_name),
-                        label="{}, pt {}".format(f_cat.label, pt_name),
-                        selection="{} && {}".format(f_cat.selection, pt_sel),
+                for pt_name, pt_sel in get_pt_info(i_probe_jet)[fl_name]:
+                    pt_cat = fl_cat.add_category(
+                        name="{}__pt{}".format(fl_cat.name, pt_name),
+                        label="{}, pt {}".format(fl_cat.label, pt_name),
+                        selection="{} && {}".format(fl_cat.selection, pt_sel),
                     )
                     # eta loop
-                    for eta_name, eta_sel in get_eta_info(i_probe_jet)[f_name]:
+                    for eta_name, eta_sel in get_eta_info(i_probe_jet)[fl_name]:
                         eta_cat = pt_cat.add_category(
                             name="{}__eta{}".format(pt_cat.name, eta_name),
                             label="{}, eta {}".format(pt_cat.label, eta_name),
                             selection="{} && {}".format(pt_cat.selection, eta_sel),
                         )
+
+                        # merged category for both jets
+                        merged_name = re.sub(r"__j\d+__", "__", eta_cat.name)
+                        if not ch.has_category(merged_name):
+                            merged_cat = ch.add_category(
+                                name=merged_name,
+                                label=re.sub(r" \(j\d+ tagged\)", "", eta_cat.label),
+                            )
+                        else:
+                            merged_cat = ch.get_category(merged_name)
+                        merged_cat.add_category(eta_cat)
 
 # variables
 cfg.add_variable(

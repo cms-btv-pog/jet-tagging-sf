@@ -9,6 +9,7 @@ as well as its configurations for different campaigns.
 import order as od
 import scinum as sn
 
+from analysis.config.constants import Z_MASS
 from analysis.config.processes import process_data_ee, process_data_emu, process_data_mumu, \
     process_tt_dl, process_dy_lep, process_st_tW, process_WW_sl
 
@@ -20,6 +21,16 @@ analysis = od.Analysis("jet_tagging_sf", 1)
 # setup the config for ICHEP 2018
 from analysis.config.campaign_ICHEP18 import campaign as campaign_ICHEP18
 config_ICHEP18 = cfg = analysis.add_config(campaign=campaign_ICHEP18)
+
+# store DeepCSV working points
+
+cfg.set_aux("working_points", {
+    "deepcsv": {
+        "loose": 0.1522,
+        "medium": 0.4941,
+        "tight": 0.8001,
+    }
+})
 
 # link processes
 cfg.add_process(process_data_ee)
@@ -57,69 +68,108 @@ cfg.set_aux("dataset_channels", {
 })
 
 # define nested categories (flavor -> pt bin -> eta bin)
-flavor_info = [
-    ("b", "abs(jet1_flavor) == 5"),
-    ("c", "abs(jet1_flavor) == 4"),
-    ("udsg", "abs(jet1_flavor) != 5 && abs(jet1_flavor) != 4"),
-]
-pt_info = {
-    "b": [
-        ("20To30", "jet1_pt > 20 && jet1_pt <= 30"),
-        ("30To50", "jet1_pt > 30 && jet1_pt <= 50"),
-        ("50To70", "jet1_pt > 50 && jet1_pt <= 70"),
-        ("70To100", "jet1_pt > 70 && jet1_pt <= 100"),
-        ("100ToInf", "jet1_pt > 100"),
-    ],
-    "c": [
-        ("20To30", "jet1_pt > 20 && jet1_pt <= 30"),
-        ("30To50", "jet1_pt > 30 && jet1_pt <= 50"),
-        ("50To70", "jet1_pt > 50 && jet1_pt <= 70"),
-        ("70To100", "jet1_pt > 70 && jet1_pt <= 100"),
-        ("100ToInf", "jet1_pt > 100"),
-    ],
-    "udsg": [
-        ("20To30", "jet1_pt > 20 && jet1_pt <= 30"),
-        ("30To40", "jet1_pt > 30 && jet1_pt <= 40"),
-        ("40To60", "jet1_pt > 40 && jet1_pt <= 60"),
-        ("60ToInf", "jet1_pt > 60"),
+def get_flavor_info(idx=1):
+    return [
+        ("b", "abs(jet%d_flavor) == 5" % idx),
+        ("c", "abs(jet%d_flavor) == 4" % idx),
+        ("udsg", "abs(jet%d_flavor) != 5 && abs(jet%d_flavor) != 4" % (idx, idx)),
     ]
-}
-eta_info = {
-    "b": [
-        ("0To2p4", "jet1_eta <= 2.4"),
-    ],
-    "c": [
-        ("0To2p4", "jet1_eta <= 2.4"),
-    ],
-    "udsg": [
-        ("0To0p8", "jet1_eta <= 0.8"),
-        ("0p8To1p6", "jet1_eta > 0.8 && jet1_eta <= 1.6"),
-        ("1p6To2p4", "jet1_eta > 1.6 && jet1_eta <= 2.4"),
+
+def get_pt_info(idx=1):
+    return {
+        "b": [
+            ("20To30", "jet%d_pt > 20 && jet%d_pt <= 30" % (idx, idx)),
+            ("30To50", "jet%d_pt > 30 && jet%d_pt <= 50" % (idx, idx)),
+            ("50To70", "jet%d_pt > 50 && jet%d_pt <= 70" % (idx, idx)),
+            ("70To100", "jet%d_pt > 70 && jet%d_pt <= 100" % (idx, idx)),
+            ("100ToInf", "jet%d_pt > 100" % idx),
+        ],
+        "c": [
+            ("20To30", "jet%d_pt > 20 && jet%d_pt <= 30" % (idx, idx)),
+            ("30To50", "jet%d_pt > 30 && jet%d_pt <= 50" % (idx, idx)),
+            ("50To70", "jet%d_pt > 50 && jet%d_pt <= 70" % (idx, idx)),
+            ("70To100", "jet%d_pt > 70 && jet%d_pt <= 100" % (idx, idx)),
+            ("100ToInf", "jet%d_pt > 100" % idx),
+        ],
+        "udsg": [
+            ("20To30", "jet%d_pt > 20 && jet%d_pt <= 30" % (idx, idx)),
+            ("30To40", "jet%d_pt > 30 && jet%d_pt <= 40" % (idx, idx)),
+            ("40To60", "jet%d_pt > 40 && jet%d_pt <= 60" % (idx, idx)),
+            ("60ToInf", "jet%d_pt > 60" % idx),
+        ]
+    }
+
+def get_eta_info(idx=1):
+    return {
+        "b": [
+            ("0To2p4", "jet%d_eta <= 2.4" % idx),
+        ],
+        "c": [
+            ("0To2p4", "jet%d_eta <= 2.4" % idx),
+        ],
+        "udsg": [
+            ("0To0p8", "jet%d_eta <= 0.8" % idx),
+            ("0p8To1p6", "jet%d_eta > 0.8 && jet%d_eta <= 1.6" % (idx, idx)),
+            ("1p6To2p4", "jet%d_eta > 1.6 && jet%d_eta <= 2.4" % (idx, idx)),
+        ]
+    }
+
+def get_phasespace_info(idx=1, btagger="deepcsv_bcomb", et_miss=30., z_window=10.):
+    csv_tight = cfg.get_aux("working_points")["deepcsv"]["tight"]
+    csv_loose = cfg.get_aux("working_points")["deepcsv"]["loose"]
+
+    hf_cuts, lf_cuts = [], []
+    # jet tagging requirement
+    hf_cuts.append("jet{}_{} > {}".format(btagger, idx, CSVT))
+    lf_cuts.append("jet{}_{} < {}".format(btagger, idx, CSVL))
+
+    #ET-miss requirement
+    hf_cuts.append(" > {}".format(et_miss))
+    lf_cuts.append(" < {}".format(et_miss))
+
+    # z-mass window
+    hf_cuts.append("abs(m_ll - {}) > {}".format(Z_MASS, z_window))
+    lf_cuts.append("abs(m_ll - {}) < {}".format(Z_MASS, z_window))
+
+    # z peak diamond
+    lf_cuts.append("pass_z_peak == 0")
+
+    return [
+        ("HF": " && ".join(HF_cuts))
+        ("LF": " && ".join(LF_cuts))
     ]
-}
+
 for ch in [ch_ee, ch_emu, ch_mumu]:
     # TODO: maybe start with phase-space categories, such as "measurement" and "closure"
-    # flavor loop
-    for f_name, f_sel in flavor_info:
-        f_cat = ch.add_category(
-            name="{}__{}".format(ch.name, f_name),
-            label="{} flavor".format(f_name),
-            selection="channel == {} && {}".format(ch.id, f_sel),
-        )
-        # pt loop
-        for pt_name, pt_sel in pt_info[f_name]:
-            pt_cat = f_cat.add_category(
-                name="{}__pt{}".format(f_cat.name, pt_name),
-                label="{}, pt {}".format(f_cat.label, pt_name),
-                selection="{} && {}".format(f_cat.selection, pt_sel),
+    for i_tag_jet, i_probe_jet in zip([1, 2], [2, 1]):
+        # phase space region loop
+        for p_name, p_sel in get_phasespace_info(iTagJet):
+            p_cat = ch.add_category(
+                name="{}__{}".format(ch.name, p_name),
+                label="{} region".format(p_name),
+                selection="channel == {} && {}".format(ch.id, p_sel),
             )
-            # eta loop
-            for eta_name, eta_sel in eta_info[f_name]:
-                eta_cat = pt_cat.add_category(
-                    name="{}__eta{}".format(pt_cat.name, eta_name),
-                    label="{}, eta {}".format(pt_cat.label, eta_name),
-                    selection="{} && {}".format(pt_cat.selection, eta_sel),
+            # flavor loop
+            for f_name, f_sel in get_flavor_info(iProbeJet):
+                f_cat = p_cat.add_category(
+                    name="{}__{}".format(p_cat.name, f_name),
+                    label="{} flavor".format(f_name),
+                    selection="{} && {}".format(p_cat.selection, f_sel),
                 )
+                # pt loop
+                for pt_name, pt_sel in get_pt_info(iProbeJet)[f_name]:
+                    pt_cat = f_cat.add_category(
+                        name="{}__pt{}".format(f_cat.name, pt_name),
+                        label="{}, pt {}".format(f_cat.label, pt_name),
+                        selection="{} && {}".format(f_cat.selection, pt_sel),
+                    )
+                    # eta loop
+                    for eta_name, eta_sel in get_eta_info(iProbeJet)[f_name]:
+                        eta_cat = pt_cat.add_category(
+                            name="{}__eta{}".format(pt_cat.name, eta_name),
+                            label="{}, eta {}".format(pt_cat.label, eta_name),
+                            selection="{} && {}".format(pt_cat.selection, eta_sel),
+                        )
 
 # variables
 cfg.add_variable(

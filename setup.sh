@@ -36,9 +36,10 @@ action() {
     # helper functions
     #
 
-    _install_pip() {
+    jtsf_install_pip() {
         pip install --ignore-installed --no-cache-dir --prefix "$JTSF_SOFTWARE" "$@"
     }
+    export -f jtsf_install_pip
 
     _addpy() {
         [ ! -z "$1" ] && export PYTHONPATH="$1:$PYTHONPATH"
@@ -58,24 +59,38 @@ action() {
     _addpy "$JTSF_SOFTWARE/lib/python2.7/site-packages"
 
     # software that is used in this project
-    if [ ! -d "$JTSF_SOFTWARE" ]; then
+    jtsf_install_software() {
+        local origin="$( pwd )"
+        local mode="$1"
+
+        if [ -d "$JTSF_SOFTWARE" ]; then
+            if [ "$mode" = "force" ]; then
+                echo "remove software in $JTSF_SOFTWARE"
+                rm -rf "$JTSF_SOFTWARE"
+            else
+                if [ "$mode" != "silent" ]; then
+                    echo "software already installed in $JTSF_SOFTWARE"
+                fi
+                return "0"
+            fi
+        fi
+
         echo "installing development software in $JTSF_SOFTWARE"
         mkdir -p "$JTSF_SOFTWARE"
 
-        _install_pip six
-        _install_pip scinum
-        _install_pip order
-        _install_pip --no-dependencies uproot
-        _install_pip luigi
-        LAW_INSTALL_CUSTOM_SCRIPT="1" _install_pip git+https://github.com/riga/law.git
+        jtsf_install_pip --no-dependencies uproot
+        jtsf_install_pip order
+        LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip git+https://github.com/riga/law.git
 
         # gfal2
         cd "$JTSF_SOFTWARE"
         wget https://www.dropbox.com/s/3nylghi0xtqaiyy/gfal2.tgz
         tar -xzf gfal2.tgz
         rm gfal2.tgz
-        cd "$JTSF_BASE"
-    fi
+        cd "$origin"
+    }
+    export -f jtsf_install_software
+    jtsf_install_software silent
 
     # setup gfal2 separately
     source "$JTSF_SOFTWARE/gfal2/setup.sh" || return "$?"

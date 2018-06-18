@@ -147,8 +147,8 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
         # phase space region loop
         for p_name, p_sel in get_phasespace_info(i_tag_jet):
             p_cat = ch.add_category(
-                name="{}__{}".format(ch.name, p_name),
-                label="{} region".format(p_name),
+                name="{}__{}__{}".format(ch.name, p_name, i_tag_jet),
+                label="{} region (tag jet1)".format(p_name),
                 selection="channel == {} && {}".format(ch.id, p_sel),
             )
             # flavor loop

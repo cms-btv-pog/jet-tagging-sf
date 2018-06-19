@@ -20,6 +20,7 @@
 
 #include "DataFormats/BeamSpot/interface/BeamSpot.h"
 #include "DataFormats/Common/interface/TriggerResults.h"
+#include "DataFormats/Math/interface/deltaR.h"
 #include "DataFormats/Math/interface/LorentzVector.h"
 #include "DataFormats/HLTReco/interface/TriggerEvent.h"
 #include "DataFormats/HLTReco/interface/TriggerEventWithRefs.h"
@@ -50,10 +51,12 @@
 #include "HLTrigger/HLTcore/interface/HLTConfigProvider.h"
 
 #include "JetMETCorrections/Objects/interface/JetCorrector.h"
+#include "JetMETCorrections/Modules/interface/JetResolution.h"
 
 #include "TFile.h"
 #include "TTree.h"
 #include "TH1F.h"
+#include "TRandom3.h"
 
 #include "JetTaggingSF/JetTaggingSF/interface/VarMap.h"
 
@@ -88,8 +91,7 @@ enum MuonID
 enum JetID
 {
     J_INVALID = 0,
-    J_LOOSE,
-    J_TIGHT
+    J_VALID,
 };
 
 enum LeptonChannel
@@ -165,7 +167,7 @@ private:
     virtual void endJob() override;
 
     // methods for handling variables and output objects
-    void setupJESObjects();
+    void setupJetCorrectionObjects();
     void setupVariables();
     void setVariable(const string& name, double value);
 
@@ -180,8 +182,7 @@ private:
         std::vector<pat::Muon>&, std::vector<pat::Muon>&, reco::RecoCandidate*&,
         reco::RecoCandidate*&, LeptonChannel&);
     bool jetMETSelection(const edm::Event&, double, reco::RecoCandidate*, reco::RecoCandidate*,
-        const pat::MET&, const string&, const string&, std::vector<pat::Jet>&,
-        std::vector<pat::Jet>&, pat::MET&);
+        const pat::MET&, const string&, const string&, std::vector<pat::Jet>&, pat::MET&);
     VertexID vertexID(reco::Vertex&);
     ElectronID electronID(pat::Electron&, reco::Vertex&, double);
     MuonID muonID(pat::Muon&, reco::Vertex&);
@@ -191,7 +192,9 @@ private:
     double readGenWeight(const edm::Event&);
     float readPU(const edm::Event&);
     double readRho(const edm::Event&);
-    void correctJet(pat::Jet&, const string&, const string&, int64_t, double);
+    void applyJES(pat::Jet&, const string&, const string&, int64_t, double);
+    void applyJER(pat::Jet&, const std::vector<reco::GenJet>*, const string&, const string&,
+        double);
 
     // options
     bool verbose_;
@@ -208,6 +211,8 @@ private:
     vstring jesUncFiles_;
     string jesUncSrcFile_;
     vstring jesUncSources_;
+    string jerPtResolutionFile_;
+    string jerScaleFactorFile_;
 
     // tokes
     edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
@@ -220,6 +225,7 @@ private:
     edm::EDGetTokenT<std::vector<pat::Muon> > muonToken_;
     edm::EDGetTokenT<std::vector<pat::MET> > metToken_;
     edm::EDGetTokenT<std::vector<pat::Jet> > jetToken_;
+    edm::EDGetTokenT<std::vector<reco::GenJet> > genJetToken_;
     edm::EDGetTokenT<double> rhoToken_;
 
     // additional members
@@ -234,10 +240,13 @@ private:
     TH1F* cutflowHist_;
     size_t nJESRanges_;
     size_t nJESFilesPerRange_;
-    std::vector<std::pair<string, string> > jesVariations_;
+    std::vector<std::pair<string, string> > jetVariations_;
     std::vector<FactorizedJetCorrector*> jetCorrectors_; // per jes range
     std::vector<JetCorrectionUncertainty*> jetCorrectorUncs_; // per jes range
     std::vector<JetCorrectionUncertainty*> jetCorrectorUncSources_; // per source, one for all ranges
+    JME::JetResolution* jerResolution_;
+    JME::JetResolutionScaleFactor* jerScaleFactor_;
+    TRandom3* rnd_;
 };
 
 TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
@@ -255,6 +264,8 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , jesUncFiles_(iConfig.getParameter<vstring>("jesUncFiles"))
     , jesUncSrcFile_(iConfig.getParameter<string>("jesUncSrcFile"))
     , jesUncSources_(iConfig.getParameter<vstring>("jesUncSources"))
+    , jerPtResolutionFile_(iConfig.getParameter<string>("jerPtResolutionFile"))
+    , jerScaleFactorFile_(iConfig.getParameter<string>("jerScaleFactorFile"))
     , genInfoToken_(consumes<GenEventInfoProduct>(iConfig.getParameter<edm::InputTag>("genInfoCollection")))
     , triggerBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerBitsCollection")))
     , metFilterBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("metFilterBitsCollection")))
@@ -265,31 +276,52 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , muonToken_(consumes<std::vector<pat::Muon> >(iConfig.getParameter<edm::InputTag>("muonCollection")))
     , metToken_(consumes<std::vector<pat::MET> >(iConfig.getParameter<edm::InputTag>("metCollection")))
     , jetToken_(consumes<std::vector<pat::Jet> >(iConfig.getParameter<edm::InputTag>("jetCollection")))
+    , genJetToken_(consumes<std::vector<reco::GenJet> >(iConfig.getParameter<edm::InputTag>("genJetCollection")))
     , rhoToken_(consumes<double>(iConfig.getParameter<edm::InputTag>("rhoCollection")))
-    , tfile_(0)
-    , tfileMeta_(0)
-    , tree_(0)
-    , eventHist_(0)
-    , selectedEventHist_(0)
-    , weightHist_(0)
-    , selectedWeightHist_(0)
-    , cutflowHist_(0)
+    , tfile_(nullptr)
+    , tfileMeta_(nullptr)
+    , tree_(nullptr)
+    , eventHist_(nullptr)
+    , selectedEventHist_(nullptr)
+    , weightHist_(nullptr)
+    , selectedWeightHist_(nullptr)
+    , cutflowHist_(nullptr)
+    , jerResolution_(nullptr)
+    , jerScaleFactor_(nullptr)
+    , rnd_(0)
 {
     if (verbose_)
     {
         std::cout << "running TreeMaker in verbose mode" << std::endl;
     }
 
-    setupJESObjects();
+    setupJetCorrectionObjects();
     setupVariables();
+
+    rnd_ = new TRandom3(0);
 }
 
 TreeMaker::~TreeMaker()
 {
 }
 
-void TreeMaker::setupJESObjects()
+void TreeMaker::setupJetCorrectionObjects()
 {
+    // build jet variations, i.e. a vector a string pairs (variation, direction)
+    // begin with the nominal one
+    jetVariations_.push_back(stringPair("", ""));
+
+    if (!isData_ && !jerPtResolutionFile_.empty() && !jerScaleFactorFile_.empty())
+    {
+        jerResolution_ = new JME::JetResolution(jerPtResolutionFile_);
+        jerScaleFactor_ = new JME::JetResolutionScaleFactor(jerScaleFactorFile_);
+
+        // add jet variations
+        jetVariations_.push_back(stringPair("jer", "up"));
+        jetVariations_.push_back(stringPair("jer", "down"));
+    }
+
+    // stop here, when no jes files are given
     if (jesFiles_.size() == 0)
     {
         return;
@@ -353,14 +385,11 @@ void TreeMaker::setupJESObjects()
         }
     }
 
-    // build the JES variations, i.e. a vector a string pairs (variation, direction)
-    // first, the nominal one
-    jesVariations_.push_back(stringPair("", ""));
-    // iterate over JES uncertainties
+    // add jet variations for each jes source
     for (size_t i = 0; i < jesUncSources_.size(); i++)
     {
-        jesVariations_.push_back(stringPair(jesUncSources_[i], "up"));
-        jesVariations_.push_back(stringPair(jesUncSources_[i], "down"));
+        jetVariations_.push_back(stringPair("jes" + jesUncSources_[i], "up"));
+        jetVariations_.push_back(stringPair("jes" + jesUncSources_[i], "down"));
     }
 }
 
@@ -391,13 +420,13 @@ void TreeMaker::setupVariables()
     }
     varMap_.addDouble("mll");
 
-    // jet and MET and other JES dependent variables
-    for (size_t i = 0; i < (isData_ ? 1 : jesVariations_.size()); i++)
+    // jet and MET and other JES/JER dependent variables
+    for (size_t i = 0; i < (isData_ ? 1 : jetVariations_.size()); i++)
     {
         string postfix = "";
-        if (!jesVariations_[i].first.empty())
+        if (!jetVariations_[i].first.empty())
         {
-            postfix += "_jes_" + jesVariations_[i].first + "_" + jesVariations_[i].second;
+            postfix += "_" + jetVariations_[i].first + "_" + jetVariations_[i].second;
         }
 
         varMap_.addInt32("jetmet_pass" + postfix);
@@ -414,7 +443,6 @@ void TreeMaker::setupVariables()
             varMap_.addDouble("jet" + std::to_string(j) + "_px" + postfix);
             varMap_.addDouble("jet" + std::to_string(j) + "_py" + postfix);
             varMap_.addDouble("jet" + std::to_string(j) + "_pz" + postfix);
-            varMap_.addInt32("jet" + std::to_string(j) + "_tight" + postfix);
 
             // jet variables that are not subject to systematic variations should only be saved once
             if (i == 0)
@@ -582,24 +610,21 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
 
     // read and select jets plus MET
     std::vector<std::vector<pat::Jet> > jets;
-    std::vector<std::vector<pat::Jet> > tightJets;
     std::vector<pat::MET> mets;
     std::vector<bool> passJetMETSelection;
     bool passOneJetMETSelection = false;
-    for (size_t i = 0; i < (isData_ ? 1 : jesVariations_.size()); i++)
+    for (size_t i = 0; i < (isData_ ? 1 : jetVariations_.size()); i++)
     {
-        string variation = jesVariations_[i].first;
-        string direction = jesVariations_[i].second;
+        string variation = jetVariations_[i].first;
+        string direction = jetVariations_[i].second;
 
         std::vector<pat::Jet> jets2;
-        std::vector<pat::Jet> tightJets2;
         pat::MET met(metOrig);
 
         bool pass = jetMETSelection(
-            event, rho, lep1, lep2, metOrig, variation, direction, jets2, tightJets2, met);
+            event, rho, lep1, lep2, metOrig, variation, direction, jets2, met);
 
         jets.push_back(jets2);
-        tightJets.push_back(tightJets2);
         mets.push_back(met);
         passJetMETSelection.push_back(pass);
 
@@ -663,12 +688,12 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     varMap_.setDouble("mll", mll);
 
     // jet and MET variables
-    for (size_t i = 0; i < (isData_ ? 1 : jesVariations_.size()); i++)
+    for (size_t i = 0; i < (isData_ ? 1 : jetVariations_.size()); i++)
     {
         string postfix = "";
-        if (!jesVariations_[i].first.empty())
+        if (!jetVariations_[i].first.empty())
         {
-            postfix += "_jes_" + jesVariations_[i].first + "_" + jesVariations_[i].second;
+            postfix += "_" + jetVariations_[i].first + "_" + jetVariations_[i].second;
         }
 
         varMap_.setInt32("jetmet_pass" + postfix, passJetMETSelection[i]);
@@ -708,8 +733,6 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
             varMap_.setDouble("jet" + std::to_string(j) + "_px" + postfix, jet->px());
             varMap_.setDouble("jet" + std::to_string(j) + "_py" + postfix, jet->py());
             varMap_.setDouble("jet" + std::to_string(j) + "_pz" + postfix, jet->pz());
-            varMap_.setInt32("jet" + std::to_string(j) + "_tight" + postfix,
-                jet->userInt("tight"));
             varMap_.setInt32("jet" + std::to_string(j) + "_flavor" + postfix,
                 jet->hadronFlavour());
             varMap_.setDouble("jet" + std::to_string(j) + "_csvv2" + postfix,
@@ -913,15 +936,19 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
 
 bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
     reco::RecoCandidate* lep1, reco::RecoCandidate* lep2, const pat::MET& metOrig,
-    const string& variation, const string& direction, std::vector<pat::Jet>& jets,
-    std::vector<pat::Jet>& tightJets, pat::MET& met)
+    const string& variation, const string& direction, std::vector<pat::Jet>& jets, pat::MET& met)
 {
-    // read and select jets
+    // read jets
     edm::Handle<std::vector<pat::Jet> > jetsHandle;
     event.getByToken(jetToken_, jetsHandle);
-    if (!jetsHandle.isValid())
+
+    // read gen jets for matching within JER smearing
+    const std::vector<reco::GenJet>* genJets = nullptr;
+    if (!isData_)
     {
-        return false;
+        edm::Handle<std::vector<reco::GenJet> > genJetsHandle;
+        event.getByToken(genJetToken_, genJetsHandle);
+        genJets = genJetsHandle.product();
     }
 
     // keep track of changes to MET due to jet corrections
@@ -930,16 +957,30 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
     for (const pat::Jet& jetOrig : *jetsHandle)
     {
         pat::Jet jet(jetOrig);
-        correctJet(jet, variation, direction, event.run(), rho);
+
+        // when variation is empty, apply nominal JES and JER,
+        // when variation is JER, apply nominal JES and JER variation,
+        // otherwise, apply JES variation and nominal JER
+        if (variation.empty())
+        {
+            applyJES(jet, "", "", event.run(), rho);
+            applyJER(jet, genJets, "", "", rho);
+        }
+        else if (variation == "jer")
+        {
+            applyJES(jet, "", "", event.run(), rho);
+            applyJER(jet, genJets, variation, direction, rho);
+        }
+        else
+        {
+            applyJES(jet, variation, direction, event.run(), rho);
+            applyJER(jet, genJets, "", "", rho);
+        }
 
         JetID type = jetID(jet, lep1, lep2);
-        if (type >= J_LOOSE)
+        if (type == J_VALID)
         {
             jets.push_back(jet);
-            if (type == J_TIGHT)
-            {
-                tightJets.push_back(jet);
-            }
 
             // propagate to met
             correctedMetP4.SetPx(correctedMetP4.Px() - (jet.px() - jetOrig.px()));
@@ -957,7 +998,6 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
 
     // sort jets
     std::sort(jets.begin(), jets.end(), comparePt);
-    std::sort(tightJets.begin(), tightJets.end(), comparePt);
 
     return true;
 }
@@ -1016,6 +1056,7 @@ ElectronID TreeMaker::electronID(pat::Electron& electron, reco::Vertex& vertex, 
     }
 
     // calculate the relative isolation for later use
+    // no need to cut on since VID already did
     const auto& isoVars = electron.pfIsolationVariables();
     float effArea = electronEffectiveArea(electron);
     float neutralSum = isoVars.sumNeutralHadronEt + isoVars.sumPhotonEt - rho * effArea;
@@ -1037,19 +1078,19 @@ MuonID TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
         return M_INVALID;
     }
 
-    // loose eta cut
+    // eta cut
     double absEta = fabs(muon.eta());
     if (absEta >= 2.4)
     {
         return M_INVALID;
     }
 
-    // loose isolation cut
+    // isolation cut
     const auto& isoVars = muon.pfIsolationR04();
     float neutralSum = isoVars.sumNeutralHadronEt + isoVars.sumPhotonEt - 0.5 * isoVars.sumPUPt;
     float iso = (isoVars.sumChargedHadronPt + fmax(0.0, neutralSum)) / muon.pt();
     muon.addUserFloat("iso", iso, true);
-    if (iso >= 0.25)
+    if (iso >= 0.15)
     {
         return M_INVALID;
     }
@@ -1074,8 +1115,8 @@ MuonID TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
         return M_INVALID;
     }
 
-    // tight or loose decision depends on pt, eta and iso
-    bool isTight = muon.pt() > 26. && absEta < 2.1 && iso < 0.15;
+    // tight or loose decision depends on pt
+    bool isTight = muon.pt() > 25.;
     muon.addUserInt("tight", isTight, true);
 
     return isTight ? M_TIGHT : M_LOOSE;
@@ -1083,7 +1124,7 @@ MuonID TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
 
 JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2)
 {
-    // loose pt cut
+    // pt cut
     if (jet.pt() <= 20.)
     {
         return J_INVALID;
@@ -1096,7 +1137,7 @@ JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandi
         return J_INVALID;
     }
 
-    // PU jet ID
+    // loose PU jet ID
     if (jet.userInt("pileupJetId:fullId") < 4)
     {
         return J_INVALID;
@@ -1141,11 +1182,7 @@ JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandi
         return J_INVALID;
     }
 
-    // tight or loose decision depends only on pt
-    bool isTight = jet.pt() > 30.;
-    jet.addUserInt("tight", isTight, true);
-
-    return isTight ? J_TIGHT : J_LOOSE;
+    return J_VALID;
 }
 
 double TreeMaker::readGenWeight(const edm::Event& event)
@@ -1177,7 +1214,7 @@ double TreeMaker::readRho(const edm::Event& event)
     return *rhoHandle;
 }
 
-void TreeMaker::correctJet(pat::Jet& jet, const string& variation, const string& direction,
+void TreeMaker::applyJES(pat::Jet& jet, const string& variation, const string& direction,
     int64_t run, double rho)
 {
     // before we start, lookup the proper objects, as all values depend on the run number
@@ -1218,8 +1255,10 @@ void TreeMaker::correctJet(pat::Jet& jet, const string& variation, const string&
     // apply a variation / uncertainty?
     if (!variation.empty())
     {
+        // variation is "jer<source>"
+        string source = variation.substr(3);
         JetCorrectionUncertainty* corr = nullptr;
-        if (variation == "total")
+        if (source == "total")
         {
             // total variation
             corr = jetCorrectorUnc;
@@ -1229,7 +1268,7 @@ void TreeMaker::correctJet(pat::Jet& jet, const string& variation, const string&
             // factorized variation
             for (size_t i = 0; i < jesUncSources_.size(); i++)
             {
-                if (jesUncSources_[i] == variation)
+                if (jesUncSources_[i] == source)
                 {
                     corr = jetCorrectorUncSources_[i];
                     break;
@@ -1238,7 +1277,7 @@ void TreeMaker::correctJet(pat::Jet& jet, const string& variation, const string&
         }
         if (!corr)
         {
-            throw std::runtime_error("could not find jet corrector for variation " + variation);
+            throw std::runtime_error("could not find jet corrector for source " + source);
         }
         // update the recorrectFactor accordingly
         corr->setJetPt(jet.pt());
@@ -1255,6 +1294,65 @@ void TreeMaker::correctJet(pat::Jet& jet, const string& variation, const string&
 
     // finally, scale the four-vector
     jet.setP4(jet.p4() * recorrectFactor);
+}
+
+void TreeMaker::applyJER(pat::Jet& jet, const std::vector<reco::GenJet>* genJets,
+    const string& variation, const string& direction, double rho)
+{
+    if (isData_ || jerResolution_ == nullptr || jerScaleFactor_ == nullptr || jet.pt() == 0)
+    {
+        return;
+    }
+
+    Variation v = Variation::NOMINAL;
+    if (variation == "jer")
+    {
+        v = direction == "up" ? Variation::UP : Variation::DOWN;
+    }
+
+    double res = jerResolution_->getResolution({ { JME::Binning::JetPt, jet.pt() },
+        { JME::Binning::JetEta, jet.eta() }, { JME::Binning::Rho, rho } });
+    double sf = jerScaleFactor_->getScaleFactor({ { JME::Binning::JetEta, jet.eta() } }, v);
+
+    // try to find a matched gen jet
+    double minDR = 0.2;
+    double maxDPt = 3 * res * jet.pt();
+    const reco::GenJet* matchedGenJet = nullptr;
+    for (size_t i = 0; i < genJets->size(); i++)
+    {
+        double dR = deltaR(genJets->at(i), jet);
+        if (dR >= minDR)
+        {
+            continue;
+        }
+
+        double dPt = std::fabs(genJets->at(i).pt() - jet.pt());
+        if (dPt > maxDPt)
+        {
+            continue;
+        }
+
+        minDR = dR;
+        matchedGenJet = &(genJets->at(i));
+    }
+
+    // scaling when a gen jet was found, random smearing otherwise (and sf > 1)
+    double jerFactor = 1.;
+    if (matchedGenJet)
+    {
+        jerFactor = 1 + (sf - 1) * (jet.pt() - matchedGenJet->pt()) / jet.pt();
+    }
+    else if (sf > 1)
+    {
+        double width = res * std::sqrt(sf * sf - 1);
+        jerFactor = 1 + rnd_->Gaus(0.0, width);
+    }
+
+    // truncate the jer factor when the energy is too small
+    jerFactor = std::max(jerFactor, 1e-2 / jet.energy());
+
+    // finally, update the jet
+    jet.setP4(jet.p4() * jerFactor);
 }
 
 DEFINE_FWK_MODULE(TreeMaker);

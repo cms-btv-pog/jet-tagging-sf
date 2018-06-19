@@ -121,6 +121,20 @@ try:
         "jes uncertainty sources to consider",
     )
     options.register(
+        "jerPtResolutionFile",
+        "",
+        VarParsing.multiplicity.singleton,
+        VarParsing.varType.string,
+        "JER pt resolution file",
+    )
+    options.register(
+        "jerScaleFactorFile",
+        "",
+        VarParsing.multiplicity.singleton,
+        VarParsing.varType.string,
+        "JER scale factor file",
+    )
+    options.register(
         "reportEvery",
         1000,
         VarParsing.multiplicity.singleton,
@@ -214,6 +228,8 @@ try:
     process.treeMaker.jesUncFiles = cms.vstring(options.jesUncFiles)
     process.treeMaker.jesUncSrcFile = cms.string(options.jesUncSrcFile)
     process.treeMaker.jesUncSources = cms.vstring(options.jesUncSources)
+    process.treeMaker.jerPtResolutionFile = cms.string(options.jerPtResolutionFile)
+    process.treeMaker.jerScaleFactorFile = cms.string(options.jerScaleFactorFile)
     process.treeMaker.metFilterBitsCollection = metFilterBitsCollection
     process.treeMaker.electronCollection = electronCollection
     process.treeMaker.muonCollection = muonCollection

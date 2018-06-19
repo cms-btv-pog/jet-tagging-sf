@@ -79,6 +79,8 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 ("jesUncFiles", jes_unc_files),
                 ("jesUncSrcFile", jes_unc_src_file),
                 ("jesUncSources", self.config_inst.get_aux("jes_sources")),
+                ("jerPtResolutionFile", setup_files["jer_files"]["PtResolution"]),
+                ("jerScaleFactorFile", setup_files["jer_files"]["SF"]),
             ]
 
             # triggers

@@ -13,5 +13,6 @@
 <use name="SimDataFormats/PileupSummaryInfo" />
 <use name="HLTrigger/HLTcore" />
 <use name="EgammaAnalysis/ElectronTools" />
+<use name="JetMETCorrections/Modules" />
 
 <flags EDM_PLUGIN="1" />

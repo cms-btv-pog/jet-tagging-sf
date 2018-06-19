@@ -2,6 +2,10 @@
 
 """
 Physics processes.
+If not stated otherwise, cross sections are given in pb.
+Values taken from:
+- https://twiki.cern.ch/twiki/bin/view/CMS/StandardModelCrossSectionsat13TeVInclusive?rev=18
+- https://twiki.cern.ch/twiki/bin/view/CMS/SummaryTable1G25ns?rev=151
 """
 
 
@@ -56,13 +60,62 @@ process_dy = od.Process(
 
 process_dy_lep = process_dy.add_process(
     "dy_lep", 22,
+    label=r"Drell-Yan, $Z \rightarrow ll$",
 )
 
-process_dy_lep_10To50 = process_dy_lep.add_process(
-    "dy_lep_10To50", 221,
-    label=r"Drell-Yan, $10 \leq m_{ll} \leq 50$",
+process_dy_lep_5To50 = process_dy_lep.add_process(
+    "dy_lep_5To50", 221,
+    label=r"Drell-Yan, $5 \leq m_{ll} \leq 50$",
     xsecs={
-        13: sn.Number(18610),
+        13: sn.Number(71310, {
+            "scale": 70,
+        }),
+    },
+
+)
+
+process_dy_lep_5To50_Ht70To100 = process_dy_lep_5To50.add_process(
+    "dy_lep_5To50_Ht70To100", 2211,
+    xsecs={
+        13: sn.Number(301.2, {
+            "pdf": 0.8,
+        }),
+    },
+)
+
+process_dy_lep_5To50_Ht100To200 = process_dy_lep_5To50.add_process(
+    "dy_lep_5To50_Ht100To200", 2212,
+    xsecs={
+        13: sn.Number(224.2, {
+            "pdf": 5.7,
+        }),
+    },
+)
+
+process_dy_lep_5To50_Ht200To400 = process_dy_lep_5To50.add_process(
+    "dy_lep_5To50_Ht200To400", 2213,
+    xsecs={
+        13: sn.Number(37.2, {
+            "pdf": 1.1,
+        }),
+    },
+)
+
+process_dy_lep_5To50_Ht400To600 = process_dy_lep_5To50.add_process(
+    "dy_lep_5To50_Ht400To600", 2214,
+    xsecs={
+        13: sn.Number(3.581, {
+            "pdf": 0.118,
+        }),
+    },
+)
+
+process_dy_lep_5To50_Ht600ToInf = process_dy_lep_5To50.add_process(
+    "dy_lep_5To50_Ht600ToInf", 2215,
+    xsecs={
+        13: sn.Number(1.124, {
+            "pdf": 0.038,
+        }),
     },
 )
 
@@ -74,6 +127,70 @@ process_dy_lep_50ToInf = process_dy_lep.add_process(
             "integration": 0.6,
             "pdf": 33.2,
         }) * N_LEPS,
+    },
+)
+
+process_dy_lep_50ToInf_Ht70To100 = process_dy_lep_50ToInf.add_process(
+    "dy_lep_50ToInf_Ht70To100", 2221,
+    xsecs={
+        13: sn.Number(169.9, {
+            "pdf": 0.5,
+        }),
+    },
+)
+
+process_dy_lep_50ToInf_Ht100To200 = process_dy_lep_50ToInf.add_process(
+    "dy_lep_50ToInf_Ht100To200", 2222,
+    xsecs={
+        13: sn.Number(147.40, {
+            "pdf": 0.09,
+        }),
+    },
+)
+
+process_dy_lep_50ToInf_Ht200To400 = process_dy_lep_50ToInf.add_process(
+    "dy_lep_50ToInf_Ht200To400", 2223,
+    xsecs={
+        13: sn.Number(40.99, {
+            "pdf": 0.04,
+        }),
+    },
+)
+
+process_dy_lep_50ToInf_Ht400To600 = process_dy_lep_50ToInf.add_process(
+    "dy_lep_50ToInf_Ht400To600", 2224,
+    xsecs={
+        13: sn.Number(5.678, {
+            "pdf": 0.005,
+        }),
+    },
+)
+
+process_dy_lep_50ToInf_Ht600To800 = process_dy_lep_50ToInf.add_process(
+    "dy_lep_50ToInf_Ht600To800", 2225,
+    xsecs={
+        13: sn.Number(1.367),
+    },
+)
+
+process_dy_lep_50ToInf_Ht800To1200 = process_dy_lep_50ToInf.add_process(
+    "dy_lep_50ToInf_Ht800To1200", 2226,
+    xsecs={
+        13: sn.Number(0.6304),
+    },
+)
+
+process_dy_lep_50ToInf_Ht1200To2500 = process_dy_lep_50ToInf.add_process(
+    "dy_lep_50ToInf_Ht1200To2500", 2227,
+    xsecs={
+        13: sn.Number(0.1514),
+    },
+)
+
+process_dy_lep_50ToInf_Ht2500ToInf = process_dy_lep_50ToInf.add_process(
+    "dy_lep_50ToInf_Ht2500ToInf", 2228,
+    xsecs={
+        13: sn.Number(0.003565),
     },
 )
 

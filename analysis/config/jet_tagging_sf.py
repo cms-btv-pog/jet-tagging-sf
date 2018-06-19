@@ -51,7 +51,11 @@ cfg.add_process(process_st_tW)
 #     "data_B_ee", "data_C_ee", "data_D_ee", "data_E_ee", "data_F_ee",
 #     "data_B_emu", "data_C_emu", "data_D_emu", "data_E_emu", "data_F_emu",
 #     "data_B_mumu", "data_C_mumu", "data_D_mumu", "data_E_mumu", "data_F_mumu",
-#     "tt_dl", "dy_lep_10To50", "dy_lep_50ToInf", "st_tW_t", "st_tW_tbar", "WW_sl",
+#     "tt_dl", "dy_lep_5To50_Ht70To100", "dy_lep_5To50_Ht100To200", "dy_lep_5To50_Ht200To400",
+#     "dy_lep_5To50_Ht600ToInf", "dy_lep_50ToInf_Ht70To100", "dy_lep_50ToInf_Ht100To200",
+#     "dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600", "dy_lep_50ToInf_Ht600To800",
+#     "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500", "dy_lep_50ToInf_Ht2500ToInf",
+#     "st_tW_t", "st_tW_tbar", "WW_sl",
 # ]
 dataset_names = [
     "data_B_ee", "data_B_emu", "data_B_mumu", "tt_dl", "st_tW_t",

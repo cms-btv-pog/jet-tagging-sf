@@ -76,15 +76,48 @@ cfg.set_aux("dataset_channels", {
     if dataset.is_data
 })
 
-# define nested categories (flavor -> pt bin -> eta bin)
-def get_flavor_info(idx=1):
+# define nested categories (analysis phase space -> hf/lf region -> flavor -> pt bin -> eta bin)
+def get_phasespace_info():
+    return [
+        ("measure", join_root_selection("n_jets == 2")),
+        ("closure", join_root_selection("n_jets >= 2")),
+    ]
+
+def get_region_info(idx, channel, btagger="deepcsv_bcomb", et_miss=30., z_window=10.):
+    csv_tight = cfg.get_aux("working_points")["deepcsv"]["tight"]
+    csv_loose = cfg.get_aux("working_points")["deepcsv"]["loose"]
+
+    hf_cuts, lf_cuts = [], []
+    # jet tagging requirement
+    hf_cuts.append("jet{}_{} > {}".format(btagger, idx, csv_tight))
+    lf_cuts.append("jet{}_{} < {}".format(btagger, idx, csv_loose))
+
+    # the following cuts do not apply for emu
+    if channel != "emu":
+        # ET-miss requirement
+        hf_cuts.append(" > {}".format(et_miss))
+        lf_cuts.append(" < {}".format(et_miss))
+
+        # z-mass window
+        hf_cuts.append("abs(mll - {}) > {}".format(Z_MASS.nominal, z_window))
+        lf_cuts.append("abs(mll - {}) < {}".format(Z_MASS.nominal, z_window))
+
+        # z peak diamond
+        # lf_cuts.append("pass_z_peak == 0")
+
+    return [
+        ("HF", join_root_selection(hf_cuts)),
+        ("LF", join_root_selection(lf_cuts)),
+    ]
+
+def get_flavor_info(idx):
     return [
         ("b", "abs(jet%d_flavor) == 5" % idx),
         ("c", "abs(jet%d_flavor) == 4" % idx),
         ("udsg", "abs(jet%d_flavor) != 5 && abs(jet%d_flavor) != 4" % (idx, idx)),
     ]
 
-def get_pt_info(idx=1):
+def get_pt_info(idx):
     return {
         "b": [
             ("20To30", "jet%d_pt > 20 && jet%d_pt <= 30" % (idx, idx)),
@@ -108,7 +141,7 @@ def get_pt_info(idx=1):
         ]
     }
 
-def get_eta_info(idx=1):
+def get_eta_info(idx):
     return {
         "b": [
             ("0To2p4", "jet%d_eta <= 2.4" % idx),
@@ -123,73 +156,50 @@ def get_eta_info(idx=1):
         ]
     }
 
-def get_phasespace_info(idx=1, btagger="deepcsv_bcomb", et_miss=30., z_window=10.):
-    csv_tight = cfg.get_aux("working_points")["deepcsv"]["tight"]
-    csv_loose = cfg.get_aux("working_points")["deepcsv"]["loose"]
-
-    hf_cuts, lf_cuts = [], []
-    # jet tagging requirement
-    hf_cuts.append("jet{}_{} > {}".format(btagger, idx, csv_tight))
-    lf_cuts.append("jet{}_{} < {}".format(btagger, idx, csv_loose))
-
-    # ET-miss requirement
-    hf_cuts.append(" > {}".format(et_miss))
-    lf_cuts.append(" < {}".format(et_miss))
-
-    # z-mass window
-    hf_cuts.append("abs(mll - {}) > {}".format(Z_MASS.nominal, z_window))
-    lf_cuts.append("abs(mll - {}) < {}".format(Z_MASS.nominal, z_window))
-
-    # z peak diamond
-    lf_cuts.append("pass_z_peak == 0")
-
-    return [
-        ("HF", join_root_selection(hf_cuts)),
-        ("LF", join_root_selection(lf_cuts)),
-    ]
-
 for ch in [ch_ee, ch_emu, ch_mumu]:
-    # TODO: maybe start with phase-space categories, such as "measurement" and "closure"
-    for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
-        # phase space region loop
-        for ps_name, ps_sel in get_phasespace_info(i_tag_jet):
-            ps_cat = ch.add_category(
-                name="{}__{}__j{}".format(ch.name, ps_name, i_tag_jet),
-                label="{} region (j{} tagged)".format(ps_name, i_tag_jet),
-                selection="channel == {} && {}".format(ch.id, ps_sel),
-            )
-            # flavor loop
-            for fl_name, fl_sel in get_flavor_info(i_probe_jet):
-                fl_cat = ps_cat.add_category(
-                    name="{}__{}".format(ps_cat.name, fl_name),
-                    label="{}, {} flavor".format(ps_cat.label, fl_name),
-                    selection="{} && {}".format(ps_cat.selection, fl_sel),
+    # phase space region loop (measurement, closure, ...)
+    for ps_name, ps_sel in get_phasespace_info():
+        # loop over both jet1 jet2 permutations
+        for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
+            # region loop (hf, lf, ...)
+            for rg_name, rg_sel in get_region_info(i_tag_jet, ch):
+                rg_cat = ch.add_category(
+                    name="{}__{}__{}__j{}".format(ch.name, ps_name, rg_name, i_tag_jet),
+                    label="{}, {} region (j{} tagged)".format(ch.name, ps_name, i_tag_jet),
+                    selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
                 )
-                # pt loop
-                for pt_name, pt_sel in get_pt_info(i_probe_jet)[fl_name]:
-                    pt_cat = fl_cat.add_category(
-                        name="{}__pt{}".format(fl_cat.name, pt_name),
-                        label="{}, pt {}".format(fl_cat.label, pt_name),
-                        selection="{} && {}".format(fl_cat.selection, pt_sel),
+                # flavor loop (b, c, udsg, ...)
+                for fl_name, fl_sel in get_flavor_info(i_probe_jet):
+                    fl_cat = rg_cat.add_category(
+                        name="{}__{}".format(rg_cat.name, fl_name),
+                        label="{}, {} flavor".format(rg_cat.label, fl_name),
+                        selection=join_root_selection(rg_cat.selection, fl_sel),
                     )
-                    # eta loop
-                    for eta_name, eta_sel in get_eta_info(i_probe_jet)[fl_name]:
-                        eta_cat = pt_cat.add_category(
-                            name="{}__eta{}".format(pt_cat.name, eta_name),
-                            label="{}, eta {}".format(pt_cat.label, eta_name),
-                            selection="{} && {}".format(pt_cat.selection, eta_sel),
+                    # pt loop
+                    for pt_name, pt_sel in get_pt_info(i_probe_jet)[fl_name]:
+                        pt_cat = fl_cat.add_category(
+                            name="{}__pt{}".format(fl_cat.name, pt_name),
+                            label="{}, pt {}".format(fl_cat.label, pt_name),
+                            selection="{} && {}".format(fl_cat.selection, pt_sel),
                         )
-
-                        # merged category for both jets
-                        merged_name = re.sub(r"__j\d+__", "__", eta_cat.name)
-                        if not ch.has_category(merged_name):
-                            merged_cat = ch.add_category(
-                                name=merged_name,
-                                label=re.sub(r" \(j\d+ tagged\)", "", eta_cat.label),
+                        # eta loop
+                        for eta_name, eta_sel in get_eta_info(i_probe_jet)[fl_name]:
+                            eta_cat = pt_cat.add_category(
+                                name="{}__eta{}".format(pt_cat.name, eta_name),
+                                label="{}, eta {}".format(pt_cat.label, eta_name),
+                                selection="{} && {}".format(pt_cat.selection, eta_sel),
                             )
-                        else:
-                            merged_cat = ch.get_category(merged_name)
-                        merged_cat.add_category(eta_cat)
+
+                            # merged category for both jets
+                            merged_name = re.sub(r"__j\d+__", "__", eta_cat.name)
+                            if not ch.has_category(merged_name):
+                                merged_cat = ch.add_category(
+                                    name=merged_name,
+                                    label=re.sub(r" \(j\d+ tagged\)", "", eta_cat.label),
+                                )
+                            else:
+                                merged_cat = ch.get_category(merged_name)
+                            merged_cat.add_category(eta_cat)
 
 # variables
 cfg.add_variable(

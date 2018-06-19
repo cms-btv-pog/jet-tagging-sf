@@ -102,14 +102,6 @@ enum LeptonChannel
     C_MUMU
 };
 
-double deltaR(const LorentzVector& v1, const LorentzVector& v2)
-{
-    double deltaEta = v1.eta() - v2.eta();
-    double deltaPhi = fabs(v1.phi() - v2.phi());
-    if (deltaPhi > M_PI) deltaPhi = 2. * M_PI - deltaPhi;
-    return sqrt(deltaEta * deltaEta + deltaPhi * deltaPhi);
-}
-
 bool comparePt(const pat::Jet& jet1, const pat::Jet& jet2)
 {
     return jet1.pt() > jet2.pt();

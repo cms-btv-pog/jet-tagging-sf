@@ -1141,34 +1141,66 @@ JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandi
         return J_INVALID;
     }
 
-    // loose ID criteria from jetmet POG
     bool passPOGID;
+
+    // Note: we can require the tight jet ID in 2017, the loose ID is commented out in case we want
+    //       to provide SFs for loose jets
+    // // loose ID criteria from jetmet POG
+    // if (absEta <= 2.4)
+    // {
+    //     passPOGID = jet.neutralHadronEnergyFraction() < 0.99 &&
+    //         jet.neutralEmEnergyFraction() < 0.99 &&
+    //         jet.nConstituents() > 1 &&
+    //         jet.chargedHadronEnergyFraction() > 0. &&
+    //         jet.chargedMultiplicity() > 0 &&
+    //         jet.chargedEmEnergyFraction() < 0.99;
+    // }
+    // else if (absEta <= 2.7)
+    // {
+    //     passPOGID = jet.neutralHadronEnergyFraction() < 0.99 &&
+    //         jet.neutralEmEnergyFraction() < 0.99 &&
+    //         jet.nConstituents() > 1;
+    // }
+    // else if (absEta <= 3.)
+    // {
+    //     passPOGID = jet.neutralEmEnergyFraction() > 0.01 &&
+    //         jet.neutralHadronEnergyFraction() < 0.98 &&
+    //         jet.neutralMultiplicity() > 2;
+    // }
+    // else
+    // {
+    //     passPOGID = jet.neutralEmEnergyFraction() < 0.9 &&
+    //         jet.neutralMultiplicity() > 10;
+    // }
+
+    // tight ID criteria from jetmet POG
     if (absEta <= 2.4)
     {
-        passPOGID = jet.neutralHadronEnergyFraction() < 0.99 &&
-            jet.neutralEmEnergyFraction() < 0.99 &&
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.9 &&
             jet.nConstituents() > 1 &&
             jet.chargedHadronEnergyFraction() > 0. &&
-            jet.chargedMultiplicity() > 0 &&
-            jet.chargedEmEnergyFraction() < 0.99;
+            jet.chargedMultiplicity() > 0;
     }
     else if (absEta <= 2.7)
     {
-        passPOGID = jet.neutralHadronEnergyFraction() < 0.99 &&
-            jet.neutralEmEnergyFraction() < 0.99 &&
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.9 &&
             jet.nConstituents() > 1;
     }
     else if (absEta <= 3.)
     {
-        passPOGID = jet.neutralEmEnergyFraction() > 0.01 &&
-            jet.neutralHadronEnergyFraction() < 0.98 &&
+        passPOGID = jet.neutralEmEnergyFraction() > 0.02 &&
+            jet.neutralEmEnergyFraction() < 0.99 &&
             jet.neutralMultiplicity() > 2;
     }
     else
     {
         passPOGID = jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.neutralHadronEnergyFraction() > 0.02 &&
             jet.neutralMultiplicity() > 10;
     }
+
     if (!passPOGID)
     {
         return J_INVALID;
@@ -1247,7 +1279,7 @@ void TreeMaker::applyJES(pat::Jet& jet, const string& variation, const string& d
     // apply a variation / uncertainty?
     if (!variation.empty())
     {
-        // variation is "jer<source>"
+        // variation is "jes<source>"
         string source = variation.substr(3);
         JetCorrectionUncertainty* corr = nullptr;
         if (source == "total")

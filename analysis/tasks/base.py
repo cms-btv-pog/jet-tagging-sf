@@ -30,6 +30,7 @@ class AnalysisTask(law.Task):
     campaign = "2017_Run2_pp_13TeV_ICHEP18"
 
     accepts_messages = True
+    message_cache_size = 20
 
     def __init__(self, *args, **kwargs):
         super(AnalysisTask, self).__init__(*args, **kwargs)

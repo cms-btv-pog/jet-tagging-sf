@@ -186,6 +186,9 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
         self._setup_render_variables(config, self.arc_workflow_requires())
         return config
 
+    def arc_stageout_file(self):
+        return law.util.rel_path(__file__, "files", "arc_stageout.sh")
+
 
 class InstallCMSSWCode(AnalysisTask):
 

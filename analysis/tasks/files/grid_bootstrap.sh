@@ -23,6 +23,10 @@ action() {
     # set env variables
     #
 
+    export PATH_ORIG="$PATH"
+    export PYTHONPATH_ORIG="$PYTHONPATH"
+    export LD_LIBRARY_PATH_ORIG="$LD_LIBRARY_PATH"
+
     export JTSF_DATA="$HOME/jtsf_data"
     export JTSF_SOFTWARE="$JTSF_DATA/software"
     export JTSF_STORE="$JTSF_DATA/store"

@@ -241,15 +241,15 @@ class MeasureTreeSizes(AnalysisTask):
     def run(self):
         merged_files = collections.OrderedDict()
 
-        for dataset in self.config_inst.datasets.names():
-            print(" dataset {} ".format(dataset).center(80, "-"))
+        for dataset in self.config_inst.datasets:
+            print(" dataset {} ".format(dataset.name).center(80, "-"))
 
             # determine the full url to the remote directory, split it into uberftp door and path
-            task = WriteTrees.req(self, dataset=dataset)
+            task = WriteTrees.req(self, dataset=dataset.name)
             url = task.output()["collection"].dir.url()
             m = re.match(r"^.+//(.*)\:\d+/.+(/pnfs/.+)$", url)
             if not m:
-                print("cannot parse url for dataset {}: {}".format(dataset, url))
+                print("cannot parse url for dataset {}: {}".format(dataset.name, url))
                 continue
             door, path = m.groups()
 
@@ -269,12 +269,13 @@ class MeasureTreeSizes(AnalysisTask):
             mean_size = sum_sizes / float(n)
             target_size = self.merged_size * 1024.**3
             merge_factor = n if mean_size == 0 else min(n, int(round(target_size / mean_size)))
-            merged_files[dataset] = int(math.ceil(n / float(merge_factor)))
+            merged_files[dataset.name] = int(math.ceil(n / float(merge_factor)))
 
-            print("sum         : {:.2f} {}".format(*law.util.human_bytes(sum_sizes)))
-            print("mean        : {:.2f} {}".format(*law.util.human_bytes(mean_size)))
+            print("files       : {} / {}".format(n, dataset.n_files))
+            print("sum size    : {:.2f} {}".format(*law.util.human_bytes(sum_sizes)))
+            print("mean size   : {:.2f} {}".format(*law.util.human_bytes(mean_size)))
             print("merge factor: {}".format(merge_factor))
-            print("merged files: {}".format(merged_files[dataset]))
+            print("merged files: {}".format(merged_files[dataset.name]))
 
         # some output
         print(" number of files after merging ".center(80, "="))

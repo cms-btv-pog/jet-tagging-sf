@@ -36,6 +36,10 @@ cfg.set_aux("working_points", {
         "tight": 0.8001,
     }
 })
+cfg.set_aux("btagger", {
+    "name": "deepcsv",
+    "variable": "deepcsv_bcomb",
+})
 
 # link processes
 cfg.add_process(process_data_ee)
@@ -83,20 +87,25 @@ def get_phasespace_info():
         ("closure", join_root_selection("n_jets >= 2")),
     ]
 
-def get_region_info(idx, channel, btagger="deepcsv_bcomb", et_miss=30., z_window=10.):
-    csv_tight = cfg.get_aux("working_points")["deepcsv"]["tight"]
-    csv_loose = cfg.get_aux("working_points")["deepcsv"]["loose"]
+def get_region_info(idx, channel, et_miss=30., z_window=10.):
+    btagger = cfg.get_aux("btagger")
+    btag_name = btagger["name"]
+    btag_variable = cfg.get_variable("jet{}_{}".format(idx, btagger["variable"]))
+
+    csv_tight = cfg.get_aux("working_points")[btag_name]["tight"]
+    csv_loose = cfg.get_aux("working_points")[btag_name]["loose"]
 
     hf_cuts, lf_cuts = [], []
     # jet tagging requirement
-    hf_cuts.append("jet{}_{} > {}".format(btagger, idx, csv_tight))
-    lf_cuts.append("jet{}_{} < {}".format(btagger, idx, csv_loose))
+    hf_cuts.append("({}) > {}".format(btag_variable.expression, csv_tight))
+    lf_cuts.append("({}) < {}".format(btag_variable.expression, csv_loose))
 
     # the following cuts do not apply for emu
     if channel != "emu":
         # ET-miss requirement
-        hf_cuts.append(" > {}".format(et_miss))
-        lf_cuts.append(" < {}".format(et_miss))
+        et_miss_expr = "(met_px**2 + met_py**2)**0.5"
+        hf_cuts.append("{} > {}".format(et_miss_expr, et_miss))
+        lf_cuts.append("{} < {}".format(et_miss_expr, et_miss))
 
         # z-mass window
         hf_cuts.append("abs(mll - {}) > {}".format(Z_MASS.nominal, z_window))
@@ -115,25 +124,19 @@ def get_flavor_info(idx):
         ("b", "abs(jet%d_flavor) == 5" % idx),
         ("c", "abs(jet%d_flavor) == 4" % idx),
         ("udsg", "abs(jet%d_flavor) != 5 && abs(jet%d_flavor) != 4" % (idx, idx)),
+        ("inclusive", "1 * 1"),
     ]
 
 def get_pt_info(idx):
     return {
-        "b": [
+        "HF": [
             ("20To30", "jet%d_pt > 20 && jet%d_pt <= 30" % (idx, idx)),
             ("30To50", "jet%d_pt > 30 && jet%d_pt <= 50" % (idx, idx)),
             ("50To70", "jet%d_pt > 50 && jet%d_pt <= 70" % (idx, idx)),
             ("70To100", "jet%d_pt > 70 && jet%d_pt <= 100" % (idx, idx)),
             ("100ToInf", "jet%d_pt > 100" % idx),
         ],
-        "c": [
-            ("20To30", "jet%d_pt > 20 && jet%d_pt <= 30" % (idx, idx)),
-            ("30To50", "jet%d_pt > 30 && jet%d_pt <= 50" % (idx, idx)),
-            ("50To70", "jet%d_pt > 50 && jet%d_pt <= 70" % (idx, idx)),
-            ("70To100", "jet%d_pt > 70 && jet%d_pt <= 100" % (idx, idx)),
-            ("100ToInf", "jet%d_pt > 100" % idx),
-        ],
-        "udsg": [
+        "LF": [
             ("20To30", "jet%d_pt > 20 && jet%d_pt <= 30" % (idx, idx)),
             ("30To40", "jet%d_pt > 30 && jet%d_pt <= 40" % (idx, idx)),
             ("40To60", "jet%d_pt > 40 && jet%d_pt <= 60" % (idx, idx)),
@@ -143,18 +146,44 @@ def get_pt_info(idx):
 
 def get_eta_info(idx):
     return {
-        "b": [
+        "HF": [
             ("0To2p4", "jet%d_eta <= 2.4" % idx),
         ],
-        "c": [
-            ("0To2p4", "jet%d_eta <= 2.4" % idx),
-        ],
-        "udsg": [
+        "LF": [
             ("0To0p8", "jet%d_eta <= 0.8" % idx),
             ("0p8To1p6", "jet%d_eta > 0.8 && jet%d_eta <= 1.6" % (idx, idx)),
             ("1p6To2p4", "jet%d_eta > 1.6 && jet%d_eta <= 2.4" % (idx, idx)),
         ]
     }
+
+
+# variables
+for jet_idx in [1, 2]:
+    cfg.add_variable(
+        name="jet{}_pt".format(jet_idx),
+        expression="jet{}_pt".format(jet_idx),
+        binning=(25, 0., 500.,),
+        unit="GeV",
+        x_title="Jet_{} p_{{T}}".format(jet_idx),
+    )
+    cfg.add_variable(
+        name="jet{}_deepcsv_b".format(jet_idx),
+        expression="jet{}_deepcsv_b".format(jet_idx),
+        binning=(25, 0., 1.,),
+        x_title="Jet_{} prob_{{b}}".format(jet_idx),
+    )
+    cfg.add_variable(
+        name="jet{}_deepcsv_bb".format(jet_idx),
+        expression="jet{}_deepcsv_bb".format(jet_idx),
+        binning=(25, 0., 1.,),
+        x_title="Jet_{} prob_{{bb}}".format(jet_idx),
+    )
+    cfg.add_variable(
+        name="jet{}_deepcsv_bcomb".format(jet_idx),
+        expression="jet{0}_deepcsv_b + jet{0}_deepcsv_bb".format(jet_idx),
+        binning=(25, 0., 1.,),
+        x_title="Jet_{} prob_{{b+bb}}".format(jet_idx),
+    )
 
 for ch in [ch_ee, ch_emu, ch_mumu]:
     # phase space region loop (measurement, closure, ...)
@@ -176,18 +205,21 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                         selection=join_root_selection(rg_cat.selection, fl_sel),
                     )
                     # pt loop
-                    for pt_name, pt_sel in get_pt_info(i_probe_jet)[fl_name]:
+                    for pt_name, pt_sel in get_pt_info(i_probe_jet)[rg_name]:
                         pt_cat = fl_cat.add_category(
                             name="{}__pt{}".format(fl_cat.name, pt_name),
                             label="{}, pt {}".format(fl_cat.label, pt_name),
                             selection="{} && {}".format(fl_cat.selection, pt_sel),
                         )
                         # eta loop
-                        for eta_name, eta_sel in get_eta_info(i_probe_jet)[fl_name]:
+                        for eta_name, eta_sel in get_eta_info(i_probe_jet)[rg_name]:
                             eta_cat = pt_cat.add_category(
                                 name="{}__eta{}".format(pt_cat.name, eta_name),
                                 label="{}, eta {}".format(pt_cat.label, eta_name),
                                 selection="{} && {}".format(pt_cat.selection, eta_sel),
+                                aux={
+                                    "i_probe_jet": i_probe_jet,
+                                },
                             )
 
                             # merged category for both jets
@@ -196,37 +228,11 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                                 merged_cat = ch.add_category(
                                     name=merged_name,
                                     label=re.sub(r" \(j\d+ tagged\)", "", eta_cat.label),
+                                    tags=("merged",),
                                 )
                             else:
                                 merged_cat = ch.get_category(merged_name)
                             merged_cat.add_category(eta_cat)
-
-# variables
-cfg.add_variable(
-    name="jet1_pt",
-    expression="jet1_pt",
-    binning=(25, 0., 500.,),
-    unit="GeV",
-    x_title="Jet_{1} p_{T}",
-)
-cfg.add_variable(
-    name="jet1_deepcsv_b",
-    expression="jet1_deepcsv_b",
-    binning=(25, 0., 1.,),
-    x_title="Jet_{1} prob_{b}",
-)
-cfg.add_variable(
-    name="jet1_deepcsv_bb",
-    expression="jet1_deepcsv_bb",
-    binning=(25, 0., 1.,),
-    x_title="Jet_{1} prob_{bb}",
-)
-cfg.add_variable(
-    name="jet1_deepcsv_bcomb",
-    expression="jet1_deepcsv_b + jet1_deepcsv_bb",
-    binning=(25, 0., 1.,),
-    x_title="Jet_{1} prob_{b+bb}",
-)
 
 # luminosities per channel in /pb
 cfg.set_aux("lumi", {

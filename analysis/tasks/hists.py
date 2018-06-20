@@ -111,8 +111,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 weights.append(str(lumi_weight))
 
                             # totalWeight alias
-                            totalWeight = "1 * 1" if not weights else " * ".join(weights)
-                            tree.SetAlias("totalWeight", totalWeight)
+                            while len(weights) < 2:
+                                weights.insert(0, "1")
+                            tree.SetAlias("totalWeight", join_root_selection(weights, op="*"))
 
                             # change into the correct directory
                             process_dirs[(category.name, process.name)].cd()

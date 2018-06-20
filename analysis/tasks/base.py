@@ -159,7 +159,7 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
         return self.glite_output_directory().url(cmd="listdir")
 
     def glite_bootstrap_file(self):
-        return law.util.rel_path(__file__, "grid_bootstrap.sh")
+        return law.util.rel_path(__file__, "files", "grid_bootstrap.sh")
 
     def glite_job_config(self, config, job_num, branches):
         config = law.GLiteWorkflow.glite_job_config(self, config, job_num, branches)

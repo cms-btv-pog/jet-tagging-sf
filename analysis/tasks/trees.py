@@ -104,7 +104,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
             # build the cmsRun command
             cfg_file = "treeMaker_{}_cfg.py".format(os.getenv("JTSF_CMSSW_SETUP"))
-            cmd = "cmsRun " + law.util.rel_path(__file__, cfg_file)
+            cmd = "cmsRun " + law.util.rel_path(__file__, "files", cfg_file)
             cmd += " " + " ".join(cmsRunArg(*tpl) for tpl in args)
 
             # create the temporary dir to run in

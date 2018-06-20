@@ -59,6 +59,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
             for category, _, children in channel.walk_categories():
                 if not children:
                     categories.append((channel, category))
+        categories = list(set(categories))
 
         # get processes
         if len(self.dataset_inst.processes) != 1:

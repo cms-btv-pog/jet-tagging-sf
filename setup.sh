@@ -7,23 +7,39 @@ action() {
 
     export JTSF_BASE="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && /bin/pwd )"
 
+    # check if we're on lxplus
+    [[ "$( hostname )" = lxplus*.cern.ch ]] && JTSF_ON_LXPLUS="1" || JTSF_ON_LXPLUS="0"
+
+    # default data directory
     if [ -z "$JTSF_DATA" ]; then
-        # lxplus
-        if [[ "$( hostname )" = lxplus*.cern.ch ]]; then
-            JTSF_ON_LXPLUS="1"
+        if [ "$JTSF_ON_LXPLUS" = "1" ]; then
             JTSF_DATA="$JTSF_BASE/.data"
         else
-            JTSF_ON_LXPLUS="0"
             JTSF_DATA="/user/public/jet-tagging-sf"
         fi
     fi
+
+    # default grid user
+    if [ -z "$JTSF_GRID_USER" ]; then
+        if [ "$JTSF_ON_LXPLUS" = "1" ]; then
+            JTSF_GRID_USER="$( whoami )"
+            echo "setting JTSF_GRID_USER to $JTSF_GRID_USER"
+        else
+            2>&1 echo "please set the JTSF_GRID_USER to your grid user name and try again"
+            return "1"
+        fi
+    fi
+
+    # other defaults
     [ -z "$JTSF_SOFTWARE" ] && JTSF_SOFTWARE="$JTSF_DATA/software"
     [ -z "$JTSF_STORE" ] && JTSF_STORE="$JTSF_DATA/store"
     [ -z "$JTSF_LOCAL_CACHE" ] && JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
     [ -z "$JTSF_CMSSW_SETUP" ] && JTSF_CMSSW_SETUP="ICHEP18"
 
+    # export variables
     export JTSF_DATA
     export JTSF_ON_LXPLUS
+    export JTSF_GRID_USER
     export JTSF_SOFTWARE
     export JTSF_STORE
     export JTSF_LOCAL_CACHE

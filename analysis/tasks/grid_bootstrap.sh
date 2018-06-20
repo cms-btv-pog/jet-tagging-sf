@@ -27,6 +27,7 @@ action() {
     export JTSF_SOFTWARE="$JTSF_DATA/software"
     export JTSF_STORE="$JTSF_DATA/store"
     export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
+    export JTSF_GRID_USER="{{jtsf_grid_user}}"
     export JTSF_CMSSW_SETUP="{{jtsf_cmssw_setup}}"
 
     export SCRAM_ARCH="{{scram_arch}}"

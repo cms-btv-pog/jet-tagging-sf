@@ -138,6 +138,7 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
         reqs["repo"] = UploadRepo.req(self, replicas=10, _prefer_cli=["replicas"])
 
     def _setup_render_variables(self, config, reqs):
+        config.render_variables["jtsf_grid_user"] = os.getenv("JTSF_GRID_USER")
         config.render_variables["jtsf_cmssw_setup"] = os.getenv("JTSF_CMSSW_SETUP")
         config.render_variables["scram_arch"] = os.getenv("SCRAM_ARCH")
         config.render_variables["cmssw_base_url"] = reqs["cmssw"].output().dir.url()
@@ -253,7 +254,7 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
 
     def single_output(self):
         path = "{}.tgz".format(os.path.basename(self.cmssw_path))
-        return self.wlcg_target(path)
+        return self.wlcg_target(path, fs="wlcg_fs_software")
 
     def output(self):
         return law.TransferLocalFile.output(self)
@@ -273,7 +274,7 @@ class UploadSoftware(AnalysisTask, law.TransferLocalFile):
     source_path = os.environ["JTSF_SOFTWARE"] + ".tgz"
 
     def single_output(self):
-        return self.wlcg_target(os.path.basename(self.source_path))
+        return self.wlcg_target(os.path.basename(self.source_path), fs="wlcg_fs_software")
 
     def run(self):
         # create the local bundle
@@ -300,7 +301,7 @@ class UploadRepo(AnalysisTask, law.BundleGitRepository, law.TransferLocalFile):
 
     def single_output(self):
         path = "{}.{}.tgz".format(os.path.basename(self.repo_path), self.checksum)
-        return self.wlcg_target(path)
+        return self.wlcg_target(path, fs="wlcg_fs_software")
 
     def output(self):
         return law.TransferLocalFile.output(self)

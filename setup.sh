@@ -105,6 +105,7 @@ action() {
         mkdir -p "$JTSF_SOFTWARE"
 
         jtsf_install_pip --no-dependencies uproot
+        jtsf_install_pip slackclient
         jtsf_install_pip order
         jtsf_install_pip git+https://github.com/riga/luigi.git@fix/dynamicParamKwargs
         LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip --no-dependencies git+https://github.com/riga/law.git

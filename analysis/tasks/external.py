@@ -23,6 +23,7 @@ class GetDatasetLFNs(DatasetTask, law.TransferLocalFile):
         h = law.util.create_hash(sorted(self.dataset_inst.keys))
         return self.wlcg_target("lfns_{}.json".format(h))
 
+    @law.decorator.notify
     def run(self):
         lfns = []
         for key in self.dataset_inst.keys:

@@ -17,12 +17,13 @@ from analysis.config.jet_tagging_sf import analysis
 from analysis.util import calc_checksum
 
 
-law.contrib.load("arc", "cms", "git", "glite", "tasks", "root", "wlcg")
+law.contrib.load("arc", "cms", "git", "glite", "tasks", "root", "slack", "wlcg")
 
 
 class AnalysisTask(law.Task):
 
     version = luigi.Parameter()
+    notify = law.NotifySlackParameter()
 
     outputs_siblings = True
 
@@ -31,6 +32,8 @@ class AnalysisTask(law.Task):
 
     accepts_messages = True
     message_cache_size = 20
+
+    exclude_params_req = {"notify"}
 
     def __init__(self, *args, **kwargs):
         super(AnalysisTask, self).__init__(*args, **kwargs)

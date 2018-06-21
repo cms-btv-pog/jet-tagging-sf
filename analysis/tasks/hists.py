@@ -187,8 +187,8 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
             # fetch inputs
             with self.publish_step("fetching inputs ..."):
                 def fetch(inp):
-                    inp.copy_to_local(tmp_dir, cache=False)
-                    return inp.basename
+                    inp.copy_to_local(tmp_dir.child(inp.unique_basename, type="f"), cache=False)
+                    return inp.unique_basename
 
                 def callback(i):
                     self.publish_message("fetch file {} / {}".format(i + 1, len(inputs)))

@@ -157,6 +157,7 @@ class CalculateLumi(AnalysisTask):
     def requires(self):
         return DownloadSetupFiles.req(self)
 
+    @law.decorator.notify
     def run(self):
         if not law.util.check_bool_flag(os.getenv("JTSF_ON_LXPLUS")):
             raise Exception("{} must run on lxplus".format(self.__class__.__name__))

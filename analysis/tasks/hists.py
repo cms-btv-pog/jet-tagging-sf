@@ -21,10 +21,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         reqs = super(WriteHistograms, self).workflow_requires()
 
         if not self.cancel_jobs and not self.cleanup_jobs:
-            reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
-                version=self.get_version(MergeTrees), _prefer_cli=["version"])
             reqs["meta"] = MergeMetaData.req(self, version=self.get_version(MergeMetaData),
                 _prefer_cli=["version"])
+            if not self.pilot:
+                reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
+                    version=self.get_version(MergeTrees), _prefer_cli=["version"])
 
         return reqs
 

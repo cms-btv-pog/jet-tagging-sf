@@ -6,7 +6,9 @@ __all__ = ["AnalysisTask", "DatasetTask", "GridWorkflow"]
 
 import re
 import os
+import abc
 import shutil
+import random
 import collections
 
 import law
@@ -93,6 +95,41 @@ class DatasetTask(AnalysisTask):
     def glite_output_postfix(self):
         self.get_branch_map()
         return "_{}To{}".format(self.start_branch, self.end_branch)
+
+
+class DatasetWrapperTask(AnalysisTask, law.WrapperTask):
+
+    datasets = law.CSVParameter(default=[], description="datasets to require")
+    grid_ces = law.CSVParameter(default=[], description="grid CEs to submit to, chosen randomly")
+
+    exclude_db = True
+
+    def __init__(self, *args, **kwargs):
+        super(DatasetWrapperTask, self).__init__(*args, **kwargs)
+
+        if not self.datasets:
+            self.datasets = self.get_default_datasets()
+
+    @abc.abstractproperty
+    def wrapped_task(self):
+        return
+
+    def get_default_datasets(self):
+        return [dataset.name for dataset in self.config_inst.datasets]
+
+    def requires(self):
+        cls = self.wrapped_task
+
+        def req(dataset):
+            kwargs = {"dataset": dataset}
+
+            if issubclass(cls, GridWorkflow) and self.grid_ces:
+                kwargs["grid_ce"] = [random.choice(self.grid_ces)]
+                kwargs["_prefer_cli"] = ["grid_ce"]
+
+            return cls.req(self, **kwargs)
+
+        return collections.OrderedDict([(dataset, req(dataset)) for dataset in self.datasets])
 
 
 class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):

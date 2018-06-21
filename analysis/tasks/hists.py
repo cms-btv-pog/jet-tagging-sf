@@ -10,7 +10,7 @@ import luigi
 import six
 from order.util import join_root_selection
 
-from analysis.tasks.base import AnalysisTask, DatasetTask, GridWorkflow
+from analysis.tasks.base import AnalysisTask, DatasetTask, DatasetWrapperTask, GridWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 
 
@@ -144,6 +144,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 hist.Write()
 
                         progress(i)
+
+
+class WriteHistogramsWrapper(DatasetWrapperTask):
+
+    wrapped_task = WriteHistograms
 
 
 class MergeHistograms(AnalysisTask, law.CascadeMerge):

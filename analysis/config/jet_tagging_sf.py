@@ -194,13 +194,13 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
             for rg_name, rg_sel in get_region_info(i_tag_jet, ch):
                 rg_cat = ch.add_category(
                     name="{}__{}__{}__j{}".format(ch.name, ps_name, rg_name, i_tag_jet),
-                    label="{}, {} region (j{} tagged)".format(ch.name, ps_name, i_tag_jet),
+                    label="{}, {}, {} region (j{} tagged)".format(ch.name, ps_name, rg_name, i_tag_jet),
                     selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
                 )
                 # flavor loop (b, c, udsg, ...)
                 for fl_name, fl_sel in get_flavor_info(i_probe_jet):
                     fl_cat = rg_cat.add_category(
-                        name="{}__{}".format(rg_cat.name, fl_name),
+                        name="{}__f{}".format(rg_cat.name, fl_name),
                         label="{}, {} flavor".format(rg_cat.label, fl_name),
                         selection=join_root_selection(rg_cat.selection, fl_sel),
                     )
@@ -219,16 +219,23 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                                 selection="{} && {}".format(pt_cat.selection, eta_sel),
                                 aux={
                                     "i_probe_jet": i_probe_jet,
+                                    "flavor": fl_name,
                                 },
                             )
 
-                            # merged category for both jets
+                            # merged category for both jets and all flavors
                             merged_name = re.sub(r"__j\d+__", "__", eta_cat.name)
+                            merged_name = re.sub(r"__f[^_]+__", "__", merged_name)
                             if not ch.has_category(merged_name):
+                                label = re.sub(r" \(j\d+ tagged\)", "", eta_cat.label)
+                                label = re.sub(r", \w+ flavor", "", label)
                                 merged_cat = ch.add_category(
                                     name=merged_name,
-                                    label=re.sub(r" \(j\d+ tagged\)", "", eta_cat.label),
+                                    label=label,
                                     tags=("merged",),
+                                    aux={
+                                        "region": rg_name,
+                                    }
                                 )
                             else:
                                 merged_cat = ch.get_category(merged_name)
@@ -351,4 +358,5 @@ cfg.set_aux("versions", {
     "MergeTrees": "prod1",
     "MergeMetaData": "prod1",
     "WriteHistograms": "prod1",
+    "MergeHistograms": "prod1",
 })

@@ -3,6 +3,7 @@
 
 import os
 import collections
+import array
 
 import law
 import luigi
@@ -100,6 +101,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                         self.publish_message("writing histograms in category {} ({}/{})".format(
                             category.name, i + 1, len(categories)))
 
+                        region = category.get_aux("region")
+
                         for process in processes:
                             # weights
                             weights = []
@@ -121,8 +124,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                             # actual projecting
                             for variable in self.config_inst.variables:
+                                if variable.has_tag("skip_{}".format(region)):
+                                    continue
+
                                 hist = ROOT.TH1F(variable.name, variable.full_title(root=True),
-                                    *variable.binning)
+                                    variable.n_bins, array.array("f", variable.bin_edges))
                                 hist.Sumw2()
 
                                 # build the full selection string, including the total event weight

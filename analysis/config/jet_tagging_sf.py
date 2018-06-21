@@ -28,7 +28,6 @@ from analysis.config.campaign_ICHEP18 import campaign as campaign_ICHEP18
 config_ICHEP18 = cfg = analysis.add_config(campaign=campaign_ICHEP18)
 
 # store DeepCSV working points
-
 cfg.set_aux("working_points", {
     "deepcsv": {
         "loose": 0.1522,
@@ -111,9 +110,6 @@ def get_region_info(idx, channel, et_miss=30., z_window=10.):
         hf_cuts.append("abs(mll - {}) > {}".format(Z_MASS.nominal, z_window))
         lf_cuts.append("abs(mll - {}) < {}".format(Z_MASS.nominal, z_window))
 
-        # z peak diamond
-        # lf_cuts.append("pass_z_peak == 0")
-
     return [
         ("HF", join_root_selection(hf_cuts)),
         ("LF", join_root_selection(lf_cuts)),
@@ -166,24 +162,47 @@ for jet_idx in [1, 2]:
         unit="GeV",
         x_title="Jet_{} p_{{T}}".format(jet_idx),
     )
-    cfg.add_variable(
-        name="jet{}_deepcsv_b".format(jet_idx),
-        expression="jet{}_deepcsv_b".format(jet_idx),
-        binning=(25, 0., 1.,),
-        x_title="Jet_{} prob_{{b}}".format(jet_idx),
-    )
-    cfg.add_variable(
-        name="jet{}_deepcsv_bb".format(jet_idx),
-        expression="jet{}_deepcsv_bb".format(jet_idx),
-        binning=(25, 0., 1.,),
-        x_title="Jet_{} prob_{{bb}}".format(jet_idx),
-    )
-    cfg.add_variable(
-        name="jet{}_deepcsv_bcomb".format(jet_idx),
-        expression="jet{0}_deepcsv_b + jet{0}_deepcsv_bb".format(jet_idx),
-        binning=(25, 0., 1.,),
-        x_title="Jet_{} prob_{{b+bb}}".format(jet_idx),
-    )
+    for region in [None, "HF", "LF"]:
+        if not region:
+            binning = (25, 0., 1.)
+            tags = set()
+            postfix = ""
+        elif region == "HF":
+            binning = [
+                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+                0.4257, 0.4941, 0.5553, 0.6165, 0.6777, 0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968,
+                1.01,
+            ]
+            tags = {"skip_LF"}
+            postfix = "_HF"
+        elif region == "LF":
+            binning = [
+                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+                0.4257, 0.4941, 0.5961, 0.6981, 0.8001, 0.835, 0.87, 0.905, 0.94, 0.975, 1.01,
+            ]
+            tags = {"skip_HF"}
+            postfix = "_LF"
+        cfg.add_variable(
+            name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
+            expression="jet{}_deepcsv_b".format(jet_idx),
+            binning=binning,
+            x_title="Jet_{} prob_{{b}}".format(jet_idx),
+            tags=tags,
+        )
+        cfg.add_variable(
+            name="jet{}_deepcsv_bb{}".format(jet_idx, postfix),
+            expression="jet{}_deepcsv_bb".format(jet_idx),
+            binning=binning,
+            x_title="Jet_{} prob_{{bb}}".format(jet_idx),
+            tags=tags,
+        )
+        cfg.add_variable(
+            name="jet{}_deepcsv_bcomb{}".format(jet_idx, postfix),
+            expression="jet{0}_deepcsv_b + jet{0}_deepcsv_bb".format(jet_idx),
+            binning=binning,
+            x_title="Jet_{} prob_{{b+bb}}".format(jet_idx),
+            tags=tags,
+        )
 
 for ch in [ch_ee, ch_emu, ch_mumu]:
     # phase space region loop (measurement, closure, ...)
@@ -192,11 +211,17 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
             # region loop (hf, lf, ...)
             for rg_name, rg_sel in get_region_info(i_tag_jet, ch):
+                # we skip the emu channel in the lf region because the DY (the main contribution)
+                # should have same-flavored leptons
+                if rg_name == "LF" and ch == ch_emu:
+                    continue
+
                 rg_cat = ch.add_category(
                     name="{}__{}__{}__j{}".format(ch.name, ps_name, rg_name, i_tag_jet),
                     label="{}, {}, {} region (j{} tagged)".format(ch.name, ps_name, rg_name, i_tag_jet),
                     selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
                 )
+
                 # flavor loop (b, c, udsg, ...)
                 for fl_name, fl_sel in get_flavor_info(i_probe_jet):
                     fl_cat = rg_cat.add_category(
@@ -204,41 +229,44 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                         label="{}, {} flavor".format(rg_cat.label, fl_name),
                         selection=join_root_selection(rg_cat.selection, fl_sel),
                     )
+
                     # pt loop
                     for pt_name, pt_sel in get_pt_info(i_probe_jet)[rg_name]:
                         pt_cat = fl_cat.add_category(
                             name="{}__pt{}".format(fl_cat.name, pt_name),
                             label="{}, pt {}".format(fl_cat.label, pt_name),
-                            selection="{} && {}".format(fl_cat.selection, pt_sel),
+                            selection=join_root_selection(fl_cat.selection, pt_sel),
                         )
+
                         # eta loop
                         for eta_name, eta_sel in get_eta_info(i_probe_jet)[rg_name]:
                             eta_cat = pt_cat.add_category(
                                 name="{}__eta{}".format(pt_cat.name, eta_name),
                                 label="{}, eta {}".format(pt_cat.label, eta_name),
-                                selection="{} && {}".format(pt_cat.selection, eta_sel),
+                                selection=join_root_selection(pt_cat.selection, eta_sel),
                                 aux={
                                     "i_probe_jet": i_probe_jet,
+                                    "region": rg_name,
                                     "flavor": fl_name,
                                 },
                             )
 
                             # merged category for both jets and all flavors
-                            merged_name = re.sub(r"__j\d+__", "__", eta_cat.name)
-                            merged_name = re.sub(r"__f[^_]+__", "__", merged_name)
-                            if not ch.has_category(merged_name):
-                                label = re.sub(r" \(j\d+ tagged\)", "", eta_cat.label)
-                                label = re.sub(r", \w+ flavor", "", label)
-                                merged_cat = ch.add_category(
+                            merged_vars = (ps_name, rg_name, pt_name, eta_name)
+                            merged_name = "{}__{}__pt{}__eta{}".format(*merged_vars)
+                            if not cfg.has_category(merged_name):
+                                label = "{}, {} region, pt {}, eta {}".format(*merged_vars)
+                                merged_cat = cfg.add_category(
                                     name=merged_name,
                                     label=label,
                                     tags=("merged",),
                                     aux={
+                                        "phase_space": ps_name,
                                         "region": rg_name,
                                     }
                                 )
                             else:
-                                merged_cat = ch.get_category(merged_name)
+                                merged_cat = cfg.get_category(merged_name)
                             merged_cat.add_category(eta_cat)
 
 # luminosities per channel in /pb

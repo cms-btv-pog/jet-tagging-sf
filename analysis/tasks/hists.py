@@ -13,8 +13,10 @@ from order.util import join_root_selection
 from analysis.tasks.base import AnalysisTask, DatasetTask, DatasetWrapperTask, GridWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 
-
 class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
+
+    iteration = luigi.IntParameter(default=0, description="Iteration of the scale factor calculation, "
+                                  "starting at zero. Default: 0")
 
     file_merging = "trees"
 
@@ -29,16 +31,26 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
             if not self.pilot:
                 reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
+            if self.iteration > 0:
+                reqs["sf"] = CalculateScaleFactors(self, iteration=self.iteration-1,
+                    version=self.get_version(CalculateScaleFactors), _prefer_cli=["version"])
 
         return reqs
 
     def requires(self):
-        return {
+        reqs = {
             "tree": MergeTrees.req(self, cascade_tree=self.branch, branch=0,
                 version=self.get_version(MergeTrees), _prefer_cli=["version", "workflow"]),
             "meta": MergeMetaData.req(self, version=self.get_version(MergeMetaData),
                 _prefer_cli=["version"]),
         }
+        if self.iteration > 0:
+            reqs["sf"] = CalculateScaleFactors(self, iteration=self.iteration-1,
+                version=self.get_version(CalculateScaleFactors), _prefer_cli=["version"])
+        return reqs
+
+    def store_parts(self):
+        return super(WriteHistograms, self).store_parts() + (self.iteration,)
 
     def output(self):
         return self.wlcg_target("hists_{}.root".format(self.branch))
@@ -155,6 +167,8 @@ class WriteHistogramsWrapper(DatasetWrapperTask):
 
 class MergeHistograms(AnalysisTask, law.CascadeMerge):
 
+    iteration = WriteHistograms.iteration
+
     merge_factor = 8  # TODO: optimize
 
     def create_branch_map(self):
@@ -188,6 +202,9 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
                 version=self.get_version(WriteHistograms), _prefer_cli=["version"])
             for d, l in target_slices
         ]
+
+    def store_parts(self):
+        return super(MergeHistograms, self).store_parts() + (self.iteration,)
 
     def cascade_output(self):
         return self.wlcg_target("hists.root")
@@ -229,3 +246,5 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
 
     def arc_output_postfix(self):
         return self.glite_output_postfix()
+
+from analysis.tasks.measurement import CalculateScaleFactors

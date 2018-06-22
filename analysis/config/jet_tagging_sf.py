@@ -9,6 +9,7 @@ as well as its configurations for different campaigns.
 
 import re
 
+import numpy as np
 import order as od
 import scinum as sn
 import six
@@ -80,6 +81,18 @@ cfg.set_aux("dataset_channels", {
     if dataset.is_data
 })
 
+# store pt and eta binning
+cfg.set_aux("binning", {
+    "LF": {
+        "pt": [20, 30, 40, 60, np.inf],
+        "eta": [0., 0.8, 1.6, 2.4],
+    },
+    "HF": {
+        "pt": [20, 30, 50, 70, 100, np.inf],
+        "eta": [0., 2.4],
+    }
+})
+
 # define nested categories (analysis phase space -> hf/lf region -> flavor -> pt bin -> eta bin)
 def get_phasespace_info():
     return [
@@ -124,33 +137,34 @@ def get_flavor_info(idx):
         ("inclusive", "1 * 1"),
     ]
 
-def get_pt_info(idx):
-    return {
-        "HF": [
-            ("20To30", "jet%d_pt > 20 && jet%d_pt <= 30" % (idx, idx)),
-            ("30To50", "jet%d_pt > 30 && jet%d_pt <= 50" % (idx, idx)),
-            ("50To70", "jet%d_pt > 50 && jet%d_pt <= 70" % (idx, idx)),
-            ("70To100", "jet%d_pt > 70 && jet%d_pt <= 100" % (idx, idx)),
-            ("100ToInf", "jet%d_pt > 100" % idx),
-        ],
-        "LF": [
-            ("20To30", "jet%d_pt > 20 && jet%d_pt <= 30" % (idx, idx)),
-            ("30To40", "jet%d_pt > 30 && jet%d_pt <= 40" % (idx, idx)),
-            ("40To60", "jet%d_pt > 40 && jet%d_pt <= 60" % (idx, idx)),
-            ("60ToInf", "jet%d_pt > 60" % idx),
-        ]
-    }
+def binning_to_selection(binning, variable):
+    def to_string(value):
+        if np.isinf(value):
+            return "Inf"
+        if value == 0:
+            return "0"
+        else:
+            return str(value).replace(".", "p")
 
-def get_eta_info(idx):
+    selections = []
+    for left_edge, right_edge in zip(binning[:-1], binning[1:]):
+        name = "{}To{}".format(to_string(left_edge), to_string(right_edge))
+        cuts = []
+        if not left_edge == 0:
+            cuts.append("{} > {}".format(variable, left_edge))
+        if not np.isinf(right_edge):
+            cuts.append("{} <= {}".format(variable, right_edge))
+        selections.append((name, join_root_selection(*cuts)))
+    return selections
+
+def get_axis_info(idx, axis_var):
+    binning = cfg.get_aux("binning")
+    hf_bins = binning["HF"][axis_var]
+    lf_bins = binning["LF"][axis_var]
+    variable = "jet{}_{}".format(idx, axis_var)
     return {
-        "HF": [
-            ("0To2p4", "jet%d_eta <= 2.4" % idx),
-        ],
-        "LF": [
-            ("0To0p8", "jet%d_eta <= 0.8" % idx),
-            ("0p8To1p6", "jet%d_eta > 0.8 && jet%d_eta <= 1.6" % (idx, idx)),
-            ("1p6To2p4", "jet%d_eta > 1.6 && jet%d_eta <= 2.4" % (idx, idx)),
-        ]
+        "HF": binning_to_selection(hf_bins, variable),
+        "LF": binning_to_selection(lf_bins, variable),
     }
 
 
@@ -208,6 +222,13 @@ for jet_idx in [1, 2]:
 for ch in [ch_ee, ch_emu, ch_mumu]:
     # phase space region loop (measurement, closure, ...)
     for ps_name, ps_sel in get_phasespace_info():
+        # inclusive phase categories to measure rates
+        ps_cat = ch.add_category(
+            name="{}__{}".format(ch.name, ps_name),
+            label="{}, {}".format(ch.name, ps_name),
+            selection=join_root_selection("channel == {}".format(ch.id), ps_sel),
+            tags=("phase_space", ps_name,)
+        )
         # loop over both jet1 jet2 permutations
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
             # region loop (hf, lf, ...)
@@ -232,7 +253,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                     )
 
                     # pt loop
-                    for pt_name, pt_sel in get_pt_info(i_probe_jet)[rg_name]:
+                    for pt_name, pt_sel in get_axis_info(i_probe_jet, "pt")[rg_name]:
                         pt_cat = fl_cat.add_category(
                             name="{}__pt{}".format(fl_cat.name, pt_name),
                             label="{}, pt {}".format(fl_cat.label, pt_name),
@@ -240,7 +261,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                         )
 
                         # eta loop
-                        for eta_name, eta_sel in get_eta_info(i_probe_jet)[rg_name]:
+                        for eta_name, eta_sel in get_axis_info(i_probe_jet, "eta")[rg_name]:
                             eta_cat = pt_cat.add_category(
                                 name="{}__eta{}".format(pt_cat.name, eta_name),
                                 label="{}, eta {}".format(pt_cat.label, eta_name),

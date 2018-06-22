@@ -8,12 +8,27 @@ from analysis.tasks.hists import MergeHistograms
 
 
 class CalculateScaleFactors(AnalysisTask):
+
+    iteration = MergeHistograms.iteration
+
     def requires(self):
-        return MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
-                                   _prefer_cli=["version"])
+        reqs = {
+            "hist": MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
+                _prefer_cli=["version"])
+        }
+        if self.iteration > 0:
+            reqs["scale"] = CalculateScaleFactors.req(self, iteration=0,
+                version=self.get_version(CalculateScaleFactors), _prefer_cli=["version"])
+
+    def store_parts(self):
+        return super(CalculateScaleFactors, self).store_parts() + (self.iteration,)
 
     def output(self):
-        return self.wlcg_target("sfs.root")
+        outp = {
+            "sfs": self.wlcg_target("sfs.root")
+        }
+        if self.iteration == 0:
+            outp["scale"] = self.wlcg_target("scale.json")
 
     def get_flavor_component(self, flavor, region):
         """
@@ -41,12 +56,48 @@ class CalculateScaleFactors(AnalysisTask):
             if category.has_tag("merged") and category.get_aux("phase_space") == "measure":
                 categories.append(category)
 
+        # get categories from which to determine the rate scaling of MC to data
+        # only needed for the first iteration, where the scaling is saved for further use
+        if self.iteration == 0:
+            scale_categories = {}
+            for channel in self.config_inst.channels.values():
+                for category, _, _ in channel.walk_categories():
+                    if category.has_tag("measure"):
+                        if channel in scale_categories:
+                            raise Exception("Should only have one category with tag "
+                            "'measure' per channel, but got "
+                            "{} and {}".format(category, scale_categories[channel]))
+                        scale_categories[channel] = category
+
         # category -> component (heavy/light) -> histogram
         hist_dict = {}
         # category -> histogram
         sf_dict = {}
 
-        with inp.load("r") as input_file:
+        with inp["hist"].load("r") as input_file:
+            # get scale factor to scale MC (withouts b-tag SFs) to data
+            if self.iteration == 0:
+                variable_name = "jet1_pt"
+                scales = {}
+                for channel, category in scale_categories.items():
+                    data_yield, mc_yield = 0., 0.
+                    category_dir = input_file.GetDirectory(category.name)
+
+                    # sum over processes to get mc and data yields
+                    for process_key in category_dir.GetListOfKeys:
+                        process = self.config_inst.get_process(process_key.GetName())
+                        process_dir = category_dir.GetDirectory(process.name)
+
+                        hist = process_dir.Get(variable_name)
+                        if process.is_data:
+                            data_yield += hist.Integral()
+                        else:
+                            mc_yield += hist.Integral()
+                    scale = data_yield / mc_yield
+                    scales[category] = scale
+            else:
+                scales = inp["scale"].load()
+
             for category in categories:
                 region = category.get_aux("region")
 
@@ -84,6 +135,10 @@ class CalculateScaleFactors(AnalysisTask):
                         # create a new hist that merges variables from multiple categories, or add
                         # to the existing one
                         hist = process_dir.Get(variable_name)
+                        # scale overall mc rate (per channel)
+                        if process.is_mc:
+                            hist.Scale(scales[channel.name])
+
                         if component in hist_dict[category]:
                             hist_dict[category][component].Add(hist)
                         else:
@@ -96,11 +151,6 @@ class CalculateScaleFactors(AnalysisTask):
 
                 # for the sfs, it's convenient to start with the data hist
                 sf_hist = data_hist.Clone("sf_{}".format(category.name))
-
-                # scale overall rate of mc in this category to data
-                scale = data_hist.Integral() / (lf_hist.Integral() + hf_hist.Integral())
-                lf_hist.Scale(scale)
-                hf_hist.Scale(scale)
 
                 # subtract lf contamination from hf and vice versa
                 # and do the actual division to compute scale factors
@@ -116,9 +166,12 @@ class CalculateScaleFactors(AnalysisTask):
                 sf_dict[category] = sf_hist
 
             # open the output file
-            with outp.localize("w") as tmp:
+            with outp["sfs"].localize("w") as tmp:
                 with tmp.dump("RECREATE") as output_file:
                     for category in categories:
                         category_dir = output_file.mkdir(category.name)
                         category_dir.cd()
                         sf_dict[category].Write("sf")
+            # for the first iteration, save the rate scale factors
+            if self.iteration == 0:
+                outp["scale"].dump(scales, indent=4)

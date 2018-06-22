@@ -372,6 +372,12 @@ cfg.set_aux("jes_sources", [
 cfg.set_aux("file_merging", {
     "trees": {
         "tt_dl": 49,
+        "dy_lep_4To50_Ht70To100": 5,
+        "dy_lep_50ToInf_Ht100To200": 10,
+        "dy_lep_50ToInf_Ht200To400": 9,
+        "dy_lep_50ToInf_Ht400To600": 10,
+        "dy_lep_50ToInf_Ht600To800": 8,
+        "dy_lep_50ToInf_Ht800To1200": 3,
     }
 })
 

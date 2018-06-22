@@ -18,6 +18,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     file_merging = "trees"
 
+    workflow_run_decorators = [law.decorator.notify]
+
     def workflow_requires(self):
         reqs = super(WriteHistograms, self).workflow_requires()
 

@@ -23,6 +23,10 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     max_events = luigi.IntParameter(default=law.NO_INT)
 
+    workflow_run_decorators = [law.decorator.notify]
+
+    stream_input_file = False
+
     def workflow_requires(self):
         if self.cancel_jobs or self.cleanup_jobs:
             return {}
@@ -45,8 +49,9 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
         lfn = self.input()["lfns"].random_target().load()[self.branch_data]
         setup_files_dir, setup_files = self.requires()["files"].localize()
 
-        # determine the xrd redirector
-        redirector = determine_xrd_redirector(lfn)
+        # create the temporary dir to run in
+        tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
+        tmp_dir.touch()
 
         # manage jes files
         data_src = self.dataset_inst.data_source
@@ -61,6 +66,19 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
         jes_unc_files = [jes_files_dict[version]["Uncertainty"] for _, _, version in jes_versions]
         jes_unc_src_file = setup_files["jes_unc_src_file"] if self.dataset_inst.is_mc else ""
 
+        # determine the xrd redirector and download the file
+        redirector = determine_xrd_redirector(lfn)
+        xrd_url = "root://{}/{}".format(redirector, lfn)
+        if self.stream_input_file:
+            input_file = xrd_url
+        else:
+            input_file = "file://" + tmp_dir.child("input_file.root", type="f").path
+            cmd = "xrdcp {} {}".format(xrd_url, input_file)
+            with self.publish_step("download input file from {} ...".format(xrd_url)):
+                code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash")[0]
+                if code != 0:
+                    raise Exception("xrdcp failed")
+
         # cmsRun argument helper
         def cmsRunArg(key, value):
             return " ".join("{}={}".format(key, v) for v in law.util.make_list(value))
@@ -68,7 +86,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
         output = self.output()
         with output["tree"].localize("w") as tmp_tree, output["meta"].localize("w") as tmp_meta:
             args = [
-                ("inputFiles", "root://{}/{}".format(redirector, lfn)),
+                ("inputFiles", input_file),
                 ("outputFile", tmp_tree.path),
                 ("metaDataFile", tmp_meta.path),
                 ("isData", self.dataset_inst.is_data),
@@ -108,10 +126,6 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
             cmd = "cmsRun " + law.util.rel_path(__file__, "files", cfg_file)
             cmd += " " + " ".join(cmsRunArg(*tpl) for tpl in args)
 
-            # create the temporary dir to run in
-            tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
-            tmp_dir.touch()
-
             print("running command: {}".format(cmd))
             for obj in law.util.readable_popen(cmd, shell=True, executable="/bin/bash",
                     cwd=tmp_dir.path):
@@ -135,6 +149,8 @@ class WriteTreesWrapper(DatasetWrapperTask):
 class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
 
     merge_factor = 8
+
+    workflow_run_decorators = [law.decorator.notify]
 
     def create_branch_map(self):
         return law.CascadeMerge.create_branch_map(self)
@@ -189,6 +205,13 @@ class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
         return self.glite_output_postfix()
 
 
+class MergeTreesWrapper(DatasetWrapperTask):
+
+    wrapped_task = MergeTrees
+
+    cascade_tree = luigi.IntParameter(default=-1)
+
+
 class MergeMetaData(DatasetTask):
 
     def requires(self):
@@ -197,6 +220,7 @@ class MergeMetaData(DatasetTask):
     def output(self):
         return self.wlcg_target("stats.json")
 
+    @law.decorator.notify
     def run(self):
         stats = {}
 
@@ -249,8 +273,13 @@ class MeasureTreeSizes(AnalysisTask):
     def complete(self):
         return self.has_run
 
+    @law.decorator.notify
     def run(self):
         merged_files = collections.OrderedDict()
+
+        total_size = 0.
+        total_files = 0
+        total_merged_files = 0
 
         for dataset in self.config_inst.datasets:
             print(" dataset {} ".format(dataset.name).center(80, "-"))
@@ -282,6 +311,10 @@ class MeasureTreeSizes(AnalysisTask):
             merge_factor = n if mean_size == 0 else min(n, int(round(target_size / mean_size)))
             merged_files[dataset.name] = int(math.ceil(n / float(merge_factor)))
 
+            total_files += n
+            total_size += sum_sizes
+            total_merged_files += merged_files[dataset.name]
+
             print("files       : {} / {}".format(n, dataset.n_files))
             print("sum size    : {:.2f} {}".format(*law.util.human_bytes(sum_sizes)))
             print("mean size   : {:.2f} {}".format(*law.util.human_bytes(mean_size)))
@@ -289,7 +322,11 @@ class MeasureTreeSizes(AnalysisTask):
             print("merged files: {}".format(merged_files[dataset.name]))
 
         # some output
-        print(" number of files after merging ".center(80, "="))
+        print(" summary ".center(80, "="))
+        print("total files       : {}".format(total_files))
+        print("total size        : {:.2f} {}".format(*law.util.human_bytes(total_size)))
+        print("total merged files: {}".format(total_merged_files))
+        print("\nmerged files per dataset:")
         print(json.dumps(merged_files, indent=4, separators=(",", ": ")))
 
         self.has_run = True

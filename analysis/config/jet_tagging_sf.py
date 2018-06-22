@@ -208,6 +208,13 @@ for jet_idx in [1, 2]:
 for ch in [ch_ee, ch_emu, ch_mumu]:
     # phase space region loop (measurement, closure, ...)
     for ps_name, ps_sel in get_phasespace_info():
+        # inclusive phase categories to measure rates
+        ps_cat = ch.add_category(
+            name="{}__{}".format(ch.name, ps_name),
+            label="{}, {}".format(ch.name, ps_name),
+            selection=join_root_selection("channel == {}".format(ch.id), ps_sel),
+            tags=("phase_space", ps_name,)
+        )
         # loop over both jet1 jet2 permutations
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
             # region loop (hf, lf, ...)

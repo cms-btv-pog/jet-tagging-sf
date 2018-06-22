@@ -2,6 +2,7 @@
 
 
 import os
+import array
 
 from analysis.tasks.base import AnalysisTask
 from analysis.tasks.hists import MergeHistograms
@@ -69,10 +70,23 @@ class CalculateScaleFactors(AnalysisTask):
                             "{} and {}".format(category, scale_categories[channel]))
                         scale_categories[channel] = category
 
+        btagger_cfg = self.config_inst.get_aux("btagger")
+
         # category -> component (heavy/light) -> histogram
         hist_dict = {}
         # category -> histogram
         sf_dict = {}
+
+        # create n-d histograms to hold all scale factors for lf/hf jets
+        binning = self.config_inst.get_aux("binning")
+        sf_hists_nd = {}
+        for region in ["LF", "HF"]:
+            eta_bins = array.array(binning[region]["eta"])
+            pt_bins = array.array(binning[region]["eta"])
+            btag_bins = array.array(binning[region][btagger_cfg["name"]])
+            sf_hist = ROOT.TH3F("scale_factors_{}".format(region), "Scale factors {}".format(region),
+                len(eta_bins), eta_bins, len(pt_bins), pt_bins, len(btag_bins), btag_bins)
+            sf_hists_nd[region] = sf_hist
 
         with inp["hist"].load("r") as input_file:
             # get scale factor to scale MC (withouts b-tag SFs) to data
@@ -112,7 +126,7 @@ class CalculateScaleFactors(AnalysisTask):
 
                     # get variable for b-tagging discriminant of probe jet
                     i_probe_jet = leaf_cat.get_aux("i_probe_jet")
-                    btag_variable = self.config_inst.get_aux("btagger")["variable"]
+                    btag_variable = btagger_cfg["variable"]
                     variable_name = "jet{}_{}_{}".format(i_probe_jet, btag_variable, region)
 
                     for process_key in category_dir.GetListOfKeys():
@@ -145,6 +159,7 @@ class CalculateScaleFactors(AnalysisTask):
                             name = "scale_factor_{}".format(category.name)
                             hist_dict[category][component] = hist.Clone(name)
 
+                # calculate scale factors
                 data_hist = hist_dict[category]["data"]
                 lf_hist = hist_dict[category]["light"]
                 hf_hist = hist_dict[category]["heavy"]

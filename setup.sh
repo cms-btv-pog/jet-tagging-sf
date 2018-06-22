@@ -23,7 +23,7 @@ action() {
     if [ -z "$JTSF_GRID_USER" ]; then
         if [ "$JTSF_ON_LXPLUS" = "1" ]; then
             JTSF_GRID_USER="$( whoami )"
-            echo "setting JTSF_GRID_USER to $JTSF_GRID_USER"
+            echo "NOTE: lxplus detected, setting JTSF_GRID_USER to $JTSF_GRID_USER"
         else
             2>&1 echo "please set the JTSF_GRID_USER to your grid user name and try again"
             return "1"

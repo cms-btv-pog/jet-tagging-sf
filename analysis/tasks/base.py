@@ -100,6 +100,7 @@ class DatasetTask(AnalysisTask):
 class DatasetWrapperTask(AnalysisTask, law.WrapperTask):
 
     datasets = law.CSVParameter(default=[], description="datasets to require")
+    skip_datasets = law.CSVParameter(default=[], description="datasets to skip, supports patterns")
     grid_ces = law.CSVParameter(default=[], description="grid CEs to submit to, chosen randomly")
 
     exclude_db = True
@@ -109,6 +110,10 @@ class DatasetWrapperTask(AnalysisTask, law.WrapperTask):
 
         if not self.datasets:
             self.datasets = self.get_default_datasets()
+
+        if self.skip_datasets:
+            filter_fn = lambda d: not law.util.multi_match(d, self.skip_datasets)
+            self.datasets = filter(filter_fn, self.datasets)
 
     @abc.abstractproperty
     def wrapped_task(self):

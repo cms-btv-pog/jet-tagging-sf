@@ -38,7 +38,7 @@ action() {
     export CMSSW_VERSION="{{cmssw_version}}"
     export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
 
-    export ON_GRID="1"
+    export JTSF_ON_GRID="1"
 
     mkdir -p "$JTSF_DATA"
 

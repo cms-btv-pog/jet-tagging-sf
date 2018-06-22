@@ -134,10 +134,12 @@ action() {
     # law and luigi setup
     export LAW_HOME="$JTSF_BASE/.law"
     export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
-    source "$( law completion )"
+    [ "$JTSF_ON_LXPLUS" != "1" ] && export LAW_TARGET_TMP_DIR="$JTSF_DATA/tmp"
 
     if [ -z "$JTSF_SCHEDULER_HOST" ]; then
         2>&1 echo "NOTE: \$JTSF_SCHEDULER_HOST is not set, use '--local-scheduler' in your tasks!"
     fi
+
+    source "$( law completion )"
 }
 action "$@"

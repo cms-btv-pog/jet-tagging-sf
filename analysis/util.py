@@ -139,8 +139,7 @@ def parse_leaf_list(leaf_list, default_type="D"):
 
 def get_tree_names(tfile, name_pattern="*"):
     """
-    Returns the names of all trees found in a *tfile* that pass *name_pattern*. Files opened by this
-    method the first time are not cached.
+    Returns the names of all trees found in a *tfile* that pass *name_pattern*.
     """
     import ROOT
 
@@ -162,8 +161,7 @@ def get_tree_names(tfile, name_pattern="*"):
 
 def get_trees(tfile, name_pattern="*"):
     """
-    Returns all trees in a *tfile*. *name_pattern* is used as a matching pattern for all contained
-    tree names.
+    Returns all trees found in a *tfile* that pass *name_pattern*.
 
     .. code-block:: python
 
@@ -192,14 +190,18 @@ def copy_trees(src, dst, name_pattern="*", force=False):
     src = os.path.expandvars(os.path.expanduser(src))
     dst = os.path.expandvars(os.path.expanduser(dst))
 
-    if os.path.exists(dst) and not force:
-        raise IOError("destination file '{}' exists, force is False".format(dst))
+    if os.path.exists(dst):
+        if not force:
+            raise IOError("destination file '{}' exists, force is False".format(dst))
+        else:
+            os.remove(dst)
 
     # simple cp when all trees should be copied
     tfile_src = ROOT.TFile.Open(src, "READ")
     all_names = get_tree_names(tfile_src)
     names = get_tree_names(tfile_src, name_pattern=name_pattern)
     if len(names) == len(all_names):
+        tfile_src.Close()
         ROOT.TFile.Cp(src, dst, ROOT.kFALSE)
         return dst
 
@@ -322,7 +324,6 @@ class TreeExtender(object):
                 defaults = array.array(py_type, len(leaf_data) * [self.DEFAULT_VALUE[root_type]])
 
                 tree_data.append((branch, arr, defaults))
-
                 setattr(entry, name, arr)
 
             # unpack branches
@@ -337,6 +338,7 @@ class TreeExtender(object):
                     root_type = "D"
                 py_type = root_array_types[root_type]
                 arr = array.array(py_type, branch.GetNleaves() * [self.DEFAULT_VALUE[root_type]])
+
                 tree.SetBranchAddress(name, arr)
                 setattr(entry, name, arr)
 

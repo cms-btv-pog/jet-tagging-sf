@@ -54,10 +54,12 @@ class AnalysisTask(law.Task):
         return parts
 
     def local_path(self, *path):
-        return os.path.join(os.environ["JTSF_STORE"], *(self.store_parts() + path))
+        parts = [str(p) for p in self.store_parts() + path]
+        return os.path.join(os.environ["JTSF_STORE"], *parts)
 
     def wlcg_path(self, *path):
-        return os.path.join(*(self.store_parts() + path))
+        parts = [str(p) for p in self.store_parts() + path]
+        return os.path.join(*parts)
 
     def local_target(self, *args):
         cls = law.LocalFileTarget if args else law.LocalDirectoryTarget

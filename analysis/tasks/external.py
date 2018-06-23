@@ -85,6 +85,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         return {
             "lumi_file": self.config_inst.get_aux("lumi_file"),
             "normtag_file": self.config_inst.get_aux("normtag_file"),
+            "pileup_file": self.config_inst.get_aux("pileup_file"),
             "jes_files": jes_files,
             "jes_unc_src_file": jes_unc_src_file,
             "jer_files": jer_files,
@@ -131,6 +132,69 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         return tmp_dir, law.util.map_struct(abspath, self.source_files)
 
 
+class CalculatePileupWeights(AnalysisTask):
+
+    version = None
+
+    def requires(self):
+        return DownloadSetupFiles.req(self)
+
+    def output(self):
+        return self.wlcg_target("weights.root")
+
+    @law.decorator.notify
+    def run(self):
+        import ROOT
+
+        setup_files_dir, setup_files = self.requires().localize()
+
+        pileup_mc = self.config_inst.get_aux("pileup_mc")
+        xsec = self.config_inst.get_aux("min_bias_xs").nominal
+        lumi_file = setup_files["lumi_file"]
+        pileup_file = setup_files["pileup_file"]
+        n_bins = len(pileup_mc)
+
+        with self.output().localize("w") as tmp:
+            # calculate the pileup distribution following
+            # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJSONFileforData#Pileup_JSON_Files_For_Run_II
+            cmd = "pileupCalc.py -i {}".format(lumi_file)
+            cmd += " --inputLumiJSON {}".format(pileup_file)
+            cmd += " --minBiasXsec {}".format(int(xsec * 1000))
+            cmd += " --maxPileupBin {}".format(n_bins)
+            cmd += " --numPileupBins {}".format(n_bins)
+            cmd += " --calcMode true"
+            cmd += " " + tmp.path
+
+            self.publish_message("calculate data pileup with command:\n{}".format(cmd))
+            code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash")[0]
+            if code != 0:
+                raise Exception("calculating data pileup failed")
+
+            # get data and MC pileup histograms
+            with tmp.dump("UPDATE") as tfile:
+                data_hist = tfile.Get("pileup").Clone("pileup_data")
+                mc_hist = ROOT.TH1D("pileup_mc", "", n_bins, 0., n_bins)
+
+                # fill MC hist and set error to 0 (TH1.Fill returns the bin number)
+                for i, prob in enumerate(pileup_mc):
+                    mc_hist.SetBinError(mc_hist.Fill(i, prob), 0.)
+
+                # normalize and write
+                data_hist.Scale(1. / data_hist.Integral())
+                mc_hist.Scale(1. / mc_hist.Integral())
+                data_hist.Write()
+                mc_hist.Write()
+
+                # create weight histogram
+                weight_hist = data_hist.Clone("pileup_weights")
+                weight_hist.SetTitle("pileup weights")
+                weight_hist.Divide(mc_hist)
+                weight_hist.Write()
+
+                # delete the initial pileup histogram, i.e. unnormalized data pu distribution
+                tfile.Delete("pileup;*")
+
+
 class CalculateLumi(AnalysisTask):
 
     channel = luigi.Parameter(default="ee", description="analysis channel")
@@ -162,8 +226,8 @@ class CalculateLumi(AnalysisTask):
         if not law.util.check_bool_flag(os.getenv("JTSF_ON_LXPLUS")):
             raise Exception("{} must run on lxplus".format(self.__class__.__name__))
 
-        triggers = self.config_inst.get_aux("triggers")[self.channel_inst]
         setup_files_dir, setup_files = self.requires().localize()
+        triggers = self.config_inst.get_aux("triggers")[self.channel_inst]
         uid = str(uuid.uuid4())
 
         # a tmp dir

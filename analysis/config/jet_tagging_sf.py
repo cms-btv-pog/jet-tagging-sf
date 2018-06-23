@@ -150,7 +150,7 @@ def binning_to_selection(binning, variable):
     def to_string(value):
         if np.isinf(value):
             return "Inf"
-        if value == 0:
+        elif value == 0:
             return "0"
         else:
             return str(value).replace(".", "p")
@@ -159,11 +159,11 @@ def binning_to_selection(binning, variable):
     for left_edge, right_edge in zip(binning[:-1], binning[1:]):
         name = "{}To{}".format(to_string(left_edge), to_string(right_edge))
         cuts = []
-        if not left_edge == 0:
+        if left_edge != 0:
             cuts.append("{} > {}".format(variable, left_edge))
         if not np.isinf(right_edge):
             cuts.append("{} <= {}".format(variable, right_edge))
-        selections.append((name, join_root_selection(*cuts)))
+        selections.append((name, join_root_selection(cuts)))
     return selections
 
 def get_axis_info(idx, axis_var):
@@ -199,6 +199,7 @@ for jet_idx in [1, 2]:
             binning = cfg.get_aux("binning")["LF"]["deepcsv"]
             tags = {"skip_HF"}
             postfix = "_LF"
+
         cfg.add_variable(
             name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
             expression="jet{}_deepcsv_b".format(jet_idx),
@@ -221,6 +222,7 @@ for jet_idx in [1, 2]:
             tags=tags,
         )
 
+# categories
 for ch in [ch_ee, ch_emu, ch_mumu]:
     # phase space region loop (measurement, closure, ...)
     for ps_name, ps_sel in get_phasespace_info():
@@ -229,7 +231,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
             name="{}__{}".format(ch.name, ps_name),
             label="{}, {}".format(ch.name, ps_name),
             selection=join_root_selection("channel == {}".format(ch.id), ps_sel),
-            tags=("phase_space", ps_name,)
+            tags=("phase_space", ps_name),
         )
         # loop over both jet1 jet2 permutations
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
@@ -315,10 +317,12 @@ cfg.set_aux("global_tag", {
     "mc": "94X_mc2017_realistic_v13",
 })
 
-# lumi and normtag file
+# lumi, normtag and pileup file
 cfg.set_aux("lumi_file", "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/"
     "ReReco/Cert_294927-306462_13TeV_EOY2017ReReco_Collisions17_JSON.txt")
 cfg.set_aux("normtag_file", "https://www.dropbox.com/s/luj5m5rhb25auhh/normtag_PHYSICS.json")
+cfg.set_aux("pileup_file", "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/"
+    "PileUp/pileup_latest.txt")
 
 # triggers
 cfg.set_aux("triggers", {
@@ -390,6 +394,31 @@ cfg.set_aux("jes_sources", [
     "RelativeStatFSR", "RelativeStatEC", "RelativeStatHF", "PileUpDataMC", "PileUpPtRef",
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF",
 ])
+
+cfg.set_aux("pileup_mc", [
+    3.39597497605e-05, 6.63688402133e-06, 1.39533611284e-05, 3.64963078209e-05, 6.00872171664e-05,
+    9.33932578027e-05, 0.000120591524486, 0.000128694546198, 0.000361697233219, 0.000361796847553,
+    0.000702474896113, 0.00133766053707, 0.00237817050805, 0.00389825605651, 0.00594546732588,
+    0.00856825906255, 0.0116627396044, 0.0148793350787, 0.0179897368379, 0.0208723871946,
+    0.0232564170641, 0.0249826433945, 0.0262245860346, 0.0272704617569, 0.0283301107549,
+    0.0294006137386, 0.0303026836965, 0.0309692426278, 0.0308818046328, 0.0310566806228,
+    0.0309692426278, 0.0310566806228, 0.0310566806228, 0.0310566806228, 0.0307696426944,
+    0.0300103336052, 0.0288355370103, 0.0273233309106, 0.0264343533951, 0.0255453758796,
+    0.0235877272306, 0.0215627588047, 0.0195825559393, 0.0177296309658, 0.0160560731931,
+    0.0146022004183, 0.0134080690078, 0.0129586991411, 0.0125093292745, 0.0124360740539,
+    0.0123547104433, 0.0123953922486, 0.0124360740539, 0.0124360740539, 0.0123547104433,
+    0.0124360740539, 0.0123387597772, 0.0122414455005, 0.011705203844, 0.0108187105305,
+    0.00963985508986, 0.00827210065136, 0.00683770076341, 0.00545237697118, 0.00420456901556,
+    0.00367513566191, 0.00314570230825, 0.0022917978982, 0.00163221454973, 0.00114065309494,
+    0.000784838366118, 0.000533204105387, 0.000358474034915, 0.000238881117601, 0.0001984254989,
+    0.000157969880198, 0.00010375646169, 6.77366175538e-05, 4.39850477645e-05, 2.84298066026e-05,
+    1.83041729561e-05, 1.17473542058e-05, 7.51982735129e-06, 6.16160108867e-06, 4.80337482605e-06,
+    3.06235473369e-06, 1.94863396999e-06, 1.23726800704e-06, 7.83538083774e-07, 4.94602064224e-07,
+    3.10989480331e-07, 1.94628487765e-07, 1.57888581037e-07, 1.2114867431e-07, 7.49518929908e-08,
+    4.6060444984e-08, 2.81008884326e-08, 1.70121486128e-08, 1.02159894812e-08,
+])
+
+cfg.set_aux("min_bias_xs", sn.Number(69.2, (sn.Number.REL, 0.046)))  # mb
 
 # file merging information (stage -> dataset -> files after merging)
 cfg.set_aux("file_merging", {

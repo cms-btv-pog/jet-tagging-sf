@@ -25,11 +25,10 @@ class CalculateScaleFactors(AnalysisTask):
         return super(CalculateScaleFactors, self).store_parts() + (self.iteration,)
 
     def output(self):
-        outp = {
-            "sfs": self.wlcg_target("sfs.root")
-        }
+        outputs = {"scale_factors": self.wlcg_target("scale_factors.root")}
         if self.iteration == 0:
-            outp["scale"] = self.wlcg_target("scale.json")
+            outputs["channel_scale"] = self.wlcg_target("channel_scale.json")
+        return outputs
 
     def get_flavor_component(self, flavor, region):
         """
@@ -48,7 +47,6 @@ class CalculateScaleFactors(AnalysisTask):
 
         inp = self.input()
         outp = self.output()
-        outp.parent.touch(0o0770)
 
         # get categories in which we measure the scale factors
         # these are stored in the config itself as we measure them inclusively over channels
@@ -61,13 +59,13 @@ class CalculateScaleFactors(AnalysisTask):
         # only needed for the first iteration, where the scaling is saved for further use
         if self.iteration == 0:
             scale_categories = {}
-            for channel in self.config_inst.channels.values():
+            for channel in self.config_inst.channels:
                 for category, _, _ in channel.walk_categories():
                     if category.has_tag("measure"):
                         if channel in scale_categories:
-                            raise Exception("Should only have one category with tag "
-                            "'measure' per channel, but got "
-                            "{} and {}".format(category, scale_categories[channel]))
+                            raise Exception("only one category per channel should be tagged with"
+                                "'measure' per channel, but got {} and {}".format(
+                                    category, scale_categories[channel]))
                         scale_categories[channel] = category
 
         btagger_cfg = self.config_inst.get_aux("btagger")
@@ -89,7 +87,7 @@ class CalculateScaleFactors(AnalysisTask):
             sf_hists_nd[region] = sf_hist
 
         with inp["hist"].load("r") as input_file:
-            # get scale factor to scale MC (withouts b-tag SFs) to data
+            # get scale factor to scale MC (withouts b-tag SFs) to data per channel
             if self.iteration == 0:
                 variable_name = "jet1_pt"
                 scales = {}
@@ -108,9 +106,9 @@ class CalculateScaleFactors(AnalysisTask):
                         else:
                             mc_yield += hist.Integral()
                     scale = data_yield / mc_yield
-                    scales[category] = scale
+                    scales[channel.name] = scale
             else:
-                scales = inp["scale"].load()
+                scales = inp["channel_scales"].load()
 
             for category in categories:
                 region = category.get_aux("region")
@@ -171,22 +169,23 @@ class CalculateScaleFactors(AnalysisTask):
                 # and do the actual division to compute scale factors
                 # (this is where the physics happens)
                 if region == "HF":
-                    sf_hist.Add(lf_hist, -1)
+                    sf_hist.Add(lf_hist, -1.)
                     sf_hist.Divide(hf_hist)
                 elif region == "LF":
-                    sf_hist.Add(hf_hist, -1)
+                    sf_hist.Add(hf_hist, -1.)
                     sf_hist.Divide(lf_hist)
 
                 # store the corrected sf hist
                 sf_dict[category] = sf_hist
 
             # open the output file
-            with outp["sfs"].localize("w") as tmp:
+            with outp["scale_factors"].localize("w") as tmp:
                 with tmp.dump("RECREATE") as output_file:
                     for category in categories:
                         category_dir = output_file.mkdir(category.name)
                         category_dir.cd()
                         sf_dict[category].Write("sf")
-            # for the first iteration, save the rate scale factors
+
+            # for the first iteration, also save the channel rate scale factors
             if self.iteration == 0:
-                outp["scale"].dump(scales, indent=4)
+                outp["channel_scales"].dump(scales, indent=4)

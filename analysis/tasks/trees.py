@@ -323,10 +323,10 @@ class MeasureTreeSizes(AnalysisTask):
 
         # some output
         print(" summary ".center(80, "="))
-        print("total files       : {}".format(total_files))
-        print("total size        : {:.2f} {}".format(*law.util.human_bytes(total_size)))
-        print("total merged files: {}".format(total_merged_files))
-        print("\nmerged files per dataset:")
-        print(json.dumps(merged_files, indent=4, separators=(",", ": ")))
+        self.publish_message("total size   : {:.2f} {}".format(*law.util.human_bytes(total_size)))
+        self.publish_message("total files  : {}".format(total_files))
+        self.publish_message("after merging: {}".format(total_merged_files))
+        self.publish_message("\nmerged files per dataset:")
+        self.publish_message(json.dumps(merged_files, indent=4, separators=(",", ": ")))
 
         self.has_run = True

@@ -12,11 +12,14 @@ from order.util import join_root_selection
 
 from analysis.tasks.base import AnalysisTask, DatasetTask, DatasetWrapperTask, GridWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
+from analysis.tasks.external import CalculatePileupWeights
+from analysis.util import TreeExtender
+
 
 class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
-    iteration = luigi.IntParameter(default=0, description="Iteration of the scale factor calculation, "
-                                  "starting at zero. Default: 0")
+    iteration = luigi.IntParameter(default=0, description="iteration of the scale factor "
+        "calculation, starting at zero, default: 0")
 
     file_merging = "trees"
 
@@ -28,11 +31,13 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         if not self.cancel_jobs and not self.cleanup_jobs:
             reqs["meta"] = MergeMetaData.req(self, version=self.get_version(MergeMetaData),
                 _prefer_cli=["version"])
+            if self.dataset_inst.is_mc:
+                reqs["pu"] = CalculatePileupWeights.req(self)
             if not self.pilot:
                 reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
             if self.iteration > 0:
-                reqs["sf"] = CalculateScaleFactors(self, iteration=self.iteration-1,
+                reqs["sf"] = CalculateScaleFactors(self, iteration=self.iteration - 1,
                     version=self.get_version(CalculateScaleFactors), _prefer_cli=["version"])
 
         return reqs
@@ -44,8 +49,10 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
             "meta": MergeMetaData.req(self, version=self.get_version(MergeMetaData),
                 _prefer_cli=["version"]),
         }
+        if self.dataset_inst.is_mc:
+            reqs["pu"] = CalculatePileupWeights.req(self)
         if self.iteration > 0:
-            reqs["sf"] = CalculateScaleFactors(self, iteration=self.iteration-1,
+            reqs["sf"] = CalculateScaleFactors(self, iteration=self.iteration - 1,
                 version=self.get_version(CalculateScaleFactors), _prefer_cli=["version"])
         return reqs
 
@@ -55,6 +62,58 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
     def output(self):
         return self.wlcg_target("hists_{}.root".format(self.branch))
 
+    def get_pileup_weighter(self, inp):
+        with inp.load() as pu_file:
+            pu_hist = pu_file.Get("pileup_weights")
+            pu_values = [
+                pu_hist.GetBinContent(i)
+                for i in range(1, pu_hist.GetNbinsX() + 1)
+            ]
+
+        def add_branch(extender):
+            extender.add_branch("pu_weight", unpack="pu")
+
+        def add_value(entry):
+            pu_idx = int(entry.pu[0]) - 1
+            if not (0 <= pu_idx < len(pu_values)):
+                entry.pu_weight[0] = 1.
+            else:
+                entry.pu_weight[0] = pu_values[pu_idx]
+
+        return add_branch, add_value
+
+    def get_channel_scale_weighter(self, inp):
+        scales = inp.load()
+
+        # re-map from channel names to channel ids
+        scales = {
+            self.config_inst.get_channel(name).id: scale
+            for name, scale in scales.items()
+        }
+
+        def add_branch(extender):
+            extender.add_branch("channel_scale_weight", unpack="channel")
+
+        def add_value(entry):
+            channel_id = int(entry.channel[0])
+            entry.channel_scale_weight[0] = scales[channel_id]
+
+        return add_branch, add_value
+
+    def get_scale_factor_weighter(self, inp):
+        # TODO: load the TH3F objects into memory here
+
+        def add_branch(extender):
+            # TODO
+            return
+
+        def add_value(entry):
+            # TODO
+            return
+
+        return add_branch, add_value
+
+    @law.decorator.notify
     def run(self):
         import ROOT
 
@@ -100,9 +159,36 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             process_dirs[(category.name, process.name)] = process_dir
 
                 # open the input file and get the tree
-                with inp["tree"].load("r") as input_file:
+                # as we need to extend the tree with custom weights, we do not cache the file
+                with inp["tree"].load("UPDATE", cache=False) as input_file:
                     tree = input_file.Get("tree")
                     self.publish_message("{} events in tree".format(tree.GetEntries()))
+
+                    # extend the tree
+                    if self.dataset_inst.is_mc:
+                        with self.publish_step("extending the input tree with weights ..."):
+                            weighters = []
+
+                            # pileup weight
+                            weighters.append(self.get_pileup_weighter(inp["pu"]))
+
+                            # weights from previous iteratios
+                            if self.iteration > 0:
+                                # channel scale weight
+                                weighters.append(self.get_channel_scale_weighter(
+                                    inp["sf"]["channel_scales"]))
+
+                                # b-tagging scale factors
+                                weighters.append(self.get_scale_factor_weighter(
+                                    inp["sf"]["scale_factors"]))
+
+                            input_file.cd()
+                            with TreeExtender(tree) as te:
+                                for add_branch, _ in weighters:
+                                    add_branch(te)
+                                for entry in te:
+                                    for _, add_value in weighters:
+                                        add_value(entry)
 
                     # pt and eta aliases for jets and leptons
                     for obj in ["jet1", "jet2", "jet3", "jet4", "lep1", "lep2"]:
@@ -115,7 +201,10 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                         self.publish_message("writing histograms in category {} ({}/{})".format(
                             category.name, i + 1, len(categories)))
 
-                        region = category.get_aux("region")
+                        # get the region (HF / LF)
+                        # not all child categories have regions associated, e.g. the phase space
+                        # inclusive regions ("measure", "closure")
+                        region = category.get_aux("region", None)
 
                         for process in processes:
                             # weights
@@ -128,6 +217,13 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 lumi_weight = lumi * x_sec / sum_weights
                                 weights.append(str(lumi_weight))
 
+                                # pu weight
+                                weights.append("pu_weight")
+
+                                # channel scale weight
+                                if self.iteration > 0:
+                                    weights.append("channel_scale_weight")
+
                             # totalWeight alias
                             while len(weights) < 2:
                                 weights.insert(0, "1")
@@ -138,7 +234,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                             # actual projecting
                             for variable in self.config_inst.variables:
-                                if variable.has_tag("skip_{}".format(region)):
+                                if region and variable.has_tag("skip_{}".format(region)):
                                     continue
 
                                 hist = ROOT.TH1F(variable.name, variable.full_title(root=True),
@@ -247,4 +343,6 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
     def arc_output_postfix(self):
         return self.glite_output_postfix()
 
+
+# trailing imports
 from analysis.tasks.measurement import CalculateScaleFactors

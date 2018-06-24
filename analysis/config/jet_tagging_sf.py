@@ -297,9 +297,12 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
 
 # luminosities per channel in /pb
 cfg.set_aux("lumi", {
-    ch_ee: 41296.082,
-    ch_emu: 41296.082,
-    ch_mumu: 41296.082,
+    ch_ee: 4767.315,  # B only
+    ch_emu: 4767.315,  # B only
+    ch_mumu: 4767.315,  # B only
+    # ch_ee: 41296.082,
+    # ch_emu: 41296.082,
+    # ch_mumu: 41296.082,
 })
 
 # run ranges

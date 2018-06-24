@@ -9,20 +9,21 @@ action() {
 
     # check if we're on lxplus
     [[ "$( hostname )" = lxplus*.cern.ch ]] && JTSF_ON_LXPLUS="1" || JTSF_ON_LXPLUS="0"
+    export JTSF_ON_LXPLUS
 
     # default data directory
     if [ -z "$JTSF_DATA" ]; then
         if [ "$JTSF_ON_LXPLUS" = "1" ]; then
-            JTSF_DATA="$JTSF_BASE/.data"
+            export JTSF_DATA="$JTSF_BASE/.data"
         else
-            JTSF_DATA="/user/public/jet-tagging-sf"
+            export JTSF_DATA="/user/public/jet-tagging-sf"
         fi
     fi
 
     # default grid user
     if [ -z "$JTSF_GRID_USER" ]; then
         if [ "$JTSF_ON_LXPLUS" = "1" ]; then
-            JTSF_GRID_USER="$( whoami )"
+            export JTSF_GRID_USER="$( whoami )"
             echo "NOTE: lxplus detected, setting JTSF_GRID_USER to $JTSF_GRID_USER"
         else
             2>&1 echo "please set the JTSF_GRID_USER to your grid user name and try again"
@@ -31,19 +32,27 @@ action() {
     fi
 
     # other defaults
-    [ -z "$JTSF_SOFTWARE" ] && JTSF_SOFTWARE="$JTSF_DATA/software"
-    [ -z "$JTSF_STORE" ] && JTSF_STORE="$JTSF_DATA/store"
-    [ -z "$JTSF_LOCAL_CACHE" ] && JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
-    [ -z "$JTSF_CMSSW_SETUP" ] && JTSF_CMSSW_SETUP="ICHEP18"
+    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/software"
+    [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
+    [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
+    [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="ICHEP18"
 
-    # export variables
-    export JTSF_DATA
-    export JTSF_ON_LXPLUS
-    export JTSF_GRID_USER
-    export JTSF_SOFTWARE
-    export JTSF_STORE
-    export JTSF_LOCAL_CACHE
-    export JTSF_CMSSW_SETUP
+    # law and luigi setup
+    export LAW_HOME="$JTSF_BASE/.law"
+    export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
+    [ "$JTSF_ON_LXPLUS" == "0" ] && export LAW_TARGET_TMP_DIR="$JTSF_DATA/tmp"
+
+    if [ "$JTSF_ON_GRID" == "1" ]; then
+        export JTSF_LUIGI_WORKER_KEEP_ALIVE="False"
+        export JTSF_LUIGI_WORKER_FORCE_MULTIPROCESSING="True"
+    else
+        export JTSF_LUIGI_WORKER_KEEP_ALIVE="True"
+        export JTSF_LUIGI_WORKER_FORCE_MULTIPROCESSING="False"
+    fi
+
+    if [ -z "$JTSF_SCHEDULER_HOST" ]; then
+        2>&1 echo "NOTE: \$JTSF_SCHEDULER_HOST is not set, use '--local-scheduler' in your tasks!"
+    fi
 
 
     #
@@ -123,23 +132,10 @@ action() {
     # setup gfal2 separately
     source "$JTSF_SOFTWARE/gfal2/setup.sh" || return "$?"
 
-
-    #
-    # env setup
-    #
-
     # add _this_ repo
     _addpy "$JTSF_BASE"
 
-    # law and luigi setup
-    export LAW_HOME="$JTSF_BASE/.law"
-    export LAW_CONFIG_FILE="$JTSF_BASE/law.cfg"
-    [ "$JTSF_ON_LXPLUS" != "1" ] && export LAW_TARGET_TMP_DIR="$JTSF_DATA/tmp"
-
-    if [ -z "$JTSF_SCHEDULER_HOST" ]; then
-        2>&1 echo "NOTE: \$JTSF_SCHEDULER_HOST is not set, use '--local-scheduler' in your tasks!"
-    fi
-
+    # source law's bash completion scipt
     source "$( law completion )"
 }
 action "$@"

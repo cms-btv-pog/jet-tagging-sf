@@ -323,6 +323,7 @@ dataset_tt_dl.add_process(process_tt_dl)
 dataset_dy_lep_4To50_Ht70To100.add_process(process_dy_lep_5To50_Ht70To100)  # TODO: 5To50 okay?
 dataset_dy_lep_4To50_Ht100To200.add_process(process_dy_lep_5To50_Ht100To200)  # TODO: 5To50 okay?
 dataset_dy_lep_4To50_Ht200To400.add_process(process_dy_lep_5To50_Ht200To400)  # TODO: 5To50 okay?
+dataset_dy_lep_4To50_Ht400To600.add_process(process_dy_lep_5To50_Ht400To600)  # TODO: 5To50 okay?
 dataset_dy_lep_4To50_Ht600ToInf.add_process(process_dy_lep_5To50_Ht600ToInf)  # TODO: 5To50 okay?
 # dataset_dy_lep_50ToInf_Ht70To100.add_process(process_dy_lep_50ToInf_Ht70To100)  # TODO: enable
 dataset_dy_lep_50ToInf_Ht100To200.add_process(process_dy_lep_50ToInf_Ht100To200)

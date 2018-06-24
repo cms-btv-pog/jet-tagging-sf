@@ -127,18 +127,20 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         #    that is decremented in each iteration until e.g. 0)
 
         # get child categories
+        # skip non-measure categories for iterations > 0
         categories = []
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
         for channel in channels:
             for category, _, children in channel.walk_categories():
-                if not children:
+                if not children and (self.iteration == 0 or category.has_tag("measure")):
                     categories.append((channel, category))
         categories = list(set(categories))
 
         # get processes
         if len(self.dataset_inst.processes) != 1:
-            raise NotImplementedError("cannot handle datasets with more than one process yet")
+            raise NotImplementedError("only datasets with exactly one linked process can be"
+                " handled, got {}".format(len(self.dataset_inst.processes)))
         processes = list(self.dataset_inst.processes.values())
 
         # build a progress callback
@@ -172,7 +174,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             # pileup weight
                             weighters.append(self.get_pileup_weighter(inp["pu"]))
 
-                            # weights from previous iteratios
+                            # weights from previous iterations
                             if self.iteration > 0:
                                 # channel scale weight
                                 weighters.append(self.get_channel_scale_weighter(

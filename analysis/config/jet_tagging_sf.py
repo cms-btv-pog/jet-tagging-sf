@@ -276,6 +276,8 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                                     "flavor": fl_name,
                                 },
                             )
+                            if ps_name == "measure":
+                                eta_cat.add_tag("measure")
 
                             # merged category for both jets and all flavors
                             merged_vars = (ps_name, rg_name, pt_name, eta_name)

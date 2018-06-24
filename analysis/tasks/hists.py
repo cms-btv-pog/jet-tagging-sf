@@ -8,6 +8,7 @@ import array
 import law
 import luigi
 import six
+import numpy as np
 from order.util import join_root_selection
 
 from analysis.tasks.base import AnalysisTask, DatasetTask, DatasetWrapperTask, GridWorkflow
@@ -74,11 +75,14 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
             extender.add_branch("pu_weight", unpack="pu")
 
         def add_value(entry):
-            pu_idx = int(entry.pu[0]) - 1
-            if not (0 <= pu_idx < len(pu_values)):
-                entry.pu_weight[0] = 1.
-            else:
-                entry.pu_weight[0] = pu_values[pu_idx]
+            # some events have inf pileup, skip them
+            weight = 1.
+            pu = entry.pu[0]
+            if np.isfinite(pu):
+                pu_idx = int(pu) - 1
+                if 0 <= pu_idx < len(pu_values):
+                    weight = pu_values[pu_idx]
+            entry.pu_weight[0] = weight
 
         return add_branch, add_value
 
@@ -244,12 +248,15 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 hist.Sumw2()
 
                                 # build the full selection string, including the total event weight
-                                selection = category.selection
+                                selection = [
+                                    category.selection,
+                                    "jetmet_pass == 1",
+                                    "{} > -10000".format(variable.expression),
+                                ]
                                 if variable.selection:
-                                    selection = join_root_selection(selection, variable.selection)
-                                selection = join_root_selection(selection, "{} > -10000".format(
-                                    variable.expression))
-                                selection = "({}) * totalWeight".format(selection)
+                                    selection.append(variable.selection)
+                                selection = join_root_selection(selection, op="&&")
+                                selection = join_root_selection(selection, "totalWeight", op="*")
 
                                 # project and write the histogram
                                 tree.Project(variable.name, variable.expression, selection)

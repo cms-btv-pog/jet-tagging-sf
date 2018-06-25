@@ -41,7 +41,7 @@ class MeasureScaleFactors(AnalysisTask):
         elif region == "LF":
             return "light" if flavor == "udsg" else "heavy"
         else:
-            raise ValueError("Unexpected region %s" % region)
+            raise ValueError("unexpected region %s" % region)
 
     def run(self):
         import ROOT

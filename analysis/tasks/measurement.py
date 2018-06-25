@@ -4,6 +4,8 @@
 import os
 import array
 
+from collections import defaultdict
+
 from analysis.tasks.base import AnalysisTask
 from analysis.tasks.hists import MergeHistograms
 
@@ -61,13 +63,11 @@ class MeasureScaleFactors(AnalysisTask):
         if self.iteration == 0:
             scale_categories = {}
             for channel in self.config_inst.channels:
-                for category, _, _ in channel.walk_categories():
-                    if category.has_tag(("measure", "phase_space"), mode=all):
-                        if channel in scale_categories:
-                            raise Exception("only one category per channel should be tagged with"
-                                " 'measure' and 'phase_space', but got {} and {}".format(
-                                    category, scale_categories[channel]))
-                        scale_categories[channel] = category
+                scale_categories[channel] = {}
+                for category, _, children in channel.walk_categories():
+                    if category.has_tag("scales") and category.get_aux("phase_space") == "measure":
+                        region = category.get_aux("region")
+                        scale_categories[channel][region] = category
 
         btagger_cfg = self.config_inst.get_aux("btagger")
 
@@ -95,23 +95,24 @@ class MeasureScaleFactors(AnalysisTask):
             # get scale factor to scale MC (withouts b-tag SFs) to data per channel
             if self.iteration == 0:
                 variable_name = "jet1_pt"
-                scales = {}
-                for channel, category in scale_categories.items():
-                    data_yield, mc_yield = 0., 0.
-                    category_dir = input_file.GetDirectory(category.name)
+                scales = defaultdict(dict)
+                for channel, region_categories in scale_categories.items():
+                    for region, category in region_categories.items():
+                        data_yield, mc_yield = 0., 0.
+                        category_dir = input_file.GetDirectory(category.name)
 
-                    # sum over processes to get mc and data yields
-                    for process_key in category_dir.GetListOfKeys():
-                        process = self.config_inst.get_process(process_key.GetName())
-                        process_dir = category_dir.GetDirectory(process.name)
+                        # sum over processes to get mc and data yields
+                        for process_key in category_dir.GetListOfKeys():
+                            process = self.config_inst.get_process(process_key.GetName())
+                            process_dir = category_dir.GetDirectory(process.name)
 
-                        hist = process_dir.Get(variable_name)
-                        if process.is_data:
-                            data_yield += hist.Integral()
-                        else:
-                            mc_yield += hist.Integral()
-                    scale = data_yield / mc_yield
-                    scales[channel.name] = scale
+                            hist = process_dir.Get(variable_name)
+                            if process.is_data:
+                                data_yield += hist.Integral()
+                            else:
+                                mc_yield += hist.Integral()
+                        scale = data_yield / mc_yield
+                        scales[channel.name][region] = scale
             else:
                 scales = inp["channel_scales"].load()
 

@@ -225,13 +225,27 @@ for jet_idx in [1, 2]:
 for ch in [ch_ee, ch_emu, ch_mumu]:
     # phase space region loop (measurement, closure, ...)
     for ps_name, ps_sel in get_phasespace_info():
-        # inclusive phase categories to measure rates
-        ps_cat = ch.add_category(
-            name="{}__{}".format(ch.name, ps_name),
-            label="{}, {}".format(ch.name, ps_name),
-            selection=join_root_selection("channel == {}".format(ch.id), ps_sel),
-            tags={"phase_space", ps_name},
-        )
+        # inclusive region categories to measure rates
+        rg_selections = [
+            {rg_name: rg_sel for rg_name, rg_sel in get_region_info(i_jet, ch)} for i_jet in [1, 2]
+        ]
+        for rg_name in rg_selections[0]:
+            # combine selection in this way to avoid double counting when both jets fulfill
+            # the requirements for a tag jet
+            rg_selection = join_root_selection(
+                *(selection[rg_name] for selection in rg_selections), op="||"
+            )
+            rg_cat_combined = ch.add_category(
+                name="{}__{}__{}".format(ch.name, ps_name, rg_name),
+                label="{}, {}, {}".format(ch.name, ps_name, rg_name),
+                selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_selection),
+                tags={"scales"},
+                aux={
+                    "phase_space": ps_name,
+                    "region": rg_name,
+                }
+            )
+
         # loop over both jet1 jet2 permutations
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
             # region loop (hf, lf, ...)
@@ -275,8 +289,6 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                                     "flavor": fl_name,
                                 },
                             )
-                            if ps_name == "measure":
-                                eta_cat.add_tag("measure")
 
                             # merged category for both jets and all flavors
                             merged_vars = (ps_name, rg_name, pt_name, eta_name)

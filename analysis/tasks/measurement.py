@@ -8,7 +8,7 @@ from analysis.tasks.base import AnalysisTask
 from analysis.tasks.hists import MergeHistograms
 
 
-class CalculateScaleFactors(AnalysisTask):
+class MeasureScaleFactors(AnalysisTask):
 
     iteration = MergeHistograms.iteration
 
@@ -18,16 +18,17 @@ class CalculateScaleFactors(AnalysisTask):
                 _prefer_cli=["version"])
         }
         if self.iteration > 0:
-            reqs["scale"] = CalculateScaleFactors.req(self, iteration=0,
-                version=self.get_version(CalculateScaleFactors), _prefer_cli=["version"])
+            reqs["scale"] = MeasureScaleFactors.req(self, iteration=0,
+                version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
+        return reqs
 
     def store_parts(self):
-        return super(CalculateScaleFactors, self).store_parts() + (self.iteration,)
+        return super(MeasureScaleFactors, self).store_parts() + (self.iteration,)
 
     def output(self):
         outputs = {"scale_factors": self.wlcg_target("scale_factors.root")}
         if self.iteration == 0:
-            outputs["channel_scale"] = self.wlcg_target("channel_scale.json")
+            outputs["channel_scales"] = self.wlcg_target("channel_scales.json")
         return outputs
 
     def get_flavor_component(self, flavor, region):
@@ -61,10 +62,10 @@ class CalculateScaleFactors(AnalysisTask):
             scale_categories = {}
             for channel in self.config_inst.channels:
                 for category, _, _ in channel.walk_categories():
-                    if category.has_tag("measure"):
+                    if category.has_tag(("measure", "phase_space"), mode=all):
                         if channel in scale_categories:
                             raise Exception("only one category per channel should be tagged with"
-                                "'measure' per channel, but got {} and {}".format(
+                                " 'measure' and 'phase_space', but got {} and {}".format(
                                     category, scale_categories[channel]))
                         scale_categories[channel] = category
 
@@ -79,11 +80,15 @@ class CalculateScaleFactors(AnalysisTask):
         binning = self.config_inst.get_aux("binning")
         sf_hists_nd = {}
         for region in ["LF", "HF"]:
-            eta_bins = array.array(binning[region]["eta"])
-            pt_bins = array.array(binning[region]["eta"])
-            btag_bins = array.array(binning[region][btagger_cfg["name"]])
-            sf_hist = ROOT.TH3F("scale_factors_{}".format(region), "Scale factors {}".format(region),
-                len(eta_bins), eta_bins, len(pt_bins), pt_bins, len(btag_bins), btag_bins)
+            eta_edges = array.array("f", binning[region]["eta"])
+            pt_edges = array.array("f", binning[region]["eta"])
+            btag_edges = array.array("f", binning[region][btagger_cfg["name"]])
+            sf_hist = ROOT.TH3F(
+                "scale_factors_{}".format(region), "Scale factors {}".format(region),
+                len(eta_edges) - 1, eta_edges,
+                len(pt_edges) - 1, pt_edges,
+                len(btag_edges) - 1, btag_edges,
+            )
             sf_hists_nd[region] = sf_hist
 
         with inp["hist"].load("r") as input_file:
@@ -96,7 +101,7 @@ class CalculateScaleFactors(AnalysisTask):
                     category_dir = input_file.GetDirectory(category.name)
 
                     # sum over processes to get mc and data yields
-                    for process_key in category_dir.GetListOfKeys:
+                    for process_key in category_dir.GetListOfKeys():
                         process = self.config_inst.get_process(process_key.GetName())
                         process_dir = category_dir.GetDirectory(process.name)
 

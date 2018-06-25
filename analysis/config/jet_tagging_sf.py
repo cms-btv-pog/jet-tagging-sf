@@ -230,7 +230,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
             name="{}__{}".format(ch.name, ps_name),
             label="{}, {}".format(ch.name, ps_name),
             selection=join_root_selection("channel == {}".format(ch.id), ps_sel),
-            tags=("phase_space", ps_name),
+            tags={"phase_space", ps_name},
         )
         # loop over both jet1 jet2 permutations
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
@@ -286,7 +286,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                                 merged_cat = cfg.add_category(
                                     name=merged_name,
                                     label=label,
-                                    tags=("merged",),
+                                    tags={"merged"},
                                     aux={
                                         "phase_space": ps_name,
                                         "region": rg_name,

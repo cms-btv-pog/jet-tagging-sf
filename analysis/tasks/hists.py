@@ -27,6 +27,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
     workflow_run_decorators = [law.decorator.notify]
 
     def workflow_requires(self):
+        from analysis.tasks.measurement import MeasureScaleFactors
+
         reqs = super(WriteHistograms, self).workflow_requires()
 
         if not self.cancel_jobs and not self.cleanup_jobs:
@@ -38,12 +40,14 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
             if self.iteration > 0:
-                reqs["sf"] = CalculateScaleFactors(self, iteration=self.iteration - 1,
-                    version=self.get_version(CalculateScaleFactors), _prefer_cli=["version"])
+                reqs["sf"] = MeasureScaleFactors(self, iteration=self.iteration - 1,
+                    version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
 
         return reqs
 
     def requires(self):
+        from analysis.tasks.measurement import MeasureScaleFactors
+
         reqs = {
             "tree": MergeTrees.req(self, cascade_tree=self.branch, branch=0,
                 version=self.get_version(MergeTrees), _prefer_cli=["version", "workflow"]),
@@ -53,8 +57,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         if self.dataset_inst.is_mc:
             reqs["pu"] = CalculatePileupWeights.req(self)
         if self.iteration > 0:
-            reqs["sf"] = CalculateScaleFactors(self, iteration=self.iteration - 1,
-                version=self.get_version(CalculateScaleFactors), _prefer_cli=["version"])
+            reqs["sf"] = MeasureScaleFactors(self, iteration=self.iteration - 1,
+                version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
         return reqs
 
     def store_parts(self):
@@ -351,7 +355,3 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
 
     def arc_output_postfix(self):
         return self.glite_output_postfix()
-
-
-# trailing imports
-from analysis.tasks.measurement import CalculateScaleFactors

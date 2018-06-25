@@ -251,11 +251,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 selection = [
                                     category.selection,
                                     "jetmet_pass == 1",
-                                    "{} > -10000".format(variable.expression),
+                                    "{} != -10000".format(variable.expression),
                                 ]
                                 if variable.selection:
                                     selection.append(variable.selection)
-                                selection = join_root_selection(selection, op="&&")
+                                selection = join_root_selection(selection)
                                 selection = join_root_selection(selection, "totalWeight", op="*")
 
                                 # project and write the histogram
@@ -274,7 +274,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
 
     iteration = WriteHistograms.iteration
 
-    merge_factor = 8  # TODO: optimize
+    merge_factor = 12
 
     def create_branch_map(self):
         return law.CascadeMerge.create_branch_map(self)

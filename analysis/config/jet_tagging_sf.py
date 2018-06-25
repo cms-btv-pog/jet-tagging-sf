@@ -51,7 +51,6 @@ cfg.add_process(process_st_tW)
 cfg.add_process(process_WW_sl)
 
 # add datasets
-
 dataset_names = [
     "data_B_ee",
     "data_B_emu",

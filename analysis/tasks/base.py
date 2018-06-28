@@ -19,7 +19,7 @@ from analysis.config.jet_tagging_sf import analysis
 from analysis.util import calc_checksum
 
 
-law.contrib.load("arc", "cms", "git", "glite", "tasks", "root", "slack", "wlcg")
+law.contrib.load("arc", "cms", "git", "glite", "numpy", "tasks", "root", "slack", "wlcg")
 
 
 class AnalysisTask(law.Task):

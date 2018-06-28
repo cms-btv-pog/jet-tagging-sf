@@ -21,7 +21,7 @@ To let the tasks talk to a central luigi scheduler, you need to set `$JRST_SCHED
 
 ```shell
 # example
-law run CreateTrees --dataset data_B_ee --version prod1 --grid-ce CNAF --poll-interval 1 --transfer-logs
+law run WriteTrees --dataset data_B_ee --version prod1 --grid-ce CNAF --poll-interval 1 --transfer-logs
 ```
 
 ### Available Grid CEs

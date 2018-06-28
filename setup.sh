@@ -59,7 +59,9 @@ action() {
     # CMSSW setup
     #
 
-    if [ "$JTSF_CMSSW_SETUP" = "ICHEP18" ]; then
+    if [ "$JTSF_CMSSW_SETUP" = "NONE" ]; then
+        echo "NOTE: skipping CMSSW setup"
+    elif [ "$JTSF_CMSSW_SETUP" = "ICHEP18" ]; then
         source "$JTSF_BASE/cmssw/setup_ICHEP18.sh" || return "$?"
     else
         2>&1 echo "unknown JTSF_CMSSW_SETUP '$JTSF_CMSSW_SETUP'"

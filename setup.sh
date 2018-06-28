@@ -11,10 +11,16 @@ action() {
     [[ "$( hostname )" = lxplus*.cern.ch ]] && JTSF_ON_LXPLUS="1" || JTSF_ON_LXPLUS="0"
     export JTSF_ON_LXPLUS
 
+    # check if we're on VISPA
+    [ ! -z "$( hostname | grep vispa )" ] && JTSF_ON_VISPA="1" || JTSF_ON_VISPA="0"
+    export JTSF_ON_VISPA
+
     # default data directory
     if [ -z "$JTSF_DATA" ]; then
         if [ "$JTSF_ON_LXPLUS" = "1" ]; then
             export JTSF_DATA="$JTSF_BASE/.data"
+        elif [ "$JTSF_ON_VISPA" = "1" ]; then
+            export JTSF_DATA="/net/scratch/cms/jet-tagging-sf"
         else
             export JTSF_DATA="/user/public/jet-tagging-sf"
         fi
@@ -31,8 +37,11 @@ action() {
         fi
     fi
 
+    # default CMSSW setup when on VISPA
+    [ "$JTSF_ON_VISPA" = "1" ] && export JTSF_CMSSW_SETUP="NONE"
+
     # other defaults
-    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/software"
+    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/software/$( whoami )"
     [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
     [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
     [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="ICHEP18"

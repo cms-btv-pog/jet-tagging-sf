@@ -220,6 +220,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             # weights
                             weights = []
                             if self.dataset_inst.is_mc:
+                                weights.append("gen_weight")
                                 # lumi weight
                                 lumi = self.config_inst.get_aux("lumi")[channel]
                                 x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal

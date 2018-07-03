@@ -65,7 +65,7 @@ class MeasureScaleFactors(AnalysisTask):
             for channel in self.config_inst.channels:
                 scale_categories[channel] = {}
                 for category, _, children in channel.walk_categories():
-                    if category.has_tag("scales") and category.get_aux("phase_space") == "measure":
+                    if category.has_tag("scales") and category.get_aux("phase_space") == "closure":
                         region = category.get_aux("region")
                         scale_categories[channel][region] = category
 

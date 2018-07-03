@@ -58,6 +58,7 @@ dataset_names = [
     "tt_dl",
     "dy_lep_4To50_Ht70To100", "dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
     "dy_lep_4To50_Ht400To600", "dy_lep_4To50_Ht600ToInf",
+#    "dy_lep_10To50",
     "dy_lep_50ToInf_Ht100To200", "dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
     "dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
     "dy_lep_50ToInf_Ht2500ToInf",
@@ -104,11 +105,11 @@ cfg.set_aux("binning", {
 # define nested categories (analysis phase space -> hf/lf region -> flavor -> pt bin -> eta bin)
 def get_phasespace_info():
     return [
-        ("measure", join_root_selection("n_jets == 2")),
-        ("closure", join_root_selection("n_jets >= 2")),
+        ("measure", join_root_selection(["n_jets == 2", "mll > 12"])),
+        ("closure", join_root_selection(["n_jets >= 2", "mll > 12"])),
     ]
 
-def get_region_info(idx, channel, et_miss=30., z_window=10.):
+def get_region_info(idx, channel, et_miss=30., z_window=10., add_btag_cut=True):
     btagger = cfg.get_aux("btagger")
     btag_name = btagger["name"]
     btag_variable = cfg.get_variable("jet{}_{}".format(idx, btagger["variable"]))
@@ -117,9 +118,10 @@ def get_region_info(idx, channel, et_miss=30., z_window=10.):
     csv_loose = cfg.get_aux("working_points")[btag_name]["loose"]
 
     hf_cuts, lf_cuts = [], []
-    # jet tagging requirement
-    hf_cuts.append("({}) > {}".format(btag_variable.expression, csv_tight))
-    lf_cuts.append("({}) < {}".format(btag_variable.expression, csv_loose))
+    if add_btag_cut:
+        # jet tagging requirement
+        hf_cuts.append("({}) > {}".format(btag_variable.expression, csv_tight))
+        lf_cuts.append("({}) < {}".format(btag_variable.expression, csv_loose))
 
     # the following cuts do not apply for emu
     if channel != "emu":
@@ -131,6 +133,9 @@ def get_region_info(idx, channel, et_miss=30., z_window=10.):
         # z-mass window
         hf_cuts.append("abs(mll - {}) > {}".format(Z_MASS.nominal, z_window))
         lf_cuts.append("abs(mll - {}) < {}".format(Z_MASS.nominal, z_window))
+
+        # z peak diamond
+        lf_cuts.append("pass_z_mask == 0")
 
     return [
         ("HF", join_root_selection(hf_cuts)),
@@ -177,6 +182,13 @@ def get_axis_info(idx, axis_var):
 
 
 # variables
+#cfg.add_variable(
+#    name="dr_ll",
+#    expression="dr_ll",
+#    binning=(25, 0., 5.,),
+#    x_title="dR(ll)",
+#)
+
 for jet_idx in [1, 2]:
     cfg.add_variable(
         name="jet{}_pt".format(jet_idx),
@@ -226,19 +238,16 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
     # phase space region loop (measurement, closure, ...)
     for ps_name, ps_sel in get_phasespace_info():
         # inclusive region categories to measure rates
-        rg_selections = [
-            {rg_name: rg_sel for rg_name, rg_sel in get_region_info(i_jet, ch)} for i_jet in [1, 2]
-        ]
-        for rg_name in rg_selections[0]:
-            # combine selection in this way to avoid double counting when both jets fulfill
-            # the requirements for a tag jet
-            rg_selection = join_root_selection(
-                *(selection[rg_name] for selection in rg_selections), op="||"
-            )
+        for rg_name, rg_sel in get_region_info(1, ch, add_btag_cut=False):
+            # we skip the emu channel in the lf region because the DY (the main contribution)
+            # should have same-flavored leptons
+            if rg_name == "LF" and ch == ch_emu:
+                continue
+
             rg_cat_combined = ch.add_category(
                 name="{}__{}__{}".format(ch.name, ps_name, rg_name),
                 label="{}, {}, {}".format(ch.name, ps_name, rg_name),
-                selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_selection),
+                selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
                 tags={"scales"},
                 aux={
                     "phase_space": ps_name,
@@ -250,8 +259,6 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
             # region loop (hf, lf, ...)
             for rg_name, rg_sel in get_region_info(i_tag_jet, ch):
-                # we skip the emu channel in the lf region because the DY (the main contribution)
-                # should have same-flavored leptons
                 if rg_name == "LF" and ch == ch_emu:
                     continue
 
@@ -460,6 +467,6 @@ cfg.set_aux("versions", {
     "WriteTrees": "prod1",
     "MergeTrees": "prod1",
     "MergeMetaData": "prod1",
-    "WriteHistograms": "prod2",
-    "MergeHistograms": "prod2",
+    "WriteHistograms": "prod3",
+    "MergeHistograms": "prod3",
 })

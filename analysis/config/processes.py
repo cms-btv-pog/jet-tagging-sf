@@ -74,6 +74,14 @@ process_dy_lep_5To50 = process_dy_lep.add_process(
 
 )
 
+process_dy_lep_10To50 = process_dy_lep.add_process(
+    "dy_lep_10To50", 223,
+    label=r"Drell-Yan, $10 \leq m_{ll} \leq 50$",
+    xsecs={
+        13: sn.Number(18610) * N_LEPS,
+    },
+)
+
 process_dy_lep_5To50_Ht70To100 = process_dy_lep_5To50.add_process(
     "dy_lep_5To50_Ht70To100", 2211,
     xsecs={

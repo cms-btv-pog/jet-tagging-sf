@@ -28,18 +28,6 @@ analysis = od.Analysis("jet_tagging_sf", 1)
 from analysis.config.campaign_ICHEP18 import campaign as campaign_ICHEP18
 config_ICHEP18 = cfg = analysis.add_config(campaign=campaign_ICHEP18)
 
-# store DeepCSV working points
-cfg.set_aux("working_points", {
-    "deepcsv": {
-        "loose": 0.1522,
-        "medium": 0.4941,
-        "tight": 0.8001,
-    }
-})
-cfg.set_aux("btagger", {
-    "name": "deepcsv",
-    "variable": "deepcsv_bcomb",
-})
 
 # link processes
 cfg.add_process(process_data_ee)
@@ -79,6 +67,19 @@ cfg.set_aux("dataset_channels", {
     dataset: cfg.get_channel(dataset.name.split("_")[-1])
     for dataset in cfg.datasets.values()
     if dataset.is_data
+})
+
+# store DeepCSV working points
+cfg.set_aux("working_points", {
+    "deepcsv": {
+        "loose": 0.1522,
+        "medium": 0.4941,
+        "tight": 0.8001,
+    }
+})
+cfg.set_aux("btagger", {
+    "name": "deepcsv",
+    "variable": "deepcsv_bcomb",
 })
 
 # store binning information

@@ -411,6 +411,7 @@ void TreeMaker::setupVariables()
         varMap_.addDouble("lep" + std::to_string(i) + "_eta_sc");
     }
     varMap_.addDouble("mll");
+    varMap_.addDouble("dr_ll");
 
     // jet and MET and other JES/JER dependent variables
     for (size_t i = 0; i < (isData_ ? 1 : jetVariations_.size()); i++)
@@ -677,7 +678,9 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
         }
     }
     double mll = (lep1->p4() + lep2->p4()).M();
+    double dr_ll = deltaR(lep1->p4(), lep2->p4());
     varMap_.setDouble("mll", mll);
+    varMap_.setDouble("dr_ll", dr_ll);
 
     // jet and MET variables
     for (size_t i = 0; i < (isData_ ? 1 : jetVariations_.size()); i++)
@@ -1136,7 +1139,7 @@ JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandi
     }
 
     // check distance to selected leptons
-    if (deltaR(jet.p4(), lep1->p4()) < 0.4)
+    if ((deltaR(jet.p4(), lep1->p4()) < 0.4) || (deltaR(jet.p4(), lep2->p4()) < 0.4))
     {
         return J_INVALID;
     }

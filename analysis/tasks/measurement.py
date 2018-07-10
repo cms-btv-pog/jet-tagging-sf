@@ -3,6 +3,7 @@
 
 import os
 import array
+import numpy as np
 
 from collections import defaultdict
 
@@ -81,7 +82,7 @@ class MeasureScaleFactors(AnalysisTask):
         sf_hists_nd = {}
         for region in ["LF", "HF"]:
             eta_edges = array.array("f", binning[region]["eta"])
-            pt_edges = array.array("f", binning[region]["eta"])
+            pt_edges = array.array("f", binning[region]["pt"])
             btag_edges = array.array("f", binning[region][btagger_cfg["name"]])
             sf_hist = ROOT.TH3F(
                 "scale_factors_{}".format(region), "Scale factors {}".format(region),
@@ -155,7 +156,7 @@ class MeasureScaleFactors(AnalysisTask):
                         hist = process_dir.Get(variable_name)
                         # scale overall mc rate (per channel)
                         if process.is_mc:
-                            hist.Scale(scales[channel.name])
+                            hist.Scale(scales[channel.name][region])
 
                         if component in hist_dict[category]:
                             hist_dict[category][component].Add(hist)
@@ -184,6 +185,13 @@ class MeasureScaleFactors(AnalysisTask):
                 # store the corrected sf hist
                 sf_dict[category] = sf_hist
 
+                # write to nd histograms
+                eta_val = np.mean(category.get_aux("eta"))
+                pt_val = np.mean(category.get_aux("pt"))
+                for bin_idx in range(1, sf_hist.GetNbinsX() + 1):  # TODO: Add over- and underflow bin
+                    sf_hists_nd[region].Fill(eta_val, pt_val, sf_hist.GetBinCenter(bin_idx),
+                        sf_hist.GetBinContent(bin_idx))
+
             # open the output file
             with outp["scale_factors"].localize("w") as tmp:
                 with tmp.dump("RECREATE") as output_file:
@@ -191,6 +199,10 @@ class MeasureScaleFactors(AnalysisTask):
                         category_dir = output_file.mkdir(category.name)
                         category_dir.cd()
                         sf_dict[category].Write("sf")
+                    for region in sf_hists_nd:
+                        region_dir = output_file.mkdir(region)
+                        region_dir.cd()
+                        sf_hists_nd[region].Write("sf")
 
             # for the first iteration, also save the channel rate scale factors
             if self.iteration == 0:

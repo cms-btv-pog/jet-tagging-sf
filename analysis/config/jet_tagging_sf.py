@@ -474,5 +474,6 @@ cfg.set_aux("versions", {
     "MergeTrees": "prod2",
     "MergeMetaData": "prod2",
     "WriteHistograms": "prod4",
-    "MergeHistograms": "prod3",
+    "MergeHistograms": "prod4",
+    "MeasureScaleFactors": "dev1",
 })

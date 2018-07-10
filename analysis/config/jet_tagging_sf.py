@@ -47,6 +47,7 @@ dataset_names = [
     "dy_lep_4To50_Ht70To100", "dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
     "dy_lep_4To50_Ht400To600", "dy_lep_4To50_Ht600ToInf",
 #    "dy_lep_10To50",
+#    "dy_lep_50ToInf",
     "dy_lep_50ToInf_Ht100To200", "dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
     "dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
     "dy_lep_50ToInf_Ht2500ToInf",
@@ -168,7 +169,8 @@ def binning_to_selection(binning, variable):
             cuts.append("{} > {}".format(variable, left_edge))
         if not np.isinf(right_edge):
             cuts.append("{} <= {}".format(variable, right_edge))
-        selections.append((name, join_root_selection(cuts)))
+        edges = [left_edge, right_edge]
+        selections.append((name, join_root_selection(cuts), edges))
     return selections
 
 def get_axis_info(idx, axis_var):
@@ -278,7 +280,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                     )
 
                     # pt loop
-                    for pt_name, pt_sel in get_axis_info(i_probe_jet, "pt")[rg_name]:
+                    for pt_name, pt_sel, pt_range in get_axis_info(i_probe_jet, "pt")[rg_name]:
                         pt_cat = fl_cat.add_category(
                             name="{}__pt{}".format(fl_cat.name, pt_name),
                             label="{}, pt {}".format(fl_cat.label, pt_name),
@@ -286,7 +288,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                         )
 
                         # eta loop
-                        for eta_name, eta_sel in get_axis_info(i_probe_jet, "eta")[rg_name]:
+                        for eta_name, eta_sel, eta_range in get_axis_info(i_probe_jet, "eta")[rg_name]:
                             eta_cat = pt_cat.add_category(
                                 name="{}__eta{}".format(pt_cat.name, eta_name),
                                 label="{}, eta {}".format(pt_cat.label, eta_name),
@@ -310,6 +312,8 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                                     aux={
                                         "phase_space": ps_name,
                                         "region": rg_name,
+                                        "eta": eta_range,
+                                        "pt": pt_range,
                                     }
                                 )
                             else:
@@ -454,6 +458,7 @@ cfg.set_aux("file_merging", {
         "dy_lep_50ToInf_Ht400To600": 10,
         "dy_lep_50ToInf_Ht600To800": 8,
         "dy_lep_50ToInf_Ht800To1200": 3,
+        "dy_lep_50ToInf": 7,
     }
 })
 
@@ -465,9 +470,9 @@ cfg.set_aux("get_file_merging", get_file_merging)
 
 # versions
 cfg.set_aux("versions", {
-    "WriteTrees": "prod1",
-    "MergeTrees": "prod1",
-    "MergeMetaData": "prod1",
-    "WriteHistograms": "prod3",
+    "WriteTrees": "prod2",
+    "MergeTrees": "prod2",
+    "MergeMetaData": "prod2",
+    "WriteHistograms": "prod4",
     "MergeHistograms": "prod3",
 })

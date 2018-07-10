@@ -293,6 +293,16 @@ dataset_dy_lep_10To50 = od.Dataset(
     ],
 )
 
+dataset_dy_lep_50ToInf = od.Dataset(
+    "dy_lep_50ToInf", 2231,
+    campaign=campaign,
+    n_files=372,#+2752,
+    keys=[
+        "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIFall17MiniAOD-94X_mc2017_realistic_v10-v1/MINIAODSIM",
+    #    "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIFall17MiniAOD-94X_mc2017_realistic_v10_ext1-v1/MINIAODSIM",
+    ],
+)
+
 dataset_st_tW_t = od.Dataset(
     "st_tW_t", 321,
     campaign=campaign,
@@ -336,6 +346,7 @@ dataset_dy_lep_4To50_Ht400To600.add_process(process_dy_lep_5To50_Ht400To600)  # 
 dataset_dy_lep_4To50_Ht600ToInf.add_process(process_dy_lep_5To50_Ht600ToInf)  # TODO: 5To50 okay?
 # dataset_dy_lep_50ToInf_Ht70To100.add_process(process_dy_lep_50ToInf_Ht70To100)  # TODO: enable
 dataset_dy_lep_10To50.add_process(process_dy_lep_10To50)
+dataset_dy_lep_50ToInf.add_process(process_dy_lep_50ToInf)
 dataset_dy_lep_50ToInf_Ht100To200.add_process(process_dy_lep_50ToInf_Ht100To200)
 dataset_dy_lep_50ToInf_Ht200To400.add_process(process_dy_lep_50ToInf_Ht200To400)
 dataset_dy_lep_50ToInf_Ht400To600.add_process(process_dy_lep_50ToInf_Ht400To600)

@@ -36,6 +36,9 @@ class PlotVariable(AnalysisTask):
 
         import ROOT
 
+        ROOT.PyConfig.IgnoreCommandLineOptions = True
+        ROOT.gROOT.SetBatch()
+
         inp = self.input()
         outp = self.output()
 
@@ -68,11 +71,12 @@ class PlotVariable(AnalysisTask):
                             if process.is_data:
                                 data_hist = add_hist(data_hist, hist)
                             else:
-                                mc_hists[process] = add_hist(mc_hists[process], hist)
+                                mc_hists[process.name] = add_hist(mc_hists[process.name], hist)
 
                     plot = ROOTPlot(category.name, category.name)
-                    plot.draw(mc_hists.values(), stacked=True)
-                    plot.draw(data_hist, options="SAME")
+                    plot.draw({"data": data_hist}, invis=True)
+                    plot.draw(mc_hists, stacked=True, options="SAME")
+                    plot.draw({"data": data_hist}, options="SAME")
 
                     plot.save(os.path.join(local_tmp.path,
                         "{}_{}.pdf".format(category.name, variable)))

@@ -324,7 +324,7 @@ class UploadSoftware(AnalysisTask, law.TransferLocalFile):
     source_path = os.environ["JTSF_SOFTWARE"] + ".tgz"
 
     def single_output(self):
-        return self.wlcg_target(os.path.basename(self.source_path), fs="wlcg_fs_software")
+        return self.wlcg_target("software.tgz", fs="wlcg_fs_software")
 
     def run(self):
         # create the local bundle

@@ -163,14 +163,15 @@ dataset_tt_dl = od.Dataset(
     ],
 )
 
-dataset_dy_lep_4To50_Ht70To100 = od.Dataset(
-    "dy_lep_4To50_Ht70To100", 2211,
-    campaign=campaign,
-    n_files=121,
-    keys=[
-        "/DYJetsToLL_M-4to50_HT-70to100_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
-    ],
-)
+# TODO: Add when available (current one is mislabelled)
+#dataset_dy_lep_4To50_Ht70To100 = od.Dataset(
+#    "dy_lep_4To50_Ht70To100", 2211,
+#    campaign=campaign,
+#    n_files=121,
+#    keys=[
+#        "/DYJetsToLL_M-4to50_HT-70to100_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
+#    ],
+#)
 
 dataset_dy_lep_4To50_Ht100To200 = od.Dataset(
     "dy_lep_4To50_Ht100To200", 2212,
@@ -209,14 +210,15 @@ dataset_dy_lep_4To50_Ht600ToInf = od.Dataset(
     ],
 )
 
-# TODO: add when available
-# dataset_dy_lep_50ToInf_Ht70To100 = od.Dataset(
-#     "dy_lep_50ToInf_Ht70To100", 2221,
-#     campaign=campaign,
-#     n_files=,
-#     keys=[
-#     ],
-# )
+# TODO: Replace when fixed
+dataset_dy_lep_50ToInf_Ht70To100 = od.Dataset(
+    "dy_lep_50ToInf_Ht70To100", 2211,
+    campaign=campaign,
+    n_files=121,
+    keys=[
+        "/DYJetsToLL_M-4to50_HT-70to100_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
+    ],
+)
 
 dataset_dy_lep_50ToInf_Ht100To200 = od.Dataset(
     "dy_lep_50ToInf_Ht100To200", 2222,
@@ -339,14 +341,14 @@ for d in datasets_data_mumu:
     d.add_process(process_data_mumu)
 
 dataset_tt_dl.add_process(process_tt_dl)
-dataset_dy_lep_4To50_Ht70To100.add_process(process_dy_lep_5To50_Ht70To100)  # TODO: 5To50 okay?
+#dataset_dy_lep_4To50_Ht70To100.add_process(process_dy_lep_5To50_Ht70To100)  # TODO: 5To50 okay? # TODO: enable
 dataset_dy_lep_4To50_Ht100To200.add_process(process_dy_lep_5To50_Ht100To200)  # TODO: 5To50 okay?
 dataset_dy_lep_4To50_Ht200To400.add_process(process_dy_lep_5To50_Ht200To400)  # TODO: 5To50 okay?
 dataset_dy_lep_4To50_Ht400To600.add_process(process_dy_lep_5To50_Ht400To600)  # TODO: 5To50 okay?
 dataset_dy_lep_4To50_Ht600ToInf.add_process(process_dy_lep_5To50_Ht600ToInf)  # TODO: 5To50 okay?
-# dataset_dy_lep_50ToInf_Ht70To100.add_process(process_dy_lep_50ToInf_Ht70To100)  # TODO: enable
 dataset_dy_lep_10To50.add_process(process_dy_lep_10To50)
 dataset_dy_lep_50ToInf.add_process(process_dy_lep_50ToInf)
+dataset_dy_lep_50ToInf_Ht70To100.add_process(process_dy_lep_50ToInf_Ht70To100)
 dataset_dy_lep_50ToInf_Ht100To200.add_process(process_dy_lep_50ToInf_Ht100To200)
 dataset_dy_lep_50ToInf_Ht200To400.add_process(process_dy_lep_50ToInf_Ht200To400)
 dataset_dy_lep_50ToInf_Ht400To600.add_process(process_dy_lep_50ToInf_Ht400To600)

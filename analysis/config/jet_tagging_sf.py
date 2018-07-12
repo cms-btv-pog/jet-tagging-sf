@@ -44,11 +44,13 @@ dataset_names = [
     "data_B_emu",
     "data_B_mumu",
     "tt_dl",
-    "dy_lep_4To50_Ht70To100", "dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
+    #"dy_lep_4To50_Ht70To100",
+    "dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
     "dy_lep_4To50_Ht400To600", "dy_lep_4To50_Ht600ToInf",
-#    "dy_lep_10To50",
-#    "dy_lep_50ToInf",
-    "dy_lep_50ToInf_Ht100To200", "dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
+    "dy_lep_10To50",
+    "dy_lep_50ToInf",
+    "dy_lep_50ToInf_Ht70To100", "dy_lep_50ToInf_Ht100To200",
+    "dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
     "dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
     "dy_lep_50ToInf_Ht2500ToInf",
     "st_tW_t", "st_tW_tbar",
@@ -107,8 +109,8 @@ cfg.set_aux("binning", {
 # define nested categories (analysis phase space -> hf/lf region -> flavor -> pt bin -> eta bin)
 def get_phasespace_info():
     return [
-        ("measure", join_root_selection(["n_jets == 2", "mll > 12"])),
-        ("closure", join_root_selection(["n_jets >= 2", "mll > 12"])),
+        ("measure", join_root_selection(["n_jets == 2", "mll > 12", "dr_ll > 0.2"])),
+        ("closure", join_root_selection(["n_jets >= 2", "mll > 12", "dr_ll > 0.2"])),
     ]
 
 def get_region_info(idx, channel, et_miss=30., z_window=10., add_btag_cut=True):
@@ -295,6 +297,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                                 selection=join_root_selection(pt_cat.selection, eta_sel),
                                 aux={
                                     "i_probe_jet": i_probe_jet,
+                                    "phase_space": ps_name,
                                     "region": rg_name,
                                     "flavor": fl_name,
                                 },

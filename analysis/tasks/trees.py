@@ -157,7 +157,7 @@ class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
 
     def cascade_workflow_requires(self, **kwargs):
         return WriteTrees.req(self, version=self.get_version(WriteTrees), _prefer_cli=["version"],
-            **kwargs)
+            _exclude=("start_branch", "end_branch"), **kwargs)
 
     def cascade_requires(self, start_leaf, end_leaf):
         return [self.cascade_workflow_requires(branch=l) for l in range(start_leaf, end_leaf)]

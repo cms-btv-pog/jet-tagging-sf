@@ -109,14 +109,13 @@ class MeasureScaleFactors(AnalysisTask):
 
                             hist = process_dir.Get(variable_name)
                             if process.is_data:
-                                data_yield += hist.Integral()
+                                data_yield += hist.Integral(0, hist.GetNbinsX() + 1)
                             else:
-                                mc_yield += hist.Integral()
+                                mc_yield += hist.Integral(0, hist.GetNbinsX() + 1)
                         scale = data_yield / mc_yield
                         scales[channel.name][region] = scale
             else:
                 scales = inp["channel_scales"].load()
-
             for category in categories:
                 region = category.get_aux("region")
 

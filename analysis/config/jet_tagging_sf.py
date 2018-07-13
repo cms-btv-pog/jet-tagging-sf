@@ -455,7 +455,7 @@ cfg.set_aux("min_bias_xs", sn.Number(69.2, (sn.Number.REL, 0.046)))  # mb
 cfg.set_aux("file_merging", {
     "trees": {
         "tt_dl": 49,
-        "dy_lep_4To50_Ht70To100": 5,
+        "dy_lep_50ToInf_Ht70To100": 5,
         "dy_lep_50ToInf_Ht100To200": 10,
         "dy_lep_50ToInf_Ht200To400": 9,
         "dy_lep_50ToInf_Ht400To600": 10,

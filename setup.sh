@@ -127,7 +127,7 @@ action() {
         jtsf_install_pip --no-dependencies uproot
         jtsf_install_pip slackclient
         jtsf_install_pip git+https://github.com/riga/order.git
-        jtsf_install_pip git+https://github.com/riga/luigi.git
+        jtsf_install_pip git+https://github.com/spotify/luigi.git
         LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip --no-dependencies git+https://github.com/riga/law.git
 
         # gfal2

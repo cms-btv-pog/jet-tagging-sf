@@ -17,7 +17,7 @@ from analysis.tasks.measurement import MeasureScaleFactors
 
 class PlotVariable(AnalysisTask):
     category_tag = luigi.Parameter(default="merged")
-    variables = CSVParameter(default=["jet1_pt"])
+    variables = CSVParameter(default=["jet1_deepcsv_bcomb"])
 
     def requires(self):
         return MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
@@ -61,6 +61,7 @@ class PlotVariable(AnalysisTask):
                         # we are only interested in leaves
                         if children:
                             continue
+
                         category_dir = input_file.GetDirectory(leaf_cat.name)
 
                         for process_key in category_dir.GetListOfKeys():
@@ -73,10 +74,26 @@ class PlotVariable(AnalysisTask):
                             else:
                                 mc_hists[process.name] = add_hist(mc_hists[process.name], hist)
 
+                    # get maximum value of hists/ stacks drawn to set axis ranges
+                    mc_hist_sum = mc_hists.values()[0].Clone()
+                    for mc_hist in mc_hists.values()[1:]:
+                        mc_hist_sum.Add(mc_hist)
+                    max_hist = mc_hist_sum.Clone() if \
+                        (mc_hist_sum.GetMaximum() > data_hist.GetMaximum()) else data_hist.Clone()
+                    max_hist.Scale(1.5)
+
                     plot = ROOTPlot(category.name, category.name)
-                    plot.draw({"data": data_hist}, invis=True)
+                    plot.create_pads(n_pads_y=2, limits_y=[0., 0.3, 1.0])
+                    plot.cd(0, 1)
+                    plot.draw({"invis": max_hist}, invis=True)
                     plot.draw(mc_hists, stacked=True, options="SAME")
                     plot.draw({"data": data_hist}, options="SAME")
+
+                    plot.cd(0, 0)
+                    ratio_hist = data_hist.Clone()
+                    ratio_hist.Divide(mc_hist_sum)
+                    ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)
+                    plot.draw({"data/mc": ratio_hist})
 
                     plot.save(os.path.join(local_tmp.path,
                         "{}_{}.pdf".format(category.name, variable)))
@@ -102,6 +119,9 @@ class PlotScaleFactor(AnalysisTask):
     def run(self):
         import ROOT
 
+        ROOT.PyConfig.IgnoreCommandLineOptions = True
+        ROOT.gROOT.SetBatch()
+
         inp = self.input()
         outp = self.output()
 
@@ -118,9 +138,13 @@ class PlotScaleFactor(AnalysisTask):
 
                 hist = category_dir.Get(self.hist_name)
 
-                plot = ROOTPlot()
-                plot.draw(hist)
+                plot = ROOTPlot(category.name, category.name)
+                plot.create_pads()
+                plot.cd(0, 0)
+                hist.GetYaxis().SetRangeUser(0., 2.0)
+                plot.draw({"sf": hist})
                 plot.save(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))
+                del plot
 
         with outp.localize("w") as tmp:
             with tarfile.open(tmp.path, "w:gz") as tar:

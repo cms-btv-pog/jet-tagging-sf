@@ -144,7 +144,7 @@ dataset_data_F_mumu = od.Dataset(
     "data_F_mumu", 25,
     campaign=campaign,
     is_data=True,
-    n_files=874,
+    n_files=847,
     keys=["/DoubleMuon/Run2017F-31Mar2018-v1/MINIAOD"],
 )
 
@@ -210,7 +210,7 @@ dataset_dy_lep_4To50_Ht600ToInf = od.Dataset(
     ],
 )
 
-# TODO: Replace when fixed
+# TODO: Replace when fixed (also dataset id)
 dataset_dy_lep_50ToInf_Ht70To100 = od.Dataset(
     "dy_lep_50ToInf_Ht70To100", 2211,
     campaign=campaign,

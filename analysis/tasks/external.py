@@ -35,6 +35,10 @@ class GetDatasetLFNs(DatasetTask, law.TransferLocalFile):
                 raise Exception("dasgoclient query failed")
             lfns.extend(out.strip().split("\n"))
 
+        if not (len(lfns) == self.dataset_inst.n_files):
+            raise ValueError("Number of lfns does not match number of files "
+                "for dataset {}".format(self.dataset_inst.name))
+
         tmp = law.LocalFileTarget(is_tmp="json")
         tmp.dump(lfns)
         self.transfer(tmp)

@@ -126,6 +126,7 @@ class MeasureScaleFactors(AnalysisTask):
                         continue
 
                     flavor = leaf_cat.get_aux("flavor")
+                    channel = leaf_cat.get_aux("channel")
                     category_dir = input_file.GetDirectory(leaf_cat.name)
 
                     # get variable for b-tagging discriminant of probe jet

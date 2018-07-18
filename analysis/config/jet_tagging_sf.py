@@ -296,6 +296,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                                 label="{}, eta {}".format(pt_cat.label, eta_name),
                                 selection=join_root_selection(pt_cat.selection, eta_sel),
                                 aux={
+                                    "channel": ch,
                                     "i_probe_jet": i_probe_jet,
                                     "phase_space": ps_name,
                                     "region": rg_name,
@@ -478,5 +479,5 @@ cfg.set_aux("versions", {
     "MergeMetaData": "prod2",
     "WriteHistograms": "prod6",
     "MergeHistograms": "prod6",
-    "MeasureScaleFactors": "dev1",
+    "MeasureScaleFactors": "prod1",
 })

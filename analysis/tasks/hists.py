@@ -21,6 +21,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     iteration = luigi.IntParameter(default=0, description="iteration of the scale factor "
         "calculation, starting at zero, default: 0")
+    final_it = luigi.BoolParameter(description="Flag for the final iteration of the scale factor "
+        "calculation.")
 
     file_merging = "trees"
 
@@ -110,14 +112,42 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def get_scale_factor_weighter(self, inp):
         # TODO: load the TH3F objects into memory here
+        sfs = inp.load()
+        import pdb; pdb.set_trace()
+        sf_hist_hf = None
+        sf_hist_lf = None
+        btag_var = self.config_inst.get_aux("btagger")["variable"]
 
         def add_branch(extender):
-            # TODO
-            return
+            unpack_vars = sum(
+                [["jet{}_pt".format(idx), "jet{}_flavor".format(idx), "jet{}_eta".format(idx),
+                "jet{}_{}".format(idx, btag_var)] for idx in range(1, 3)]
+            )
+            extender.add_branch("scale_factor_lf", unpack=unpack_vars)
+            extender.add_branch("scale_factor_hf", unpack=unpack_vars)
 
         def add_value(entry):
-            # TODO
-            return
+            scale_factor_lf = 1.
+            scale_factor_hf = 1.
+            for jet_idx in range(1, 5):
+                jet_pt = getattr(entry, "jet{}_pt".format(jet_idx))[0]
+                jet_eta = getattr(entry, "jet{}_eta".format(jet_idx))[0]
+                jet_flavor = getattr(entry, "jet{}_flavor".format(jet_idx))[0]
+                jet_btag = getattr(entry, "jet{}_{}".format(jet_idx, btag_var))[0]
+
+                # stop when number of jets is exceeded
+                if jet_pt < 0.:
+                    break
+
+                if abs(jet_flavor) == 5:
+                    bin_idx = sf_hist_hf.FindBin(jet_eta, jet_pt, jet_btag)
+                    scale_factor_hf *= sf_hist_hf.GetBinContent(bin_idx)
+                if abs(jet_flavor) != 5 and abs(jet_flavor) != 4:
+                    bin_idx = sf_hist_lf.FindBin(jet_eta, jet_pt, jet_btag)
+                    scale_factor_lf *= sf_hist_lf.GetBinContent(bin_idx)
+
+            entry.scale_factor_lf[0] = scale_factor_lf
+            entry.scale_factor_hf[0] = scale_factor_hf
 
         return add_branch, add_value
 
@@ -131,8 +161,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
         # TODO:
         #  - weights, corrections, etc.
-        #  - way to inject the tagging SF from previous iterations (requires some kind of parameter
-        #    that is decremented in each iteration until e.g. 0)
 
         # get child categories
         # skip non-measure categories for iterations > 0
@@ -229,11 +257,25 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 weights.append(str(lumi_weight))
 
                                 # pu weight
-                                weights.append("pu_weight")
+                                # weights.append("pu_weight")  # TODO: reenable
 
                                 # channel scale weight
                                 if self.iteration > 0:
                                     weights.append("channel_scale_weight")
+
+                                    # b-tag scale factor weights TODO
+                                    flavor = category.get_aux("flavor", None)
+                                    phase_space = category.get_aux("phase_space", None)
+                                    if phase_space == "measure" and not self.final_it:
+                                        # In measurement categories,
+                                        # apply scale factors only for contamination
+                                        if not (region == "LF" and flavor == "udsg"):
+                                            weights.append("scale_factor_lf")
+                                        if not (region == "HF" and flavor == "b"):
+                                            weights.append("scale_factor_hf")
+                                    else:
+                                        weights.append("scale_factor_lf")
+                                        weights.append("scale_factor_hf")
 
                             # totalWeight alias
                             while len(weights) < 2:
@@ -278,6 +320,7 @@ class WriteHistogramsWrapper(DatasetWrapperTask):
 class MergeHistograms(AnalysisTask, law.CascadeMerge):
 
     iteration = WriteHistograms.iteration
+    final_it = WriteHistograms.final_it
 
     merge_factor = 12
 

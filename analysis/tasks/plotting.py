@@ -17,9 +17,8 @@ from analysis.tasks.measurement import MeasureScaleFactors
 
 class PlotVariable(AnalysisTask):
     category_tag = luigi.Parameter(default="merged")
-    variable = luigi.Parameter(default="jet{}_deepcsv_bcomb")
+    variable = luigi.Parameter(default="jet{i_probe_jet}_deepcsv_bcomb")
     mc_split = luigi.ChoiceParameter(choices=["process", "flavor"])
-    jet_idx = luigi.Parameter(default="probe")
 
     def requires(self):
         return MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
@@ -62,17 +61,8 @@ class PlotVariable(AnalysisTask):
                     if children:
                         continue
 
-                    # create variable name from template and jet index
-                    # required because jets are saved in pt order, but one might want to plot the
-                    # probe or tag jet
-                    if self.jet_idx:
-                        if self.jet_idx == "probe":
-                            jet_idx = leaf_cat.get_aux("i_probe_jet")
-                        else:
-                            jet_idx = self.jet_idx
-                        variable = self.variable.format(jet_idx)
-                    else:
-                        variable = self.variable
+                    # create variable name from template
+                    variable = self.variable.format(**leaf_cat.aux)
 
                     flavor = leaf_cat.get_aux("flavor")
 
@@ -117,9 +107,8 @@ class PlotVariable(AnalysisTask):
                 ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)
                 plot.draw({"data/mc": ratio_hist})
 
-                variable = self.variable if not self.jet_idx else self.variable.format(self.jet_idx)
                 plot.save(os.path.join(local_tmp.path,
-                    "{}_{}.pdf".format(category.name, variable)))
+                    "{}_{}.pdf".format(category.name, self.variable)))
                 del plot
 
         with outp.localize("w") as tmp:

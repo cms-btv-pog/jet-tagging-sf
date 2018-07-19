@@ -115,7 +115,7 @@ class MeasureScaleFactors(AnalysisTask):
                         scale = data_yield / mc_yield
                         scales[channel.name][region] = scale
             else:
-                scales = inp["channel_scales"].load()
+                scales = inp["scale"]["channel_scales"].load()
             for category in categories:
                 region = category.get_aux("region")
 

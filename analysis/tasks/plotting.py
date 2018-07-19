@@ -19,10 +19,18 @@ class PlotVariable(AnalysisTask):
     category_tag = luigi.Parameter(default="merged")
     variable = luigi.Parameter(default="jet{i_probe_jet}_deepcsv_bcomb")
     mc_split = luigi.ChoiceParameter(choices=["process", "flavor"])
+    normalize = luigi.BoolParameter()
 
     def requires(self):
-        return MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
+        reqs = {
+            "hist": MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
                 _prefer_cli=["version"])
+        }
+        if self.normalize:
+            reqs["scale"] = MeasureScaleFactors.req(self, iteration=0,
+                version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
+
+        return reqs
 
     def output(self):
         return self.local_target("plots.tgz")
@@ -43,6 +51,9 @@ class PlotVariable(AnalysisTask):
         inp = self.input()
         outp = self.output()
 
+        if self.normalize:
+            scales = inp["scale"]["channel_scales"].load()
+
         local_tmp = LocalDirectoryTarget(is_tmp=True)
         local_tmp.touch()
 
@@ -51,7 +62,7 @@ class PlotVariable(AnalysisTask):
             if category.has_tag(self.category_tag):
                 categories.append(category)
 
-        with inp.load("r") as input_file:
+        with inp["hist"].load("r") as input_file:
             for category in categories:
                 data_hist = None
                 mc_hists = defaultdict(lambda: None)
@@ -65,6 +76,8 @@ class PlotVariable(AnalysisTask):
                     variable = self.variable.format(**leaf_cat.aux)
 
                     flavor = leaf_cat.get_aux("flavor")
+                    channel = leaf_cat.get_aux("channel")
+                    region = leaf_cat.get_aux("region")
 
                     category_dir = input_file.GetDirectory(leaf_cat.name)
                     for process_key in category_dir.GetListOfKeys():
@@ -81,6 +94,8 @@ class PlotVariable(AnalysisTask):
                         if process.is_data:
                             data_hist = add_hist(data_hist, hist)
                         else:
+                            if self.normalize:
+                                hist.Scale(scales[channel.name][region])
                             key = process.name if self.mc_split == "process" else flavor
                             mc_hists[key] = add_hist(mc_hists[key], hist)
 
@@ -100,12 +115,18 @@ class PlotVariable(AnalysisTask):
                 plot.draw(mc_hists, stacked=True, options="SAME")
                 plot.draw({"data": data_hist}, options="SAME")
 
-                # ratio of data to mc below the main plot
+                # ratio of data to mc below the main plot TODO: Error propagation
                 plot.cd(0, 0)
+                # mc error band
+                ratio_mcerr_hist = mc_hist_sum.Clone()
+                ratio_mcerr_hist.Divide(mc_hist_sum)
+                # ratio
                 ratio_hist = data_hist.Clone()
                 ratio_hist.Divide(mc_hist_sum)
                 ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)
-                plot.draw({"data/mc": ratio_hist})
+                plot.draw({"invis": ratio_hist}, invis=True)
+                plot.draw_as_graph(ratio_mcerr_hist, options=["SAME", "2"])
+                plot.draw({"data/mc": ratio_hist}, options="SAME")
 
                 plot.save(os.path.join(local_tmp.path,
                     "{}_{}.pdf".format(category.name, self.variable)))

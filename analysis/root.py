@@ -2,6 +2,8 @@
 
 import ROOT
 
+from array import array
+
 tcolors = {
     "data": ROOT.kBlack,
     "tt_dl": ROOT.kBlue,
@@ -77,6 +79,32 @@ class ROOTPad(object):
             self.objects.append(obj)
             obj.Draw(" ".join(options))
 
+    def draw_as_graph(self, hist, options=[]):
+        if not isinstance(options, (list, tuple)):
+            options = [options]
+
+        x, y = [], []
+        xerr_down, xerr_up = [], []
+        yerr_down, yerr_up = [], []
+
+        for i in xrange(1, hist.GetNbinsX() + 1):
+            x.append(hist.GetBinCenter(i))
+            y.append(hist.GetBinContent(i))
+            xerr_down.append(hist.GetBinWidth(i) / 2.)
+            xerr_up.append(hist.GetBinWidth(i) / 2.)
+            yerr_down.append(hist.GetBinErrorLow(i))
+            yerr_up.append(hist.GetBinErrorUp(i))
+
+        graph = ROOT.TGraphAsymmErrors(len(x), array("f", x), array("f", y), array("f", xerr_down),
+            array("f", xerr_up), array("f", yerr_down), array("f", yerr_up))
+        graph.SetFillStyle(1001)
+        graph.SetFillColor(16)
+        graph.SetLineColor(0)
+        graph.SetMarkerColor(0)
+
+        self.objects.append(graph)
+        graph.Draw(" ".join(options))
+
     def save(self):
         self.pad.cd()
         if hasattr(self, "legend"):
@@ -124,6 +152,9 @@ class ROOTPlot(object):
 
     def draw(self, *args, **kwargs):
         self.open_pad.draw(*args, **kwargs)
+
+    def draw_as_graph(self, *args, **kwargs):
+        self.open_pad.draw_as_graph(*args, **kwargs)
 
     def save(self, path):
         for pad in self.pads.values():

@@ -23,6 +23,9 @@ tcolors = {
     "st_tW_t": ROOT.kCyan,
     "st_tW_tbar": ROOT.kCyan - 10,
     "WW_sl": ROOT.kGray,
+    "b": ROOT.kRed,
+    "c": ROOT.kOrange,
+    "udsg": ROOT.kGreen,
 }
 
 

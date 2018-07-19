@@ -17,7 +17,9 @@ from analysis.tasks.measurement import MeasureScaleFactors
 
 class PlotVariable(AnalysisTask):
     category_tag = luigi.Parameter(default="merged")
-    variables = CSVParameter(default=["jet1_deepcsv_bcomb"])
+    variable = luigi.Parameter(default="jet{}_deepcsv_bcomb")
+    mc_split = luigi.ChoiceParameter(choices=["process", "flavor"])
+    jet_idx = luigi.Parameter(default="probe")
 
     def requires(self):
         return MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
@@ -52,52 +54,73 @@ class PlotVariable(AnalysisTask):
 
         with inp.load("r") as input_file:
             for category in categories:
+                data_hist = None
+                mc_hists = defaultdict(lambda: None)
 
-                for variable in self.variables:
-                    data_hist = None
-                    mc_hists = defaultdict(lambda: None)
+                for leaf_cat, _, children in category.walk_categories():
+                    # we are only interested in leaves
+                    if children:
+                        continue
 
-                    for leaf_cat, _, children in category.walk_categories():
-                        # we are only interested in leaves
-                        if children:
+                    # create variable name from template and jet index
+                    # required because jets are saved in pt order, but one might want to plot the
+                    # probe or tag jet
+                    if self.jet_idx:
+                        if self.jet_idx == "probe":
+                            jet_idx = leaf_cat.get_aux("i_probe_jet")
+                        else:
+                            jet_idx = self.jet_idx
+                        variable = self.variable.format(jet_idx)
+                    else:
+                        variable = self.variable
+
+                    flavor = leaf_cat.get_aux("flavor")
+
+                    category_dir = input_file.GetDirectory(leaf_cat.name)
+                    for process_key in category_dir.GetListOfKeys():
+                        process = self.config_inst.get_process(process_key.GetName())
+                        process_dir = category_dir.GetDirectory(process.name)
+
+                        # avoid double counting of inclusive and flavor-dependent histograms
+                        if process.is_data and flavor != "inclusive":
+                            continue
+                        elif process.is_mc and flavor == "inclusive":
                             continue
 
-                        category_dir = input_file.GetDirectory(leaf_cat.name)
+                        hist = process_dir.Get(variable)
+                        if process.is_data:
+                            data_hist = add_hist(data_hist, hist)
+                        else:
+                            key = process.name if self.mc_split == "process" else flavor
+                            mc_hists[key] = add_hist(mc_hists[key], hist)
 
-                        for process_key in category_dir.GetListOfKeys():
-                            process = self.config_inst.get_process(process_key.GetName())
-                            process_dir = category_dir.GetDirectory(process.name)
+                # get maximum value of hists/ stacks drawn to set axis ranges
+                mc_hist_sum = mc_hists.values()[0].Clone()
+                for mc_hist in mc_hists.values()[1:]:
+                    mc_hist_sum.Add(mc_hist)
+                max_hist = mc_hist_sum.Clone() if \
+                    (mc_hist_sum.GetMaximum() > data_hist.GetMaximum()) else data_hist.Clone()
+                max_hist.Scale(1.5)
 
-                            hist = process_dir.Get(variable)
-                            if process.is_data:
-                                data_hist = add_hist(data_hist, hist)
-                            else:
-                                mc_hists[process.name] = add_hist(mc_hists[process.name], hist)
+                # data and mc histograms
+                plot = ROOTPlot(category.name, category.name)
+                plot.create_pads(n_pads_y=2, limits_y=[0., 0.3, 1.0])
+                plot.cd(0, 1)
+                plot.draw({"invis": max_hist}, invis=True)
+                plot.draw(mc_hists, stacked=True, options="SAME")
+                plot.draw({"data": data_hist}, options="SAME")
 
-                    # get maximum value of hists/ stacks drawn to set axis ranges
-                    mc_hist_sum = mc_hists.values()[0].Clone()
-                    for mc_hist in mc_hists.values()[1:]:
-                        mc_hist_sum.Add(mc_hist)
-                    max_hist = mc_hist_sum.Clone() if \
-                        (mc_hist_sum.GetMaximum() > data_hist.GetMaximum()) else data_hist.Clone()
-                    max_hist.Scale(1.5)
+                # ratio of data to mc below the main plot
+                plot.cd(0, 0)
+                ratio_hist = data_hist.Clone()
+                ratio_hist.Divide(mc_hist_sum)
+                ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)
+                plot.draw({"data/mc": ratio_hist})
 
-                    plot = ROOTPlot(category.name, category.name)
-                    plot.create_pads(n_pads_y=2, limits_y=[0., 0.3, 1.0])
-                    plot.cd(0, 1)
-                    plot.draw({"invis": max_hist}, invis=True)
-                    plot.draw(mc_hists, stacked=True, options="SAME")
-                    plot.draw({"data": data_hist}, options="SAME")
-
-                    plot.cd(0, 0)
-                    ratio_hist = data_hist.Clone()
-                    ratio_hist.Divide(mc_hist_sum)
-                    ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)
-                    plot.draw({"data/mc": ratio_hist})
-
-                    plot.save(os.path.join(local_tmp.path,
-                        "{}_{}.pdf".format(category.name, variable)))
-                    del plot
+                variable = self.variable if not self.jet_idx else self.variable.format(self.jet_idx)
+                plot.save(os.path.join(local_tmp.path,
+                    "{}_{}.pdf".format(category.name, variable)))
+                del plot
 
         with outp.localize("w") as tmp:
             with tarfile.open(tmp.path, "w:gz") as tar:

@@ -259,7 +259,8 @@ class TreeExtender(object):
         self.existing_aliases = []
         for tree in self.trees:
             self.existing_branches += [branch.GetName() for branch in tree.GetListOfBranches()]
-            self.existing_aliases += [alias.GetName() for alias in tree.GetListOfAliases()]
+            if tree.GetListOfAliases():
+                self.existing_aliases += [alias.GetName() for alias in tree.GetListOfAliases()]
             # do not read unneeded branches
             tree.SetBranchStatus("*", 0)
 

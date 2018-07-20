@@ -148,14 +148,16 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         #  - weights, corrections, etc.
 
         # get child categories
-        # skip non-measure categories for iterations > 0
+        # skip non-measure categories except for initial and final iterations
         categories = []
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
         for channel in channels:
             for category, _, children in channel.walk_categories():
-                if not children and (self.iteration == 0 or category.has_tag("measure")):
-                    categories.append((channel, category))
+                if not children:
+                    if ((self.iteration == 0 or self.final_it) \
+                            or category.get_aux("phase_space", None) == "measure"):
+                        categories.append((channel, category))
         categories = list(set(categories))
 
         # get processes
@@ -247,16 +249,17 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                                 # channel scale weight
                                 if self.iteration > 0:
-                                    # b-tag scale factor weights TODO
-                                    flavor = category.get_aux("flavor", None)
+                                    # b-tag scale factor weights
                                     phase_space = category.get_aux("phase_space", None)
                                     if phase_space == "measure" and not self.final_it:
                                         # In measurement categories,
                                         # apply scale factors only for contamination
-                                        if not (region == "LF" and flavor == "udsg"):
+                                        if region == "HF":
                                             weights.append("scale_factor_lf")
-                                        if not (region == "HF" and flavor == "b"):
+                                        elif region == "LF":
                                             weights.append("scale_factor_hf")
+                                        else:
+                                            raise ValueError("Unexpected region {}".format(region))
                                     else:
                                         weights.append("scale_factor_lf")
                                         weights.append("scale_factor_hf")

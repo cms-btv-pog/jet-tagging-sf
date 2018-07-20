@@ -194,7 +194,7 @@ def get_axis_info(idx, axis_var):
 #    x_title="dR(ll)",
 #)
 
-for jet_idx in [1, 2]:
+for jet_idx in xrange(1, 5):
     cfg.add_variable(
         name="jet{}_pt".format(jet_idx),
         expression="jet{}_pt".format(jet_idx),

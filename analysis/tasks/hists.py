@@ -42,7 +42,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
             if self.iteration > 0:
-                reqs["sf"] = MeasureScaleFactors(self, iteration=self.iteration - 1,
+                reqs["sf"] = MeasureScaleFactors.req(self, iteration=self.iteration - 1,
                     version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
 
         return reqs
@@ -59,7 +59,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         if self.dataset_inst.is_mc:
             reqs["pu"] = CalculatePileupWeights.req(self)
         if self.iteration > 0:
-            reqs["sf"] = MeasureScaleFactors(self, iteration=self.iteration - 1,
+            reqs["sf"] = MeasureScaleFactors.req(self, iteration=self.iteration - 1,
                 version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
         return reqs
 
@@ -92,36 +92,21 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
         return add_branch, add_value
 
-    def get_channel_scale_weighter(self, inp):
-        scales = inp.load()
-
-        # re-map from channel names to channel ids
-        scales = {
-            self.config_inst.get_channel(name).id: scale
-            for name, scale in scales.items()
-        }
-
-        def add_branch(extender):
-            extender.add_branch("channel_scale_weight", unpack="channel")
-
-        def add_value(entry):
-            channel_id = int(entry.channel[0])
-            entry.channel_scale_weight[0] = scales[channel_id]
-
-        return add_branch, add_value
-
     def get_scale_factor_weighter(self, inp):
-        # TODO: load the TH3F objects into memory here
-        sfs = inp.load()
-        import pdb; pdb.set_trace()
-        sf_hist_hf = None
-        sf_hist_lf = None
+        with inp.load() as sfs:
+            sf_hist_hf = sfs.Get("HF").Get("sf")
+            sf_hist_lf = sfs.Get("LF").Get("sf")
+            # decouple from open file
+            sf_hist_hf.SetDirectory(0)
+            sf_hist_lf.SetDirectory(0)
+
         btag_var = self.config_inst.get_aux("btagger")["variable"]
 
         def add_branch(extender):
             unpack_vars = sum(
                 [["jet{}_pt".format(idx), "jet{}_flavor".format(idx), "jet{}_eta".format(idx),
-                "jet{}_{}".format(idx, btag_var)] for idx in range(1, 3)]
+                "jet{}_{}".format(idx, btag_var)] for idx in range(1, 5)],
+                []
             )
             extender.add_branch("scale_factor_lf", unpack=unpack_vars)
             extender.add_branch("scale_factor_hf", unpack=unpack_vars)
@@ -136,7 +121,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 jet_btag = getattr(entry, "jet{}_{}".format(jet_idx, btag_var))[0]
 
                 # stop when number of jets is exceeded
-                if jet_pt < 0.:
+                if jet_flavor < 0.:
                     break
 
                 if abs(jet_flavor) == 5:
@@ -202,6 +187,18 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     tree = input_file.Get("tree")
                     self.publish_message("{} events in tree".format(tree.GetEntries()))
 
+                    # pt and eta aliases for jets and leptons
+                    for obj in ["jet1", "jet2", "jet3", "jet4", "lep1", "lep2"]:
+                        tree.SetAlias("{0}_pt".format(obj),
+                            "({0}_px**2 + {0}_py**2)**0.5".format(obj))
+                        tree.SetAlias("{0}_eta".format(obj),
+                            "0.5 * log(({0}_E + {0}_pz) / ({0}_E - {0}_pz))".format(obj))
+                    # b-tagging alias
+                    btag_var = self.config_inst.get_aux("btagger")["variable"]
+                    for obj in ["jet1", "jet2", "jet3", "jet4"]:
+                        variable = self.config_inst.get_variable("{0}_{1}".format(obj, btag_var))
+                        tree.SetAlias(variable.name, variable.expression)
+
                     # extend the tree
                     if self.dataset_inst.is_mc:
                         with self.publish_step("extending the input tree with weights ..."):
@@ -212,10 +209,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                             # weights from previous iterations
                             if self.iteration > 0:
-                                # channel scale weight
-                                weighters.append(self.get_channel_scale_weighter(
-                                    inp["sf"]["channel_scales"]))
-
                                 # b-tagging scale factors
                                 weighters.append(self.get_scale_factor_weighter(
                                     inp["sf"]["scale_factors"]))
@@ -227,13 +220,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 for entry in te:
                                     for _, add_value in weighters:
                                         add_value(entry)
-
-                    # pt and eta aliases for jets and leptons
-                    for obj in ["jet1", "jet2", "jet3", "jet4", "lep1", "lep2"]:
-                        tree.SetAlias("{0}_pt".format(obj),
-                            "({0}_px**2 + {0}_py**2)**0.5".format(obj))
-                        tree.SetAlias("{0}_eta".format(obj),
-                            "0.5 * log(({0}_E + {0}_pz) / ({0}_E - {0}_pz))".format(obj))
 
                     for i, (channel, category) in enumerate(categories):
                         self.publish_message("writing histograms in category {} ({}/{})".format(
@@ -261,8 +247,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                                 # channel scale weight
                                 if self.iteration > 0:
-                                    weights.append("channel_scale_weight")
-
                                     # b-tag scale factor weights TODO
                                     flavor = category.get_aux("flavor", None)
                                     phase_space = category.get_aux("phase_space", None)

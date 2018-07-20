@@ -13,6 +13,7 @@ import collections
 import subprocess
 import threading
 import Queue
+import re
 
 import law
 
@@ -255,17 +256,27 @@ class TreeExtender(object):
 
         # red existing branches
         self.existing_branches = []
+        self.existing_aliases = []
         for tree in self.trees:
             self.existing_branches += [branch.GetName() for branch in tree.GetListOfBranches()]
+            self.existing_aliases += [alias.GetName() for alias in tree.GetListOfAliases()]
+            # do not read unneeded branches
+            tree.SetBranchStatus("*", 0)
 
-        # store data for new branches (name -> leaf data), and branches to unpack (name)
+        self.existing_branches = list(set(self.existing_branches))
+        self.existing_aliases = list(set(self.existing_aliases))
+
+        # store data for new branches (name -> leaf data), and branches + aliases to unpack (name)
         self.new_branches = collections.OrderedDict()
         self.unpack_branches = []
+        self.unpack_aliases = []
 
     def __enter__(self):
         return self
 
     def __exit__(self, err_type, err_value, traceback):
+        for tree in self.trees:
+            tree.SetBranchStatus("*", 1)
         return
 
     def add_branch(self, name, leaf_list=None, unpack=None):
@@ -291,14 +302,18 @@ class TreeExtender(object):
         """
         Adds a branch *name* to the list of branches that will be unpacked for reading during
         iteration. It can also be a list of names, a pattern or a list of patterns.
+        If *name* is an alias, all contained branch names will be unpacked.
         """
         names = law.util.make_list(name)
-        for name in self.existing_branches:
-            if name in self.unpack_branches:
-                continue
-            if law.util.multi_match(name, names):
-                self.unpack_branches.append(name)
-                break
+        def add_name(existing, unpack):
+            for name in existing:
+                if name in unpack:
+                    continue
+                if law.util.multi_match(name, names):
+                    unpack.append(name)
+
+        add_name(self.existing_branches, self.unpack_branches)
+        add_name(self.existing_aliases, self.unpack_aliases)
 
     def __iter__(self):
         import ROOT
@@ -326,8 +341,16 @@ class TreeExtender(object):
                 tree_data.append((branch, arr, defaults))
                 setattr(entry, name, arr)
 
+            # unpack aliases
+            add_unpack_branches = []
+            for name in self.unpack_aliases:
+                alias = tree.GetAlias(name)
+                # add branches used in alias to unpacked branches
+                used_branches = parse_branch_names(alias, tree)
+                add_unpack_branches.extend(used_branches)
+
             # unpack branches
-            for name in self.unpack_branches:
+            for name in self.unpack_branches + add_unpack_branches:
                 branch = tree.GetBranch(name)
                 first_leaf = branch.GetListOfLeaves()[0]
                 if isinstance(first_leaf, ROOT.TLeafI):
@@ -339,13 +362,25 @@ class TreeExtender(object):
                 py_type = root_array_types[root_type]
                 arr = array.array(py_type, branch.GetNleaves() * [self.DEFAULT_VALUE[root_type]])
 
+                tree.SetBranchStatus(name, 1)
                 tree.SetBranchAddress(name, arr)
                 setattr(entry, name, arr)
+
+            # define formulas to calculate alias values
+            aliases = {}
+            for name in self.unpack_aliases:
+                alias = tree.GetAlias(name)
+                formula = ROOT.TTreeFormula(alias, name, tree)
+                aliases[name] = formula
 
             # start iterating
             for j in xrange(tree.GetEntries()):
                 # read the next entry
                 tree.GetEntry(j)
+
+                # evaluate aliases
+                for name, formula in aliases.items():
+                    setattr(entry, name, [formula.EvalInstance(0)])
 
                 # reset values of new branches
                 for _, arr, defaults in tree_data:
@@ -363,6 +398,32 @@ class TreeExtender(object):
                     tree.Write()
 
             tree.Write()
+
+def parse_branch_names(expression, tree, expandAliases=True):
+    """
+    Parses an *expression* string and returns the contained branch names in a list. The *tree*
+    is required to validate the found branch names. When multiple
+    expressions are passed, a joined list with unique branch names is returned. When
+    *expandAliases* is *True*, all expressions are tested for aliases which get expanded.
+    """
+    expressions = list(expression) if isinstance(expression, (list, tuple, set)) \
+        else [expression]
+
+    allBranches = [b.GetName() for b in tree.GetListOfBranches()]
+    branches = []
+
+    while expressions:
+        expression = expressions.pop(0)
+        spaced = re.sub("(\+|\-|\*|\/|\(|\)|\:|\,)", " ", expression)
+        parts = [s.strip() for s in spaced.split(" ") if s.strip()]
+        for b in parts:
+            if expandAliases and tree.GetAlias(b):
+                expressions.insert(0, tree.GetAlias(b))
+                continue
+            if b in allBranches and b not in branches:
+                branches.append(b)
+
+    return branches
 
 
 class TreeInFileExtender(TreeExtender):

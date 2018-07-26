@@ -14,8 +14,17 @@ from analysis.tasks.base import AnalysisTask
 from analysis.tasks.hists import MergeHistograms
 from analysis.tasks.measurement import MeasureScaleFactors
 
+class PlotTask(AnalysisTask):
+    iteration = MergeHistograms.iteration
 
-class PlotVariable(AnalysisTask):
+    def store_parts(self):
+        return super(PlotTask, self).store_parts() + (self.iteration,)
+
+    def output(self):
+        return self.local_target("plots.tgz")
+
+
+class PlotVariable(PlotTask):
     category_tag = luigi.Parameter(default="merged")
     variable = luigi.Parameter(default="jet{i_probe_jet}_deepcsv_bcomb")
     mc_split = luigi.ChoiceParameter(choices=["process", "flavor"])
@@ -31,9 +40,6 @@ class PlotVariable(AnalysisTask):
                 version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
 
         return reqs
-
-    def output(self):
-        return self.local_target("plots.tgz")
 
     def run(self):
         def add_hist(hist, new_hist):
@@ -138,16 +144,13 @@ class PlotVariable(AnalysisTask):
                     tar.add(os.path.join(local_tmp.path, plot_file), arcname=plot_file)
 
 
-class PlotScaleFactor(AnalysisTask):
+class PlotScaleFactor(PlotTask):
 
     hist_name = "sf"
 
     def requires(self):
         return MeasureScaleFactors.req(self, version=self.get_version(MeasureScaleFactors),
                 _prefer_cli=["version"])
-
-    def output(self):
-        return self.local_target("plots.tgz")
 
     def run(self):
         import ROOT

@@ -148,16 +148,13 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         #  - weights, corrections, etc.
 
         # get child categories
-        # skip non-measure categories except for initial and final iterations
         categories = []
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
         for channel in channels:
             for category, _, children in channel.walk_categories():
                 if not children:
-                    if ((self.iteration == 0 or self.final_it) \
-                            or category.get_aux("phase_space", None) == "measure"):
-                        categories.append((channel, category))
+                    categories.append((channel, category))
         categories = list(set(categories))
 
         # get processes

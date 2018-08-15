@@ -47,6 +47,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def run(self):
         lfn = self.input()["lfns"].random_target().load()[self.branch_data]
+
         setup_files_dir, setup_files = self.requires()["files"].localize()
 
         # create the temporary dir to run in
@@ -126,9 +127,12 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
             cmd = "cmsRun " + law.util.rel_path(__file__, "files", cfg_file)
             cmd += " " + " ".join(cmsRunArg(*tpl) for tpl in args)
 
+            # create environment
+            env = os.environ.copy()
+            env["CMSSW_SEARCH_PATH"] += ":" + setup_files_dir.path
             print("running command: {}".format(cmd))
             for obj in law.util.readable_popen(cmd, shell=True, executable="/bin/bash",
-                    cwd=tmp_dir.path):
+                    cwd=tmp_dir.path, env=env):
                 if isinstance(obj, six.string_types):
                     print(obj)
                     if obj.startswith("Begin processing the"):

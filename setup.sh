@@ -22,7 +22,7 @@ action() {
         elif [ "$JTSF_ON_VISPA" = "1" ]; then
             export JTSF_DATA="/net/scratch/cms/jet-tagging-sf"
         else
-            export JTSF_DATA="/user/public/jet-tagging-sf"
+            export JTSF_DATA="/user/$( whoami )/jet-tagging-sf"
         fi
     fi
 
@@ -126,6 +126,7 @@ action() {
 
         jtsf_install_pip --no-dependencies uproot
         jtsf_install_pip slackclient
+        jtsf_install_pip docutils
         jtsf_install_pip git+https://github.com/riga/order.git
         jtsf_install_pip git+https://github.com/spotify/luigi.git
         LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip --no-dependencies git+https://github.com/riga/law.git

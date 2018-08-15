@@ -1306,8 +1306,8 @@ void TreeMaker::applyJES(pat::Jet& jet, const string& variation, const string& d
         {
             throw std::runtime_error("could not find jet corrector for source " + source);
         }
-        // update the recorrectFactor accordingly
-        corr->setJetPt(jet.pt());
+        // update the recorrectFactor accordingly (use corrected jet)
+        corr->setJetPt(jet.pt() * recorrectFactor);
         corr->setJetEta(jet.eta());
         if (direction == "up")
         {

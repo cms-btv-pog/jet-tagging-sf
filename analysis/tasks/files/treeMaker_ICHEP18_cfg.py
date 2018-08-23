@@ -212,6 +212,18 @@ try:
     seq += process.correctedElectrons
     electronCollection = cms.InputTag("correctedElectrons", "", process.name_())
 
+    from PhysicsTools.PatUtils.tools.runMETCorrectionsAndUncertainties import runMetCorAndUncFromMiniAOD
+    runMetCorAndUncFromMiniAOD(process,
+        isData           = options.isData,
+        jecUncFile       = os.path.basename(options.jesUncFiles[0]),
+        electronColl     = electronCollection.value(),
+        muonColl         = muonCollection.value(),
+        jetCollUnskimmed = jetCollection.value(),
+    )
+    seq += process.fullPatMetSequence
+    metCollection = cms.InputTag("slimmedMETs", "", process.name_())
+
+
     # load and configure the tree maker
     process.load("JetTaggingSF.JetTaggingSF.treeMaker_cfi")
     process.treeMaker.verbose = cms.untracked.bool(False)

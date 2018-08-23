@@ -206,7 +206,7 @@ private:
     string jerPtResolutionFile_;
     string jerScaleFactorFile_;
 
-    // tokes
+    // tokens
     edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
     edm::EDGetTokenT<edm::TriggerResults> triggerBitsToken_;
     edm::EDGetTokenT<edm::TriggerResults> metFilterBitsToken_;
@@ -1035,11 +1035,11 @@ ElectronID TreeMaker::electronID(pat::Electron& electron, reco::Vertex& vertex, 
         return E_INVALID;
     }
     bool isBarrel = absSCEta <= 1.479;
-    if (fabs(gsfTrackRef.get()->dz(vertex.position())) >= (isBarrel ? 0.05 : 0.1))
+    if (fabs(gsfTrackRef.get()->dz(vertex.position())) >= (isBarrel ? 0.1 : 0.2))
     {
         return E_INVALID;
     }
-    if (fabs(gsfTrackRef.get()->dxy(vertex.position())) >= (isBarrel ? 0.1 : 0.2))
+    if (fabs(gsfTrackRef.get()->dxy(vertex.position())) >= (isBarrel ? 0.05 : 0.1))
     {
         return E_INVALID;
     }

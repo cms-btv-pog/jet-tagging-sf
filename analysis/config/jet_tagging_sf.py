@@ -89,7 +89,7 @@ cfg.set_aux("btagger", {
 cfg.set_aux("binning", {
     "LF": {
         "pt": [20, 30, 40, 60, np.inf],
-        "eta": [0., 0.8, 1.6, 2.4],
+        "abs(eta)": [0., 0.8, 1.6, 2.4],
         "deepcsv": [
             -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
             0.4257, 0.4941, 0.5961, 0.6981, 0.8001, 0.835, 0.87, 0.905, 0.94, 0.975, 1.01,
@@ -97,7 +97,7 @@ cfg.set_aux("binning", {
     },
     "HF": {
         "pt": [20, 30, 50, 70, 100, np.inf],
-        "eta": [0., 2.4],
+        "abs(eta)": [0., 2.4],
         "deepcsv": [
             -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
             0.4257, 0.4941, 0.5553, 0.6165, 0.6777, 0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968,
@@ -290,7 +290,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                         )
 
                         # eta loop
-                        for eta_name, eta_sel, eta_range in get_axis_info(i_probe_jet, "eta")[rg_name]:
+                        for eta_name, eta_sel, eta_range in get_axis_info(i_probe_jet, "abs(eta)")[rg_name]:
                             eta_cat = pt_cat.add_category(
                                 name="{}__eta{}".format(pt_cat.name, eta_name),
                                 label="{}, eta {}".format(pt_cat.label, eta_name),

@@ -175,11 +175,14 @@ def binning_to_selection(binning, variable):
         selections.append((name, join_root_selection(cuts), edges))
     return selections
 
-def get_axis_info(idx, axis_var):
+def get_axis_info(idx, axis_var, fmt=None):
+    if fmt is None:
+        fmt = "jet{}_" + axis_var
+
     binning = cfg.get_aux("binning")
     hf_bins = binning["HF"][axis_var]
     lf_bins = binning["LF"][axis_var]
-    variable = "jet{}_{}".format(idx, axis_var)
+    variable = fmt.format(idx)
     return {
         "HF": binning_to_selection(hf_bins, variable),
         "LF": binning_to_selection(lf_bins, variable),
@@ -290,7 +293,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                         )
 
                         # eta loop
-                        for eta_name, eta_sel, eta_range in get_axis_info(i_probe_jet, "abs(eta)")[rg_name]:
+                        for eta_name, eta_sel, eta_range in get_axis_info(i_probe_jet, "abs(eta)", fmt="abs(jet{}_eta)")[rg_name]:
                             eta_cat = pt_cat.add_category(
                                 name="{}__eta{}".format(pt_cat.name, eta_name),
                                 label="{}, eta {}".format(pt_cat.label, eta_name),
@@ -369,7 +372,7 @@ cfg.set_aux("triggers", {
         "HLT_Mu8_TrkIsoVVL_Ele23_CaloIdL_TrackIdL_IsoVL_DZ_v*",
     ],
     ch_mumu: [
-        # note: the 2017B mumu dataset uses a different trigger
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v*",# only 2017B
         "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*",
         "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*",
     ],
@@ -479,5 +482,5 @@ cfg.set_aux("versions", {
     "MergeMetaData": "prod3",
     "WriteHistograms": "prod7",
     "MergeHistograms": "prod7",
-    "MeasureScaleFactors": "prod1",
+    "MeasureScaleFactors": "prod2",
 })

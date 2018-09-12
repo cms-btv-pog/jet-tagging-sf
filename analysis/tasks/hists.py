@@ -125,10 +125,10 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     break
 
                 if abs(jet_flavor) == 5:
-                    bin_idx = sf_hist_hf.FindBin(jet_eta, jet_pt, jet_btag)
+                    bin_idx = sf_hist_hf.FindBin(abs(jet_eta), jet_pt, jet_btag)
                     scale_factor_hf *= sf_hist_hf.GetBinContent(bin_idx)
                 if abs(jet_flavor) != 5 and abs(jet_flavor) != 4:
-                    bin_idx = sf_hist_lf.FindBin(jet_eta, jet_pt, jet_btag)
+                    bin_idx = sf_hist_lf.FindBin(abs(jet_eta), jet_pt, jet_btag)
                     scale_factor_lf *= sf_hist_lf.GetBinContent(bin_idx)
 
             entry.scale_factor_lf[0] = scale_factor_lf

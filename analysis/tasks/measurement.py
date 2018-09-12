@@ -81,7 +81,7 @@ class MeasureScaleFactors(AnalysisTask):
         binning = self.config_inst.get_aux("binning")
         sf_hists_nd = {}
         for region in ["LF", "HF"]:
-            eta_edges = array.array("f", binning[region]["eta"])
+            eta_edges = array.array("f", binning[region]["abs(eta)"])
             pt_edges = array.array("f", binning[region]["pt"])
             btag_edges = array.array("f", binning[region][btagger_cfg["name"]])
             sf_hist = ROOT.TH3F(

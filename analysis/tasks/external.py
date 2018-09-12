@@ -97,7 +97,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
 
     def run(self):
         # create a tmp dir
-        tmp_dir = law.LocalDirectoryTarget(path="$CMSSW_BASE/tmp/{}".format(str(uuid.uuid4())), is_tmp=True)
+        tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
         tmp_dir.touch()
 
         # download all setup files
@@ -123,7 +123,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
 
     def localize(self, **kwargs):
         # load the archive and unpack it into a temporary directory
-        tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
+        tmp_dir = law.LocalDirectoryTarget(path="$CMSSW_BASE/tmp/{}".format(str(uuid.uuid4())), is_tmp=True)
         output = self.output()
         if self.replicas >= 1:
             output = output.random_target()

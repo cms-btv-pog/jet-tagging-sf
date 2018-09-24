@@ -404,6 +404,7 @@ void TreeMaker::setupVariables()
         varMap_.addDouble("lep" + std::to_string(i) + "_px");
         varMap_.addDouble("lep" + std::to_string(i) + "_py");
         varMap_.addDouble("lep" + std::to_string(i) + "_pz");
+        varMap_.addDouble("lep" + std::to_string(i) + "_eta");
         varMap_.addInt32("lep" + std::to_string(i) + "_charge");
         varMap_.addInt32("lep" + std::to_string(i) + "_pdg");
         varMap_.addFloat("lep" + std::to_string(i) + "_iso");
@@ -440,6 +441,7 @@ void TreeMaker::setupVariables()
             // jet variables that are not subject to systematic variations should only be saved once
             if (i == 0)
             {
+                varMap_.addDouble("jet" + std::to_string(j) + "_eta" + postfix);
                 varMap_.addInt32("jet" + std::to_string(j) + "_flavor" + postfix);
                 varMap_.addDouble("jet" + std::to_string(j) + "_csvv2" + postfix);
                 varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_b" + postfix);
@@ -655,6 +657,7 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
         varMap_.setDouble("lep" + std::to_string(i) + "_px", lep->px());
         varMap_.setDouble("lep" + std::to_string(i) + "_py", lep->py());
         varMap_.setDouble("lep" + std::to_string(i) + "_pz", lep->pz());
+        varMap_.setDouble("lep" + std::to_string(i) + "_eta", lep->eta());
         varMap_.setInt32("lep" + std::to_string(i) + "_charge", lep->charge());
         varMap_.setInt32("lep" + std::to_string(i) + "_pdg", lep->pdgId());
         double absPdgId = abs(lep->pdgId());
@@ -728,6 +731,7 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
             varMap_.setDouble("jet" + std::to_string(j) + "_px" + postfix, jet->px());
             varMap_.setDouble("jet" + std::to_string(j) + "_py" + postfix, jet->py());
             varMap_.setDouble("jet" + std::to_string(j) + "_pz" + postfix, jet->pz());
+            varMap_.setDouble("jet" + std::to_string(j) + "_eta" + postfix, jet->eta());
             varMap_.setInt32("jet" + std::to_string(j) + "_flavor" + postfix,
                 jet->hadronFlavour());
             varMap_.setDouble("jet" + std::to_string(j) + "_csvv2" + postfix,

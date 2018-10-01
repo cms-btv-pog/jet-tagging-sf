@@ -190,8 +190,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     for obj in ["jet1", "jet2", "jet3", "jet4", "lep1", "lep2"]:
                         tree.SetAlias("{0}_pt".format(obj),
                             "({0}_px**2 + {0}_py**2)**0.5".format(obj))
-                        tree.SetAlias("{0}_eta".format(obj),
-                            "0.5 * log(({0}_E + {0}_pz) / ({0}_E - {0}_pz))".format(obj))
                     # b-tagging alias
                     btag_var = self.config_inst.get_aux("btagger")["variable"]
                     for obj in ["jet1", "jet2", "jet3", "jet4"]:

@@ -6,6 +6,13 @@ import tarfile
 
 from collections import defaultdict
 
+import matplotlib
+matplotlib.use('Agg')
+import matplotlib.pyplot as plt
+from matplotlib import rcParams
+rcParams.update({"figure.autolayout": True})
+plt.style.use("ggplot")
+
 from law.parameter import CSVParameter
 from law.target.local import LocalDirectoryTarget
 
@@ -145,7 +152,7 @@ class PlotVariable(PlotTask):
 
 
 class PlotScaleFactor(PlotTask):
-
+    plot_type = luigi.ChoiceParameter(choices=["plot", "hist"])
     hist_name = "sf"
 
     def requires(self):
@@ -174,13 +181,27 @@ class PlotScaleFactor(PlotTask):
 
                 hist = category_dir.Get(self.hist_name)
 
-                plot = ROOTPlot(category.name, category.name)
-                plot.create_pads()
-                plot.cd(0, 0)
-                hist.GetYaxis().SetRangeUser(0., 2.0)
-                plot.draw({"sf": hist})
-                plot.save(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))
-                del plot
+                if self.plot_type == "plot":
+                    fig = plt.figure()
+                    ax = fig.add_subplot(111)
+                    ax.set_title(category.name)
+
+                    x_values = []
+                    y_values = []
+                    for bin in xrange(1, hist.GetNbinsX() + 1):
+                        x_values.append(hist.GetBinCenter(bin))
+                        y_values.append(hist.GetBinContent(bin))
+
+                    ax.plot(x_values, y_values)
+                    fig.savefig(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))
+                elif self.plot_type == "hist":
+                    plot = ROOTPlot(category.name, category.name)
+                    plot.create_pads()
+                    plot.cd(0, 0)
+                    hist.GetYaxis().SetRangeUser(0., 2.0)
+                    plot.draw({"sf": hist})
+                    plot.save(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))
+                    del plot
 
         with outp.localize("w") as tmp:
             with tarfile.open(tmp.path, "w:gz") as tar:

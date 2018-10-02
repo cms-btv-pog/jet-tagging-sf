@@ -90,19 +90,31 @@ cfg.set_aux("binning", {
     "LF": {
         "pt": [20, 30, 40, 60, np.inf],
         "abs(eta)": [0., 0.8, 1.6, 2.4],
-        "deepcsv": [
-            -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
-            0.4257, 0.4941, 0.5961, 0.6981, 0.8001, 0.835, 0.87, 0.905, 0.94, 0.975, 1.01,
-        ],
+        "deepcsv": { # TODO: Directly use measurement binning?
+            "plotting": [
+                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+                0.4257, 0.4941, 0.5961, 0.6981, 0.8001, 0.835, 0.87, 0.905, 0.94, 0.975, 1.01,
+            ],
+            "measurement": [
+                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+                0.4257, 0.4941, 1.01,
+            ],
+        },
     },
     "HF": {
         "pt": [20, 30, 50, 70, 100, np.inf],
         "abs(eta)": [0., 2.4],
-        "deepcsv": [
-            -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
-            0.4257, 0.4941, 0.5553, 0.6165, 0.6777, 0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968,
-            1.01,
-        ],
+        "deepcsv": {
+            "plotting": [
+                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+                0.4257, 0.4941, 0.5553, 0.6165, 0.6777, 0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968,
+                1.01,
+            ],
+            "measurement": [
+                -2.01, 0.0, 0.1522, 0.2205, 0.2889, 0.3573, 0.4257, 0.4941, 0.5553, 0.6165, 0.6777,
+                0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968, 1.01
+            ],
+        },
     }
 })
 
@@ -196,6 +208,20 @@ def get_axis_info(idx, axis_var, fmt=None):
 #    binning=(25, 0., 5.,),
 #    x_title="dR(ll)",
 #)
+cfg.add_variable(
+    name="n_jets",
+    expression="n_jets",
+    binning=(10, 0., 10.,),
+    x_title="N(jets)",
+)
+for lep_idx in xrange(1, 3):
+    cfg.add_variable(
+        name="lep{}_pt".format(lep_idx),
+        expression="(lep{}_px**2 + lep{}_py**2)**0.5".format(lep_idx, lep_idx),
+        binning=(25, 0., 500.,),
+        unit="GeV",
+        x_title="Lep_{} p_{{T}}".format(lep_idx),
+    )
 
 for jet_idx in xrange(1, 5):
     cfg.add_variable(
@@ -211,11 +237,11 @@ for jet_idx in xrange(1, 5):
             tags = set()
             postfix = ""
         elif region == "HF":
-            binning = cfg.get_aux("binning")["HF"]["deepcsv"]
+            binning = cfg.get_aux("binning")["HF"]["deepcsv"]["plotting"]
             tags = {"skip_LF"}
             postfix = "_HF"
         elif region == "LF":
-            binning = cfg.get_aux("binning")["LF"]["deepcsv"]
+            binning = cfg.get_aux("binning")["LF"]["deepcsv"]["plotting"]
             tags = {"skip_HF"}
             postfix = "_LF"
 

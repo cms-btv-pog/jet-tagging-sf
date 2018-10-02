@@ -47,6 +47,9 @@ class MeasureScaleFactors(AnalysisTask):
             raise ValueError("unexpected region %s" % region)
 
     def run(self):
+        def hist_integral(hist):
+            return hist.Integral(0, hist.GetNbinsX() + 1)
+
         import ROOT
 
         inp = self.input()
@@ -81,9 +84,9 @@ class MeasureScaleFactors(AnalysisTask):
         binning = self.config_inst.get_aux("binning")
         sf_hists_nd = {}
         for region in ["LF", "HF"]:
-            eta_edges = array.array("f", binning[region]["abs(eta)"])
-            pt_edges = array.array("f", binning[region]["pt"])
-            btag_edges = array.array("f", binning[region][btagger_cfg["name"]])
+            eta_edges = array.array("d", binning[region]["abs(eta)"])
+            pt_edges = array.array("d", binning[region]["pt"])
+            btag_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
             sf_hist = ROOT.TH3F(
                 "scale_factors_{}".format(region), "Scale factors {}".format(region),
                 len(eta_edges) - 1, eta_edges,
@@ -109,9 +112,9 @@ class MeasureScaleFactors(AnalysisTask):
 
                             hist = process_dir.Get(variable_name)
                             if process.is_data:
-                                data_yield += hist.Integral(0, hist.GetNbinsX() + 1)
+                                data_yield += hist_integral(hist)
                             else:
-                                mc_yield += hist.Integral(0, hist.GetNbinsX() + 1)
+                                mc_yield += hist_integral(hist)
                         scale = data_yield / mc_yield
                         scales[channel.name][region] = scale
             else:
@@ -154,15 +157,21 @@ class MeasureScaleFactors(AnalysisTask):
                         # create a new hist that merges variables from multiple categories, or add
                         # to the existing one
                         hist = process_dir.Get(variable_name)
+
+                        # rebin
+                        btag_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
+                        n_bins = len(btag_edges) - 1
+                        hist_rebinned = hist.Rebin(n_bins, "rebinned_{}".format(category.name), btag_edges)
+
                         # scale overall mc rate (per channel)
                         if process.is_mc:
-                            hist.Scale(scales[channel.name][region])
+                            hist_rebinned.Scale(scales[channel.name][region])
 
                         if component in hist_dict[category]:
-                            hist_dict[category][component].Add(hist)
+                            hist_dict[category][component].Add(hist_rebinned)
                         else:
                             name = "scale_factor_{}".format(category.name)
-                            hist_dict[category][component] = hist.Clone(name)
+                            hist_dict[category][component] = hist_rebinned.Clone(name)
 
                 # calculate scale factors
                 data_hist = hist_dict[category]["data"]
@@ -171,6 +180,11 @@ class MeasureScaleFactors(AnalysisTask):
 
                 # for the sfs, it's convenient to start with the data hist
                 sf_hist = data_hist.Clone("sf_{}".format(category.name))
+
+                # normalize MC histograms
+                norm_factor = hist_integral(data_hist) / (hist_integral(lf_hist) + hist_integral(hf_hist))
+                lf_hist.Scale(norm_factor)
+                hf_hist.Scale(norm_factor)
 
                 # subtract lf contamination from hf and vice versa
                 # and do the actual division to compute scale factors

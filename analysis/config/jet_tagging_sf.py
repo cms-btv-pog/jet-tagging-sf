@@ -48,11 +48,11 @@ dataset_names = [
     #"dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
     #"dy_lep_4To50_Ht400To600", "dy_lep_4To50_Ht600ToInf",
     "dy_lep_10To50",
-    "dy_lep_50ToInf",
-    #"dy_lep_50ToInf_Ht70To100", "dy_lep_50ToInf_Ht100To200",
-    #"dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
-    #"dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
-    #"dy_lep_50ToInf_Ht2500ToInf",
+    #"dy_lep_50ToInf",
+    "dy_lep_50ToInf_Ht70To100", "dy_lep_50ToInf_Ht100To200",
+    "dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
+    "dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
+    "dy_lep_50ToInf_Ht2500ToInf",
     "st_tW_t", "st_tW_tbar",
     "WW_sl",
 ]
@@ -90,13 +90,13 @@ cfg.set_aux("binning", {
     "LF": {
         "pt": [20, 30, 40, 60, np.inf],
         "abs(eta)": [0., 0.8, 1.6, 2.4],
-        "deepcsv": { # TODO: Directly use measurement binning?
+        "deepcsv": {
             "plotting": [
                 -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
                 0.4257, 0.4941, 0.5961, 0.6981, 0.8001, 0.835, 0.87, 0.905, 0.94, 0.975, 1.01,
             ],
             "measurement": [
-                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+                -0.04, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
                 0.4257, 0.4941, 1.01,
             ],
         },
@@ -111,7 +111,7 @@ cfg.set_aux("binning", {
                 1.01,
             ],
             "measurement": [
-                -2.01, 0.0, 0.1522, 0.2205, 0.2889, 0.3573, 0.4257, 0.4941, 0.5553, 0.6165, 0.6777,
+                -0.04, 0.0, 0.1522, 0.2205, 0.2889, 0.3573, 0.4257, 0.4941, 0.5553, 0.6165, 0.6777,
                 0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968, 1.01
             ],
         },

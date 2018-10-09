@@ -210,13 +210,12 @@ dataset_dy_lep_4To50_Ht600ToInf = od.Dataset(
     ],
 )
 
-# TODO: Replace when fixed (also dataset id)
 dataset_dy_lep_50ToInf_Ht70To100 = od.Dataset(
-    "dy_lep_50ToInf_Ht70To100", 2211,
+    "dy_lep_50ToInf_Ht70To100", 2221,
     campaign=campaign,
-    n_files=121,
+    n_files=207,
     keys=[
-        "/DYJetsToLL_M-4to50_HT-70to100_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
+        "/DYJetsToLL_M-50_HT-70to100_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
     ],
 )
 

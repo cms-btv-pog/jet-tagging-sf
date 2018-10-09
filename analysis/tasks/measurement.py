@@ -221,3 +221,96 @@ class MeasureScaleFactors(AnalysisTask):
             # for the first iteration, also save the channel rate scale factors
             if self.iteration == 0:
                 outp["channel_scales"].dump(scales, indent=4)
+
+
+class FitScaleFactors(MeasureScaleFactors):
+
+    def requires(self):
+        return MeasureScaleFactors.req(self, version=self.get_version(MeasureScaleFactors),
+            _prefer_cli=["version"])
+
+    def output(self):
+        return self.wlcg_target("scale_factors.root")
+
+    def run(self):
+        import ROOT
+
+        inp = self.input()
+        outp = self.output()
+
+        interpolation_type = ROOT.Math.Interpolation.kAKIMA
+        interpolation_bins = 1000
+
+        def fit_func_pol6(x_min=0.0, x_max=0.5):  # 6th degree polynomial for LF region
+            func = ROOT.TF1("f_pol6", "pol6(0)", x_min, x_max)
+            for i_param in range(func.GetNpar()):
+                func.SetParameter(i_param, 1.)
+            return func
+
+        # get categories in which to fit the scale factors
+        categories = []
+        for category, _, _ in self.config_inst.walk_categories():
+            if category.has_tag("merged") and category.get_aux("phase_space") == "measure":
+                categories.append(category)
+
+        # finely binned histograms to write to the output file
+        hist_dict = {}
+        with inp["scale_factors"].load("r") as input_file:
+            for category in categories:
+                region = category.get_aux("region")
+                category_dir = input_file.GetDirectory(category.name)
+
+                # get scale factor histogram
+                hist_keys = category_dir.GetListOfKeys()
+                if len(hist_keys) != 1:
+                    raise ValueError("Found more than one histogram in %s, cannot identify scale "
+                        "factor hist." % category_dir)
+                hist = category_dir.Get(hist_keys[0].GetName())
+                nbins = hist.GetNbinsX()
+
+                x_axis = hist.GetXaxis()
+                interpolation_hist = ROOT.TH1D(hist.GetName() + "_fine", hist.GetTitle(),
+                    interpolation_bins, x_axis.GetXmin(), x_axis.GetXmax())
+                if region == "LF":
+                    fit_function = fit_func_pol6()
+                    # perform fit
+                    hist.Fit(fit_function, "+mrNQ0S")
+                    interpolator = fit_function
+                    # define region in which to use the function values to create the histogram
+                    # (centers of second and second to last bin)
+                    first_point = hist.GetBinCenter(2)
+                    last_point = hist.GetBinCenter(nbins - 1)
+                elif region == "HF":
+                    x_values = ROOT.vector("double")()
+                    y_values = ROOT.vector("double")()
+                    for bin_idx in range(1, nbins + 1):
+                        if hist.GetBinCenter(bin_idx) < 0:
+                            continue
+                        x_values.push_back(hist.GetBinCenter(bin_idx))
+                        y_values.push_back(hist.GetBinContent(bin_idx))
+                    interpolator = ROOT.Math.Interpolator(x_values, y_values, interpolation_type)
+                    # define region in which to use interpolation
+                    first_point, last_point = min(x_values), max(x_values)
+                else:
+                    raise ValueError("Unknown region %s" % region)
+
+                # create finely binned histogram from either TF1 or interpolator
+                for bin_idx in range(interpolation_bins + 2):
+                    bin_center = interpolation_hist.GetBinCenter(bin_idx)
+                    if bin_center < 0:
+                        interpolation_hist.SetBinContent(bin_idx, hist.GetBinContent(1))
+                    elif bin_center < first_point:
+                        interpolation_hist.SetBinContent(bin_idx, interpolator.Eval(first_point))
+                    elif bin_center > last_point:
+                        interpolation_hist.SetBinContent(bin_idx, interpolator.Eval(last_point))
+                    else:
+                        interpolation_hist.SetBinContent(bin_idx, interpolator.Eval(bin_center))
+                hist_dict[category] = interpolation_hist
+
+            # write to output file
+            with outp.localize("w") as tmp:
+                with tmp.dump("RECREATE") as output_file:
+                    for category, hist in hist_dict.items():
+                        category_dir = output_file.mkdir(category.name)
+                        category_dir.cd()
+                        hist.Write("sf")

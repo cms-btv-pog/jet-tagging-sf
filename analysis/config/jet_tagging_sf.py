@@ -96,7 +96,7 @@ cfg.set_aux("binning", {
                 0.4257, 0.4941, 0.5961, 0.6981, 0.8001, 0.835, 0.87, 0.905, 0.94, 0.975, 1.01,
             ],
             "measurement": [
-                -0.04, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
                 0.4257, 0.4941, 1.01,
             ],
         },
@@ -111,7 +111,7 @@ cfg.set_aux("binning", {
                 1.01,
             ],
             "measurement": [
-                -0.04, 0.0, 0.1522, 0.2205, 0.2889, 0.3573, 0.4257, 0.4941, 0.5553, 0.6165, 0.6777,
+                -2.01, 0.0, 0.1522, 0.2205, 0.2889, 0.3573, 0.4257, 0.4941, 0.5553, 0.6165, 0.6777,
                 0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968, 1.01
             ],
         },
@@ -200,6 +200,30 @@ def get_axis_info(idx, axis_var, fmt=None):
         "LF": binning_to_selection(lf_bins, variable),
     }
 
+def get_category(pt, eta, region, phase_space="measure"):
+    matches = []
+    for category in cfg.categories:
+        cat_phasespace = category.get_aux("phase_space", None)
+        if not cat_phasespace == phase_space:
+            continue
+
+        cat_region = category.get_aux("region", None)
+        if not region == cat_region:
+            continue
+
+        cat_pt_range = category.get_aux("pt", (0., 0.))
+        if not (cat_pt_range[0] < pt <= cat_pt_range[1]):
+            continue
+
+        cat_eta_range = category.get_aux("eta", (0., 0.))
+        if not (cat_eta_range[0] < eta <= cat_eta_range[1]):
+            continue
+        matches.append(category)
+    # only return the category if the matching is unambiguos
+    if len(matches) == 1:
+        return matches[0]
+    else:
+        raise ValueError("Expected one single matching category, but got {}".format(matches))
 
 # variables
 #cfg.add_variable(
@@ -506,7 +530,8 @@ cfg.set_aux("versions", {
     "WriteTrees": "prod3",
     "MergeTrees": "prod3",
     "MergeMetaData": "prod3",
-    "WriteHistograms": "prod8",
-    "MergeHistograms": "prod8",
+    "WriteHistograms": "prod9",
+    "MergeHistograms": "prod9",
     "MeasureScaleFactors": "prod3",
+    "FitScaleFactors": "prod3",
 })

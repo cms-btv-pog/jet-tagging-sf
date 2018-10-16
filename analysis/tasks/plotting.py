@@ -19,7 +19,7 @@ from law.target.local import LocalDirectoryTarget
 from analysis.root import ROOTPlot
 from analysis.tasks.base import AnalysisTask
 from analysis.tasks.hists import MergeHistograms
-from analysis.tasks.measurement import MeasureScaleFactors
+from analysis.tasks.measurement import MeasureScaleFactors, FitScaleFactors
 
 class PlotTask(AnalysisTask):
     iteration = MergeHistograms.iteration
@@ -156,7 +156,7 @@ class PlotScaleFactor(PlotTask):
     hist_name = "sf"
 
     def requires(self):
-        return MeasureScaleFactors.req(self, version=self.get_version(MeasureScaleFactors),
+        return FitScaleFactors.req(self, version=self.get_version(FitScaleFactors),
                 _prefer_cli=["version"])
 
     def run(self):
@@ -188,9 +188,9 @@ class PlotScaleFactor(PlotTask):
 
                     x_values = []
                     y_values = []
-                    for bin in xrange(1, hist.GetNbinsX() + 1):
-                        x_values.append(hist.GetBinCenter(bin))
-                        y_values.append(hist.GetBinContent(bin))
+                    for bin_idx in xrange(1, hist.GetNbinsX() + 1):
+                        x_values.append(hist.GetBinCenter(bin_idx))
+                        y_values.append(hist.GetBinContent(bin_idx))
 
                     ax.plot(x_values, y_values)
                     fig.savefig(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))

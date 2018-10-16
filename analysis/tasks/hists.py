@@ -11,6 +11,7 @@ import six
 import numpy as np
 from order.util import join_root_selection
 
+from analysis.config.jet_tagging_sf import get_category
 from analysis.tasks.base import AnalysisTask, DatasetTask, DatasetWrapperTask, GridWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
@@ -29,7 +30,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
     workflow_run_decorators = [law.decorator.notify]
 
     def workflow_requires(self):
-        from analysis.tasks.measurement import MeasureScaleFactors
+        from analysis.tasks.measurement import FitScaleFactors
 
         reqs = super(WriteHistograms, self).workflow_requires()
 
@@ -42,13 +43,13 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
             if self.iteration > 0:
-                reqs["sf"] = MeasureScaleFactors.req(self, iteration=self.iteration - 1,
-                    version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
+                reqs["sf"] = FitScaleFactors.req(self, iteration=self.iteration - 1,
+                    version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
 
         return reqs
 
     def requires(self):
-        from analysis.tasks.measurement import MeasureScaleFactors
+        from analysis.tasks.measurement import FitScaleFactors
 
         reqs = {
             "tree": MergeTrees.req(self, cascade_tree=self.branch, branch=0,
@@ -59,8 +60,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         if self.dataset_inst.is_mc:
             reqs["pu"] = CalculatePileupWeights.req(self)
         if self.iteration > 0:
-            reqs["sf"] = MeasureScaleFactors.req(self, iteration=self.iteration - 1,
-                version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
+            reqs["sf"] = FitScaleFactors.req(self, iteration=self.iteration - 1,
+                version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
         return reqs
 
     def store_parts(self):
@@ -94,11 +95,14 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def get_scale_factor_weighter(self, inp):
         with inp.load() as sfs:
-            sf_hist_hf = sfs.Get("HF").Get("sf")
-            sf_hist_lf = sfs.Get("LF").Get("sf")
-            # decouple from open file
-            sf_hist_hf.SetDirectory(0)
-            sf_hist_lf.SetDirectory(0)
+            sf_hists = {}
+            for category in sfs.GetListOfKeys():
+                category_dir = sfs.Get(category.name)
+                hist = category_dir.Get("sf")
+                # decouple from open file
+                hist.SetDirectory(0)
+
+                sf_hists[category.name] = hist
 
         btag_var = self.config_inst.get_aux("btagger")["variable"]
 
@@ -109,10 +113,12 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 []
             )
             extender.add_branch("scale_factor_lf", unpack=unpack_vars)
+            extender.add_branch("scale_factor_c", unpack=unpack_vars)
             extender.add_branch("scale_factor_hf", unpack=unpack_vars)
 
         def add_value(entry):
             scale_factor_lf = 1.
+            scale_factor_c = 1.
             scale_factor_hf = 1.
             for jet_idx in range(1, 5):
                 jet_pt = getattr(entry, "jet{}_pt".format(jet_idx))[0]
@@ -121,17 +127,28 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 jet_btag = getattr(entry, "jet{}_{}".format(jet_idx, btag_var))[0]
 
                 # stop when number of jets is exceeded
-                if jet_flavor < 0.:
+                if jet_flavor < -999.:
                     break
 
+                # find category in which the scale factor of the jet was computed to get correct histogram
+                # TODO: Handle c-jets
+                region = "HF" if abs(jet_flavor) in (4, 5) else "LF"
+                category = get_category(jet_pt, jet_eta, region, phase_space="measure")
+
+                # get scale factor
+                sf_hist = sf_hists[category.name]
+                bin_idx = sf_hist.FindBin(jet_btag)
+                scale_factor = sf_hist.GetBinContent(bin_idx)
+
                 if abs(jet_flavor) == 5:
-                    bin_idx = sf_hist_hf.FindBin(abs(jet_eta), jet_pt, jet_btag)
-                    scale_factor_hf *= sf_hist_hf.GetBinContent(bin_idx)
-                if abs(jet_flavor) != 5 and abs(jet_flavor) != 4:
-                    bin_idx = sf_hist_lf.FindBin(abs(jet_eta), jet_pt, jet_btag)
-                    scale_factor_lf *= sf_hist_lf.GetBinContent(bin_idx)
+                    scale_factor_hf *= scale_factor
+                elif abs(jet_flavor) == 4:
+                    scale_factor_c *= 1.  # TODO: set to scale_factor once we have sf hists for c jets
+                else:
+                    scale_factor_lf *= scale_factor
 
             entry.scale_factor_lf[0] = scale_factor_lf
+            entry.scale_factor_c[0] = scale_factor_c
             entry.scale_factor_hf[0] = scale_factor_hf
 
         return add_branch, add_value
@@ -246,9 +263,10 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 if self.iteration > 0:
                                     # b-tag scale factor weights
                                     phase_space = category.get_aux("phase_space", None)
+                                    # In measurement categories,
+                                    # apply scale factors only for contamination
                                     if phase_space == "measure" and not self.final_it:
-                                        # In measurement categories,
-                                        # apply scale factors only for contamination
+                                        weights.append("scale_factor_c")
                                         if region == "HF":
                                             weights.append("scale_factor_lf")
                                         elif region == "LF":
@@ -257,6 +275,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                             raise ValueError("Unexpected region {}".format(region))
                                     else:
                                         weights.append("scale_factor_lf")
+                                        weights.append("scale_factor_c")
                                         weights.append("scale_factor_hf")
 
                             # totalWeight alias

@@ -14,23 +14,20 @@ import itertools
 import os
 import tarfile
 
-from analysis.tasks.base import AnalysisTask
+from analysis.tasks.plotting import PlotTask
 from analysis.tasks.measurement import FitScaleFactors
 from analysis.config.jet_tagging_sf import binning_to_selection
 from law.target.local import LocalDirectoryTarget
 
 dirname = os.path.abspath(os.path.dirname(__file__))
 
-class PlotFromCSV(AnalysisTask):
+class PlotFromCSV(PlotTask):
 
     inputFile = os.path.join(dirname, "DeepCSV_94XSF_V3_B_F.csv")
 
     def requires(self):
         return FitScaleFactors.req(self, version=self.get_version(FitScaleFactors),
                 _prefer_cli=["version"])
-
-    def output(self):
-        return self.local_target("plots.tgz")
 
     def run(self):
         ROOT.PyConfig.IgnoreCommandLineOptions = True

@@ -41,6 +41,12 @@ class ROOTPad(object):
 
         self.objects = []
 
+    def add_object(self, obj):
+        # separate objects from their root files so that the plot persists if the file is closed
+        if hasattr(obj, "SetDirectory"):
+            obj.SetDirectory(0)
+        self.objects.append(obj)
+
     def draw(self, obj_dict, stacked=False, invis=False, options=[]):
         if not isinstance(options, (list, tuple)):
             options = [options]
@@ -50,7 +56,7 @@ class ROOTPad(object):
             # drawn is a THStack
             for obj in obj_dict.values():
                 invis_obj = obj.Clone()
-                self.objects.append(invis_obj)
+                self.add_object(invis_obj)
                 invis_obj.SetLineColor(0)
                 invis_obj.SetMarkerColor(0)
                 invis_obj.Draw(" ".join(options))
@@ -66,7 +72,7 @@ class ROOTPad(object):
                 self.legend.AddEntry(obj, key, "f")
 
                 stack.Add(obj)
-                self.objects.append(obj)
+                self.add_object(obj)
             options.append("HIST")
             draw_objs = [stack]
         else:
@@ -76,7 +82,7 @@ class ROOTPad(object):
             draw_objs = obj_dict.values()
 
         for obj in draw_objs:
-            self.objects.append(obj)
+            self.add_object(obj)
             obj.Draw(" ".join(options))
 
     def draw_as_graph(self, hist, options=[]):
@@ -102,7 +108,7 @@ class ROOTPad(object):
         graph.SetLineColor(0)
         graph.SetMarkerColor(0)
 
-        self.objects.append(graph)
+        self.add_object(graph)
         graph.Draw(" ".join(options))
 
     def save(self):

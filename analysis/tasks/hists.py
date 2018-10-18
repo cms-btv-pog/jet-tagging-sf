@@ -97,12 +97,12 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         with inp.load() as sfs:
             sf_hists = {}
             for category in sfs.GetListOfKeys():
-                category_dir = sfs.Get(category.name)
+                category_dir = sfs.Get(category.GetName())
                 hist = category_dir.Get("sf")
                 # decouple from open file
                 hist.SetDirectory(0)
 
-                sf_hists[category.name] = hist
+                sf_hists[category.GetName()] = hist
 
         btag_var = self.config_inst.get_aux("btagger")["variable"]
 
@@ -133,7 +133,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 # find category in which the scale factor of the jet was computed to get correct histogram
                 # TODO: Handle c-jets
                 region = "HF" if abs(jet_flavor) in (4, 5) else "LF"
-                category = get_category(jet_pt, jet_eta, region, phase_space="measure")
+                category = get_category(jet_pt, abs(jet_eta), region, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]
@@ -160,9 +160,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         inp = self.input()
         outp = self.output()
         outp.parent.touch(0o0770)
-
-        # TODO:
-        #  - weights, corrections, etc.
 
         # get child categories
         categories = []
@@ -225,7 +222,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             if self.iteration > 0:
                                 # b-tagging scale factors
                                 weighters.append(self.get_scale_factor_weighter(
-                                    inp["sf"]["scale_factors"]))
+                                    inp["sf"]))
 
                             input_file.cd()
                             with TreeExtender(tree) as te:

@@ -225,12 +225,19 @@ class MeasureScaleFactors(AnalysisTask):
 
 class FitScaleFactors(MeasureScaleFactors):
 
+    final_it = MergeHistograms.final_it
+
     def requires(self):
         return MeasureScaleFactors.req(self, version=self.get_version(MeasureScaleFactors),
             _prefer_cli=["version"])
 
     def output(self):
-        return self.wlcg_target("scale_factors.root")
+        outp = {
+            "sf": self.wlcg_target("scale_factors.root")
+        }
+        if self.final_it:
+            outp["csv"] = self.wlcg_target("scale_factors.csv")
+        return outp
 
     def run(self):
         import ROOT
@@ -247,12 +254,22 @@ class FitScaleFactors(MeasureScaleFactors):
                 func.SetParameter(i_param, 1.)
             return func
 
+        def fit_func_pol1(x_min, x_max, init_params=[1., 1.]):  # 1st degree polynomial for final fit in HF region
+            func = ROOT.TF1("f_pol1", "pol1(0)", x_min, x_max)
+            if not len(init_params) == func.GetNpar():
+                raise ValueError("Expected {} parameter values, but got {}".format(func.GetNpar(),
+                    init_params))
+            func.SetParameters(*init_params)
+            return func
+
         # get categories in which to fit the scale factors
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
             if category.has_tag("merged") and category.get_aux("phase_space") == "measure":
                 categories.append(category)
 
+        # contents of .csv file for scale factors
+        fit_results = []
         # finely binned histograms to write to the output file
         hist_dict = {}
         with inp["scale_factors"].load("r") as input_file:
@@ -307,10 +324,52 @@ class FitScaleFactors(MeasureScaleFactors):
                         interpolation_hist.SetBinContent(bin_idx, interpolator.Eval(bin_center))
                 hist_dict[category] = interpolation_hist
 
+                # fill .csv file in final iteration
+                if self.final_it:
+                    results = {}
+                    results["eta_min"], results["eta_max"] = category.get_aux("eta")
+                    pt_range = category.get_aux("pt")
+                    results["pt_min"] = pt_range[0]
+                    results["pt_max"] = min(pt_range[1], 10000.)  # replace inf
+                    results["flavor_id"] = self.config_inst.get_aux("flavor_ids")[region]
+
+                    fit_results_tpl = "3, iterativefit, central, {flavor_id}, {eta_min}, " \
+                        "{eta_max}, {pt_min}, {pt_max}".format(**results)
+                    fit_results.append(fit_results_tpl + ", -15, 0, {}".format(hist.GetBinContent(1)))
+                    fit_results.append(fit_results_tpl + ", 0, {}, {}".format(first_point,
+                        interpolator.Eval(first_point)))
+
+                    # intermediate functions
+                    if region == "LF":
+                        fit_results.append(fit_results_tpl + ", {}, {}, {}".format(first_point,
+                            last_point, str(interpolator.GetExpFormula("p"))))
+                    elif region == "HF":  # piecewise linear function
+                        for bin_idx in range(1, nbins):
+                            if hist.GetBinCenter(bin_idx) < first_point:
+                                continue
+                            x_min = hist.GetBinCenter(bin_idx)
+                            x_max = hist.GetBinCenter(bin_idx + 1)
+                            y_start = hist.GetBinContent(bin_idx)
+                            y_end = hist.GetBinContent(bin_idx + 1)
+                            slope = (y_end - y_start) / (x_max - x_min)
+                            intercept = y_start - x_min * slope
+                            func = fit_func_pol1(x_min, x_max, [intercept, slope])
+
+                            fit_results.append(fit_results_tpl + ", {}, {}, {}".format(x_min,
+                                x_max, str(func.GetExpFormula("p"))))
+                    else:
+                        raise ValueError("Unknown region %s" % region)
+
+                    fit_results.append(fit_results_tpl + ", {}, 1.1, {}".format(last_point,
+                        interpolator.Eval(last_point)))
             # write to output file
-            with outp.localize("w") as tmp:
+            with outp["sf"].localize("w") as tmp:
                 with tmp.dump("RECREATE") as output_file:
                     for category, hist in hist_dict.items():
                         category_dir = output_file.mkdir(category.name)
                         category_dir.cd()
                         hist.Write("sf")
+            if self.final_it:
+                with outp["csv"].localize("w") as tmp:
+                    with tmp.open("w") as result_file:
+                        result_file.write("\n".join(fit_results))

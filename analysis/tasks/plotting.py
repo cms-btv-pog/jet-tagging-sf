@@ -53,6 +53,9 @@ class PlotVariable(PlotTask):
                     self.iteration, self.compare_it))
             reqs["compare"] = MergeHistograms.req(self, branch=0, iteration=self.compare_it, final_it=False,
                 version=self.get_version(MergeHistograms), _prefer_cli=["version"])
+        if self.normalize:
+            reqs["scale"] = MeasureScaleFactors.req(self, iteration=0,
+                version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
 
         return reqs
 
@@ -71,6 +74,9 @@ class PlotVariable(PlotTask):
 
         inp = self.input()
         outp = self.output()
+
+        if self.normalize:
+            scales = inp["scale"]["channel_scales"].load()
 
         local_tmp = LocalDirectoryTarget(is_tmp=True)
         local_tmp.touch()
@@ -102,7 +108,10 @@ class PlotVariable(PlotTask):
                         # create variable name from template
                         variable = self.variable.format(**leaf_cat.aux)
 
-                        flavor = leaf_cat.get_aux("flavor")
+                        flavor = leaf_cat.get_aux("flavor", None)
+                        if self.normalize:
+                            channel = leaf_cat.get_aux("channel")
+                            region = leaf_cat.get_aux("region")
 
                         category_dir = input_file.GetDirectory(leaf_cat.name)
                         for process_key in category_dir.GetListOfKeys():
@@ -110,15 +119,19 @@ class PlotVariable(PlotTask):
                             process_dir = category_dir.GetDirectory(process.name)
 
                             # avoid double counting of inclusive and flavor-dependent histograms
-                            if process.is_data and flavor != "inclusive":
-                                continue
-                            elif process.is_mc and flavor == "inclusive":
-                                continue
+                            if flavor is not None:  # Not needed in case region isn't flavor specific
+                                if process.is_data and flavor != "inclusive":
+                                    continue
+                                elif process.is_mc and flavor == "inclusive":
+                                    continue
 
                             hist = process_dir.Get(variable)
                             if process.is_data:
                                 data_hist = add_hist(data_hist, hist)
                             else:
+                                if self.normalize:  # apply "trigger" sfs as aprt of the normalization
+                                    hist.Scale(scales[channel.name][region])
+
                                 key = process.name if self.mc_split == "process" else flavor
                                 mc_hists[key] = add_hist(mc_hists[key], hist)
 

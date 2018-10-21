@@ -63,7 +63,7 @@ class PlotFromCSV(PlotTask):
         flavors = {"LF": 2, "HF": 0}
         binning = self.config_inst.get_aux("binning")
 
-        with inp.load("r") as input_file:
+        with inp["sf"].load("r") as input_file:
             for flavorName, flavorID in flavors.items():
                 flavor_bins = binning[flavorName]
                 csv_bins = flavor_bins["deepcsv"]["measurement"]

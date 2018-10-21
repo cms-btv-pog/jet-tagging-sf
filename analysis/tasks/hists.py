@@ -222,7 +222,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             if self.iteration > 0:
                                 # b-tagging scale factors
                                 weighters.append(self.get_scale_factor_weighter(
-                                    inp["sf"]))
+                                    inp["sf"]["sf"]))
 
                             input_file.cd()
                             with TreeExtender(tree) as te:

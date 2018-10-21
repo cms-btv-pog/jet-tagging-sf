@@ -48,11 +48,11 @@ dataset_names = [
     #"dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
     #"dy_lep_4To50_Ht400To600", "dy_lep_4To50_Ht600ToInf",
     "dy_lep_10To50",
-    #"dy_lep_50ToInf",
-    "dy_lep_50ToInf_Ht70To100", "dy_lep_50ToInf_Ht100To200",
-    "dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
-    "dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
-    "dy_lep_50ToInf_Ht2500ToInf",
+    "dy_lep_50ToInf",
+    #"dy_lep_50ToInf_Ht70To100", "dy_lep_50ToInf_Ht100To200",
+    #"dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
+    #"dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
+    #"dy_lep_50ToInf_Ht2500ToInf",
     "st_tW_t", "st_tW_tbar",
     "WW_sl",
 ]
@@ -83,6 +83,12 @@ cfg.set_aux("working_points", {
 cfg.set_aux("btagger", {
     "name": "deepcsv",
     "variable": "deepcsv_bcomb",
+})
+
+# flavor IDs for .csv result file
+cfg.set_aux("flavor_ids", { # TODO: c-tagging
+    "LF": 2,
+    "HF": 0,
 })
 
 # store binning information
@@ -308,10 +314,26 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                 selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
                 tags={"scales"},
                 aux={
+                    "channel": ch,
                     "phase_space": ps_name,
                     "region": rg_name,
                 }
             )
+            # combine region categories to create inclusive control regions for plotting
+            rg_merged_name = "{}__{}".format(ps_name, rg_name)
+            if not cfg.has_category(rg_merged_name):
+                rg_merged_cat = cfg.add_category(
+                    name=rg_merged_name,
+                    label="{}, {}".format(ps_name, rg_name),
+                    tags={"inclusive"},
+                    aux={
+                        "phase_space": ps_name,
+                        "region": rg_name,
+                    }
+                )
+            else:
+                rg_merged_cat = cfg.get_category(rg_merged_name)
+            rg_merged_cat.add_category(rg_cat_combined)
 
         # loop over both jet1 jet2 permutations
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
@@ -434,6 +456,13 @@ cfg.set_aux("data_triggers", {
         "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v*",
     ],
 })
+for era in ["C", "D", "E", "F"]:
+    cfg.set_aux("data_triggers", {
+        cfg.get_dataset("data_{}_mumu".format(era)): [
+            "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*",
+            "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*",
+        ],
+    })
 
 # MET filters
 cfg.set_aux("metFilters", {
@@ -531,7 +560,7 @@ cfg.set_aux("versions", {
     "MergeTrees": "prod3",
     "MergeMetaData": "prod3",
     "WriteHistograms": "prod9",
-    "MergeHistograms": "prod9",
+    "MergeHistograms": "prod10",
     "MeasureScaleFactors": "prod3",
     "FitScaleFactors": "prod3",
 })

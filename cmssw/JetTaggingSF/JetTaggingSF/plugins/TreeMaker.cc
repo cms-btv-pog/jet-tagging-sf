@@ -99,7 +99,9 @@ enum LeptonChannel
     C_INVALID = 0,
     C_EE,
     C_EMU,
-    C_MUMU
+    C_MUMU,
+    C_E,
+    C_MU
 };
 
 bool comparePt(const pat::Jet& jet1, const pat::Jet& jet2)
@@ -197,6 +199,8 @@ private:
     vstring eeTriggers_;
     vstring emuTriggers_;
     vstring mumuTriggers_;
+    vstring eTriggers_;
+    vstring muTriggers_;
     vstring metFilters_;
     vstring jesFiles_;
     vint jesRanges_;
@@ -250,6 +254,8 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , eeTriggers_(iConfig.getParameter<vstring>("eeTriggers"))
     , emuTriggers_(iConfig.getParameter<vstring>("emuTriggers"))
     , mumuTriggers_(iConfig.getParameter<vstring>("mumuTriggers"))
+    , eTriggers_(iConfig.getParameter<vstring>("eTriggers"))
+    , muTriggers_(iConfig.getParameter<vstring>("muTriggers"))
     , metFilters_(iConfig.getParameter<vstring>("metFilters"))
     , jesFiles_(iConfig.getParameter<vstring>("jesFiles"))
     , jesRanges_(iConfig.getParameter<vint>("jesRanges"))
@@ -582,8 +588,9 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     reco::RecoCandidate* lep1 = nullptr;
     reco::RecoCandidate* lep2 = nullptr;
     LeptonChannel channel = C_INVALID;
+    bool is_sl = false;
     bool passLeptonSelection = leptonSelection(
-        electrons, tightElectrons, muons, tightMuons, lep1, lep2, channel);
+        electrons, tightElectrons, muons, tightMuons, lep1, lep2, channel, is_sl);
     if (!passLeptonSelection)
     {
         return;
@@ -617,7 +624,7 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
         pat::MET met(metOrig);
 
         bool pass = jetMETSelection(
-            event, rho, lep1, lep2, metOrig, variation, direction, jets2, met);
+            event, rho, lep1, lep2, metOrig, variation, direction, jets2, met, is_sl);
 
         jets.push_back(jets2);
         mets.push_back(met);
@@ -650,7 +657,8 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     varMap_.setInt32("channel", int32_t(channel));
 
     // lepton variables
-    for (size_t i = 1; i <= 2; i++)
+    n_leps = is_sl ? 1 : 2
+    for (size_t i = 1; i <= n_leps; i++)
     {
         reco::RecoCandidate* lep = i == 1 ? lep1 : lep2;
         varMap_.setDouble("lep" + std::to_string(i) + "_E", lep->energy());
@@ -680,10 +688,13 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
             throw std::runtime_error("cannot handle lepton pdg id " + std::to_string(absPdgId));
         }
     }
-    double mll = (lep1->p4() + lep2->p4()).M();
-    double dr_ll = deltaR(lep1->p4(), lep2->p4());
-    varMap_.setDouble("mll", mll);
-    varMap_.setDouble("dr_ll", dr_ll);
+    if (!is_sl)
+    {
+        double mll = (lep1->p4() + lep2->p4()).M();
+        double dr_ll = deltaR(lep1->p4(), lep2->p4());
+        varMap_.setDouble("mll", mll);
+        varMap_.setDouble("dr_ll", dr_ll);
+    }
 
     // jet and MET variables
     for (size_t i = 0; i < (isData_ ? 1 : jetVariations_.size()); i++)
@@ -702,22 +713,25 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
         // jets
         double mht_x = 0.;
         double mht_y = 0.;
-        mht_x += lep1->px() + lep2->px();
-        mht_y += lep1->py() + lep2->py();
-        for (size_t j = 1; j <= jets[i].size(); j++)
+        if (!is_sl)
         {
-            mht_x += jets[i][j - 1].px();
-            mht_y += jets[i][j - 1].py();
+            mht_x += lep1->px() + lep2->px();
+            mht_y += lep1->py() + lep2->py();
+            for (size_t j = 1; j <= jets[i].size(); j++)
+            {
+                mht_x += jets[i][j - 1].px();
+                mht_y += jets[i][j - 1].py();
+            }
+
+            double mht = sqrt(mht_x * mht_x + mht_y * mht_y);
+            varMap_.setDouble("mht" + postfix, mht);
+
+            bool pass_z_mask = (mll < (65.5 + 3 * mht / 8)) ||
+                               (mll > (108. - mht / 4)) ||
+                               (mll < (79. - 3 * mht / 4)) ||
+                               (mll > (99. + mht / 2));
+            varMap_.setInt32("pass_z_mask" + postfix, (int)pass_z_mask);
         }
-
-        double mht = sqrt(mht_x * mht_x + mht_y * mht_y);
-        varMap_.setDouble("mht" + postfix, mht);
-
-        bool pass_z_mask = (mll < (65.5 + 3 * mht / 8)) ||
-                           (mll > (108. - mht / 4)) ||
-                           (mll < (79. - 3 * mht / 4)) ||
-                           (mll > (99. + mht / 2));
-        varMap_.setInt32("pass_z_mask" + postfix, (int)pass_z_mask);
 
         for (size_t j = 1; j <= 4; j++)
         {
@@ -796,6 +810,14 @@ bool TreeMaker::triggerSelection(const edm::Event& event, LeptonChannel& channel
     {
         triggersToPass = mumuTriggers_;
     }
+    else if (channel == C_E)
+    {
+        triggersToPass = eTriggers_;
+    }
+    else if (channel == C_MU)
+    {
+        triggersToPass = muTriggers_;
+    }
 
     const edm::TriggerNames& triggerNames = event.triggerNames(*triggerBitsHandle);
     for (size_t i = 0; i < triggerBitsHandle->size(); ++i)
@@ -866,9 +888,9 @@ bool TreeMaker::muonSelection(const edm::Event& event, reco::Vertex& vertex,
 bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     std::vector<pat::Electron>& tightElectrons, std::vector<pat::Muon>& muons,
     std::vector<pat::Muon>& tightMuons, reco::RecoCandidate*& lep1,
-    reco::RecoCandidate*& lep2, LeptonChannel& channel)
+    reco::RecoCandidate*& lep2, LeptonChannel& channel, bool& is_sl)
 {
-    // require exactly 2 leptons, at least 1 tight
+    // require exactly 2 leptons, at least 1 tight, or exactly 1 tight lepton for the SL control region
     size_t nElectrons = electrons.size();
     size_t nTightElectrons = tightElectrons.size();
 
@@ -878,7 +900,7 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     size_t nLeptons = nElectrons + nMuons;
     size_t nTightLeptons = nTightElectrons + nTightMuons;
 
-    if (nLeptons != 2 || nTightLeptons < 1)
+    if (nLeptons > 2 || nTightLeptons < 1)
     {
         return false;
     }
@@ -902,13 +924,25 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
         lep1 = &muons[0];
         lep2 = &muons[1];
     }
+    else if (nElectrons == 1 && nMuons == 0)
+    {
+        is_sl = true;
+        channel = C_E;
+        lep1 = &electrons[0];
+    }
+    else if (nElectrons == 0 && nMuons == 1)
+    {
+        is_sl = true;
+        channel = C_MU;
+        lep1 = &muons[0];
+    }
     else
     {
         throw std::runtime_error("could not determine lepton channel!");
     }
 
-    // check for opposite charges
-    if (lep1->charge() == lep2->charge())
+    // check for opposite charges (only DL channels)
+    if (!is_sl && (lep1->charge() == lep2->charge()))
     {
         return false;
     }
@@ -918,14 +952,16 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     {
         if ((leptonChannel_ == "ee" && channel != C_EE) ||
             (leptonChannel_ == "emu" && channel != C_EMU) ||
-            (leptonChannel_ == "mumu" && channel != C_MUMU))
+            (leptonChannel_ == "mumu" && channel != C_MUMU)) ||
+            (leptonChannel_ == "e" && channel != C_E) ||
+            (leptonChannel_ == "mu" && channel != C_MU)
         {
             return false;
         }
     }
 
-    // re-order py pt
-    if (lep2->pt() > lep1->pt())
+    // re-order py pt (only DL channels)
+    if (!is_sl && (lep2->pt() > lep1->pt()))
     {
         std::swap(lep1, lep2);
     }
@@ -935,7 +971,8 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
 
 bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
     reco::RecoCandidate* lep1, reco::RecoCandidate* lep2, const pat::MET& metOrig,
-    const string& variation, const string& direction, std::vector<pat::Jet>& jets, pat::MET& met)
+    const string& variation, const string& direction, std::vector<pat::Jet>& jets, pat::MET& met,
+    bool is_sl)
 {
     // read jets
     edm::Handle<std::vector<pat::Jet> > jetsHandle;
@@ -976,7 +1013,7 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
             applyJER(jet, genJets, "", "", rho);
         }
 
-        JetID type = jetID(jet, lep1, lep2);
+        JetID type = jetID(jet, lep1, lep2, is_sl);
         if (type == J_VALID)
         {
             jets.push_back(jet);
@@ -990,7 +1027,8 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
     // propagate the change in px and py to met
     met.setP4(correctedMetP4);
 
-    if (jets.size() < 2)
+    int min_njets = is_sl ? 4 : 2;
+    if (jets.size() < min_njets)
     {
         return false;
     }
@@ -1121,7 +1159,7 @@ MuonID TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
     return isTight ? M_TIGHT : M_LOOSE;
 }
 
-JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2)
+JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2, bool is_sl)
 {
     // pt cut
     if (jet.pt() <= 20.)
@@ -1143,7 +1181,11 @@ JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandi
     }
 
     // check distance to selected leptons
-    if ((deltaR(jet.p4(), lep1->p4()) < 0.4) || (deltaR(jet.p4(), lep2->p4()) < 0.4))
+    if (deltaR(jet.p4(), lep1->p4()) < 0.4)
+    {
+        return J_INVALID;
+    }
+    if (!is_sl && (deltaR(jet.p4(), lep2->p4()) < 0.4))
     {
         return J_INVALID;
     }

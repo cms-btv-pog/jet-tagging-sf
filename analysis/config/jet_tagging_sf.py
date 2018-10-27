@@ -33,8 +33,13 @@ config_ICHEP18 = cfg = analysis.add_config(campaign=campaign_ICHEP18)
 cfg.add_process(process_data_ee)
 cfg.add_process(process_data_emu)
 cfg.add_process(process_data_mumu)
+cfg.add_process(process_data_e)
+cfg.add_process(process_data_mu)
 cfg.add_process(process_tt_dl)
+cfg.add_process(process_tt_sl)
 cfg.add_process(process_dy_lep)
+cfg.add_process(process_st_s) # TODO: Include st process instead?
+cfg.add_process(process_st_t)
 cfg.add_process(process_st_tW)
 cfg.add_process(process_WW_dl)
 
@@ -43,7 +48,9 @@ dataset_names = [
     "data_B_ee", "data_C_ee", "data_D_ee", "data_E_ee", "data_F_ee",
     "data_B_emu", "data_C_emu", "data_D_emu", "data_E_emu", "data_F_emu",
     "data_B_mumu", "data_C_mumu", "data_D_mumu", "data_E_mumu", "data_F_mumu",
-    "tt_dl",
+    "data_B_e", "data_C_e", "data_D_e", "data_E_e", "data_F_e",
+    "data_B_mu", "data_C_mu", "data_D_mu", "data_E_mu", "data_F_mu",
+    "tt_dl", "tt_sl",
     #"dy_lep_4To50_Ht70To100",
     #"dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
     #"dy_lep_4To50_Ht400To600", "dy_lep_4To50_Ht600ToInf",
@@ -53,6 +60,8 @@ dataset_names = [
     #"dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
     #"dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
     #"dy_lep_50ToInf_Ht2500ToInf",
+    "st_s_lep",
+    "st_t_t", "st_t_tbar",
     "st_tW_t", "st_tW_tbar",
     "WW_dl",
 ]
@@ -64,6 +73,8 @@ for dataset_name in dataset_names:
 ch_ee = cfg.add_channel("ee", 1)
 ch_emu = cfg.add_channel("emu", 2)
 ch_mumu = cfg.add_channel("mumu", 3)
+ch_e = cfg.add_channel("e", 4)
+ch_mu = cfg.add_channel("mu", 5)
 
 # store channels per real dataset
 cfg.set_aux("dataset_channels", {
@@ -401,12 +412,11 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
 
 # luminosities per channel in /pb
 cfg.set_aux("lumi", {
-    #ch_ee: 4767.315,  # B only
-    #ch_emu: 4767.315,  # B only
-    #ch_mumu: 4767.315,  # B only
     ch_ee: 41296.082,
     ch_emu: 41296.082,
     ch_mumu: 41296.082,
+    ch_e: 41296.082,
+    ch_mu: 41296.082,
 })
 
 # run ranges
@@ -445,8 +455,16 @@ cfg.set_aux("triggers", {
     ],
     ch_mumu: [
         "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v*",# only 2017B
-        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*",
-        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*",
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*", # only 2017 C-F
+        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*", # only 2017 C-F
+    ],
+    ch_e: [
+        "HLT_Ele35_WPTight_Gsf_v*",
+        "HLT_Ele28_eta2p1_WPTight_Gsf_HT150_v*",
+    ],
+    ch_mu: [
+        "HLT_IsoMu27_v*",
+        "HLT_IsoMu24_eta2p1_v*", # only 2017 B, C, D
     ],
 })
 
@@ -461,6 +479,12 @@ for era in ["C", "D", "E", "F"]:
         cfg.get_dataset("data_{}_mumu".format(era)): [
             "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*",
             "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*",
+        ],
+    })
+for era in ["E", "F"]:
+    cfg.set_aux("data_triggers", {
+        cfg.get_dataset("data_{}_mu".format(era)): [
+            "HLT_IsoMu27_v*",
         ],
     })
 

@@ -12,7 +12,7 @@ Values taken from:
 import order as od
 import scinum as sn
 
-from analysis.config.constants import N_LEPS, BR_WW_DL, BR_WW_SL
+from analysis.config.constants import N_LEPS, BR_W_LEP, BR_WW_DL, BR_WW_SL
 
 
 process_data_ee = od.Process(
@@ -42,6 +42,14 @@ process_tt = od.Process(
             "pdf": 35.06,
             "mtop": (23.18, 22.45),
         }),
+    },
+)
+
+process_tt_sl = process_tt.add_process(
+    "tt_sl", 11,
+    label=r"$t\bar{t}$ + Jets, SL",
+    xsecs={
+        13: process_tt.get_xsec(13) * BR_WW_SL,
     },
 )
 
@@ -207,6 +215,59 @@ process_st = od.Process(
     label=r"Single $t$/$\bar{t}$",
 )
 
+# s-channel
+process_st_s = process_st.add_process(
+    "st_s", 330,
+    xsecs={
+        13: sn.Number(11.36, {
+            "scale": 0.18,
+            "pdf": (0.40, 0.45)
+        })
+    }
+)
+
+process_st_s_lep = process_st_s.add_process(
+    "st_s_lep", 341,
+    xsecs={
+        13: process_st_s.xsec(13) * BR_W_LEP
+    }
+)
+
+# t-channel
+process_st_t = process_st.add_process(
+    "st_t", 310,
+    xsecs={
+        13: sn.Number(216.99, {
+            "scale": (6.62, 4.64),
+            "pdf": 6.16,
+            "mtop": 1.81
+        })
+    }
+)
+
+process_st_t_t = process_st_t.add_process(
+    "st_t_t", 311,
+    xsecs={
+        13: sn.Number(136.02, {
+            "scale": (4.09, 2.92),
+            "pdf": 3.52,
+            "mtop": 1.11
+        })
+    }
+)
+
+process_st_t_tbar = process_st_t.add_process(
+    "st_t_tbar", 312,
+    xsecs={
+        13: sn.Number(80.95, {
+            "scale": (2.53, 1.71),
+            "pdf": 3.18,
+            "mtop": (0.71, 0.70)
+        })
+    }
+)
+
+# tW-channel
 process_st_tW = process_st.add_process(
     "st_tW", 320,
     label=r"Single $t$/$\bar{t}$, tW-channel",

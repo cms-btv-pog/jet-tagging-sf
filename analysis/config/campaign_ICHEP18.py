@@ -163,6 +163,16 @@ dataset_tt_dl = od.Dataset(
     ],
 )
 
+dataset_tt_sl = od.Dataset(
+    "tt_sl", 102,
+    campaign=campaign,
+    n_files=615 + 2176,
+    keys=[
+        "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
+        "/TTToSemiLeptonic_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
+    ],
+)
+
 # TODO: Add when available (current one is mislabelled)
 #dataset_dy_lep_4To50_Ht70To100 = od.Dataset(
 #    "dy_lep_4To50_Ht70To100", 2211,
@@ -304,6 +314,36 @@ dataset_dy_lep_50ToInf = od.Dataset(
     ],
 )
 
+# s-channel
+dataset_st_s_lep = od.Dataset(
+    "st_s_lep", 300,
+    nFiles  = 143,
+    keys    = [
+        "/ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-amcatnlo-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
+    ]
+)
+
+# t-channel
+dataset_st_t_t = od.Dataset(
+    "st_t_t", 301,
+    campaign=campaign,
+    nFiles  = 111,
+    keys    = [
+        "/ST_t-channel_top_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+)
+
+dataset_st_t_tbar = od.Dataset(
+    "st_t_tbar", 302,
+    campaign=campaign,
+    nFiles  = 69,
+    keys    = [
+        "/ST_t-channel_antitop_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
+    ],
+)
+
+
+# tW-channel
 dataset_st_tW_t = od.Dataset(
     "st_tW_t", 321,
     campaign=campaign,
@@ -340,6 +380,7 @@ for d in datasets_data_mumu:
     d.add_process(process_data_mumu)
 
 dataset_tt_dl.add_process(process_tt_dl)
+dataset_tt_sl.add_process(process_tt_sl)
 #dataset_dy_lep_4To50_Ht70To100.add_process(process_dy_lep_5To50_Ht70To100)  # TODO: 5To50 okay? # TODO: enable
 dataset_dy_lep_4To50_Ht100To200.add_process(process_dy_lep_5To50_Ht100To200)  # TODO: 5To50 okay?
 dataset_dy_lep_4To50_Ht200To400.add_process(process_dy_lep_5To50_Ht200To400)  # TODO: 5To50 okay?
@@ -355,6 +396,9 @@ dataset_dy_lep_50ToInf_Ht600To800.add_process(process_dy_lep_50ToInf_Ht600To800)
 dataset_dy_lep_50ToInf_Ht800To1200.add_process(process_dy_lep_50ToInf_Ht800To1200)
 dataset_dy_lep_50ToInf_Ht1200To2500.add_process(process_dy_lep_50ToInf_Ht1200To2500)
 dataset_dy_lep_50ToInf_Ht2500ToInf.add_process(process_dy_lep_50ToInf_Ht2500ToInf)
+dataset_st_s_lep.add_process(process_st_s_lep)
+dataset_st_t_t.add_process(process_st_t_t)
+dataset_st_t_tbar.add_process(process_st_t_tbar)
 dataset_st_tW_t.add_process(process_st_tW_t)
 dataset_st_tW_tbar.add_process(process_st_tW_tbar)
 dataset_WW_sl.add_process(process_WW_sl)

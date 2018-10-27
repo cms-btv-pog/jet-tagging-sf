@@ -249,6 +249,13 @@ process_WW = od.Process(
     },
 )
 
+process_WW_dl = process_WW.add_process(
+    "WW_dl", 41,
+    xsecs={
+        13: process_WW.get_xsec(13) * BR_WW_DL,
+    },
+)
+
 process_WW_sl = process_WW.add_process(
     "WW_sl", 42,
     xsecs={

@@ -322,8 +322,8 @@ dataset_st_tW_tbar = od.Dataset(
     ],
 )
 
-dataset_WW_sl = od.Dataset(
-    "WW_sl", 42,
+dataset_WW_dl = od.Dataset(
+    "WW_dl", 41,
     campaign=campaign,
     n_files=25,
     keys=[
@@ -358,3 +358,4 @@ dataset_dy_lep_50ToInf_Ht2500ToInf.add_process(process_dy_lep_50ToInf_Ht2500ToIn
 dataset_st_tW_t.add_process(process_st_tW_t)
 dataset_st_tW_tbar.add_process(process_st_tW_tbar)
 dataset_WW_sl.add_process(process_WW_sl)
+dataset_WW_dl.add_process(process_WW_dl)

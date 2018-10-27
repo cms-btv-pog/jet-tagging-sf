@@ -17,7 +17,7 @@ from order.util import join_root_selection
 
 from analysis.config.constants import Z_MASS
 from analysis.config.processes import process_data_ee, process_data_emu, process_data_mumu, \
-    process_tt_dl, process_dy_lep, process_st_tW, process_WW_sl
+    process_tt_dl, process_dy_lep, process_st_tW, process_WW_dl
 
 
 # define the analysis
@@ -36,7 +36,7 @@ cfg.add_process(process_data_mumu)
 cfg.add_process(process_tt_dl)
 cfg.add_process(process_dy_lep)
 cfg.add_process(process_st_tW)
-cfg.add_process(process_WW_sl)
+cfg.add_process(process_WW_dl)
 
 # add datasets
 dataset_names = [
@@ -54,7 +54,7 @@ dataset_names = [
     #"dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
     #"dy_lep_50ToInf_Ht2500ToInf",
     "st_tW_t", "st_tW_tbar",
-    "WW_sl",
+    "WW_dl",
 ]
 for dataset_name in dataset_names:
     dataset = campaign_ICHEP18.get_dataset(dataset_name)

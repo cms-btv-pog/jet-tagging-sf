@@ -16,8 +16,9 @@ import six
 from order.util import join_root_selection
 
 from analysis.config.constants import Z_MASS
-from analysis.config.processes import process_data_ee, process_data_emu, process_data_mumu, \
-    process_tt_dl, process_dy_lep, process_st_tW, process_WW_dl
+from analysis.config.processes import process_data_e, process_data_mu, process_data_ee, \
+    process_data_emu, process_data_mumu, process_tt_dl, process_tt_sl, process_dy_lep, \
+    process_st_s, process_st_t, process_st_tW, process_WW_dl
 
 
 # define the analysis

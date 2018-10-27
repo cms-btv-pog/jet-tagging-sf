@@ -241,7 +241,7 @@ process_st_s = process_st.add_process(
 process_st_s_lep = process_st_s.add_process(
     "st_s_lep", 341,
     xsecs={
-        13: process_st_s.xsec(13) * BR_W_LEP
+        13: process_st_s.get_xsec(13) * BR_W_LEP
     }
 )
 

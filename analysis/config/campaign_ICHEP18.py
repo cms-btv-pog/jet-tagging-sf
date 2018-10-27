@@ -155,7 +155,7 @@ datasets_data_mumu = [
 
 # single electron
 
-setup.addDataset(
+dataset_data_B_e = od.Dataset(
     "data_B_e", 31,
     campaign = campaign,
     n_files=499,
@@ -163,7 +163,7 @@ setup.addDataset(
     is_data=True
 )
 
-setup.addDataset(
+dataset_data_C_e = od.Dataset(
     "data_C_e", 32,
     campaign = campaign,
     n_files=1179,
@@ -171,7 +171,7 @@ setup.addDataset(
     is_data=True
 )
 
-setup.addDataset(
+dataset_data_D_e = od.Dataset(
     "data_D_e", 33,
     campaign = campaign,
     n_files=448,
@@ -179,7 +179,7 @@ setup.addDataset(
     is_data=True
 )
 
-setup.addDataset(
+dataset_data_E_e = od.Dataset(
     "data_E_e", 34,
     campaign = campaign,
     n_files=1054,
@@ -187,7 +187,7 @@ setup.addDataset(
     is_data=True
 )
 
-setup.addDataset(
+dataset_data_F_e = od.Dataset(
     "data_F_e", 35,
     campaign = campaign,
     n_files=1351,
@@ -202,7 +202,7 @@ datasets_data_e = [
 
 # single muon
 
-setup.addDataset(
+dataset_data_B_mu = od.Dataset(
     "data_B_mu", 41,
     campaign = campaign,
     n_files=1059,
@@ -210,7 +210,7 @@ setup.addDataset(
     is_data=True
 )
 
-setup.addDataset(
+dataset_data_C_mu = od.Dataset(
     "data_C_mu", 42,
     campaign = campaign,
     n_files=1248,
@@ -218,7 +218,7 @@ setup.addDataset(
     is_data=True
 )
 
-setup.addDataset(
+dataset_data_D_mu = od.Dataset(
     "data_D_mu", 43,
     campaign = campaign,
     n_files=607,
@@ -226,7 +226,7 @@ setup.addDataset(
     is_data=True
 )
 
-setup.addDataset(
+dataset_data_E_mu = od.Dataset(
     "data_E_mu", 44,
     campaign = campaign,
     n_files=1523,
@@ -234,7 +234,7 @@ setup.addDataset(
     is_data=True
 )
 
-setup.addDataset(
+dataset_data_F_mu = od.Dataset(
     "data_F_mu", 45,
     campaign = campaign,
     n_files=2435,
@@ -413,6 +413,7 @@ dataset_dy_lep_50ToInf = od.Dataset(
 # s-channel
 dataset_st_s_lep = od.Dataset(
     "st_s_lep", 300,
+    campaign=campaign,
     n_files=143,
     keys= [
         "/ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-amcatnlo-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
@@ -459,7 +460,7 @@ dataset_st_tW_tbar = od.Dataset(
 )
 
 dataset_WW_dl = od.Dataset(
-    "WW_dl", 41,
+    "WW_dl", 401,
     campaign=campaign,
     n_files=25,
     keys=[
@@ -501,5 +502,5 @@ dataset_st_t_t.add_process(process_st_t_t)
 dataset_st_t_tbar.add_process(process_st_t_tbar)
 dataset_st_tW_t.add_process(process_st_tW_t)
 dataset_st_tW_tbar.add_process(process_st_tW_tbar)
-dataset_WW_sl.add_process(process_WW_sl)
+#dataset_WW_sl.add_process(process_WW_sl)
 dataset_WW_dl.add_process(process_WW_dl)

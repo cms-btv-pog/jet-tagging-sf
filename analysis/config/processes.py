@@ -33,6 +33,18 @@ process_data_mumu = od.Process(
     label="data",
 )
 
+process_data_e = od.Process(
+    "data_e", 4,
+    is_data=True,
+    label="data",
+)
+
+process_data_mu = od.Process(
+    "data_mu", 5,
+    is_data=True,
+    label="data",
+)
+
 process_tt = od.Process(
     "tt", 10,
     label=r"$t\bar{t}$ + Jets",

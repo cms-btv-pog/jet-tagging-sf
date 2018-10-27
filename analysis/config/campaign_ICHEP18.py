@@ -153,6 +153,102 @@ datasets_data_mumu = [
     dataset_data_F_mumu,
 ]
 
+# single electron
+
+setup.addDataset(
+    "data_B_e", 31,
+    campaign = campaign,
+    n_files=499,
+    keys=["/SingleElectron/Run2017B-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+setup.addDataset(
+    "data_C_e", 32,
+    campaign = campaign,
+    n_files=1179,
+    keys=["/SingleElectron/Run2017C-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+setup.addDataset(
+    "data_D_e", 33,
+    campaign = campaign,
+    n_files=448,
+    keys=["/SingleElectron/Run2017D-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+setup.addDataset(
+    "data_E_e", 34,
+    campaign = campaign,
+    n_files=1054,
+    keys=["/SingleElectron/Run2017E-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+setup.addDataset(
+    "data_F_e", 35,
+    campaign = campaign,
+    n_files=1351,
+    keys=["/SingleElectron/Run2017F-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+datasets_data_e = [
+    dataset_data_B_e, dataset_data_C_e, dataset_data_D_e, dataset_data_E_e,
+    dataset_data_F_e,
+]
+
+# single muon
+
+setup.addDataset(
+    "data_B_mu", 41,
+    campaign = campaign,
+    n_files=1059,
+    keys=["/SingleMuon/Run2017B-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+setup.addDataset(
+    "data_C_mu", 42,
+    campaign = campaign,
+    n_files=1248,
+    keys=["/SingleMuon/Run2017C-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+setup.addDataset(
+    "data_D_mu", 43,
+    campaign = campaign,
+    n_files=607,
+    keys=["/SingleMuon/Run2017D-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+setup.addDataset(
+    "data_E_mu", 44,
+    campaign = campaign,
+    n_files=1523,
+    keys=["/SingleMuon/Run2017E-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+setup.addDataset(
+    "data_F_mu", 45,
+    campaign = campaign,
+    n_files=2435,
+    keys=["/SingleMuon/Run2017F-31Mar2018-v1/MINIAOD"],
+    is_data=True
+)
+
+datasets_data_mu = [
+    dataset_data_B_mu, dataset_data_C_mu, dataset_data_D_mu, dataset_data_E_mu,
+    dataset_data_F_mu,
+]
+
+# MC datasets
+
 dataset_tt_dl = od.Dataset(
     "tt_dl", 101,
     campaign=campaign,
@@ -317,8 +413,8 @@ dataset_dy_lep_50ToInf = od.Dataset(
 # s-channel
 dataset_st_s_lep = od.Dataset(
     "st_s_lep", 300,
-    nFiles  = 143,
-    keys    = [
+    n_files=143,
+    keys= [
         "/ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-amcatnlo-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
     ]
 )
@@ -327,8 +423,8 @@ dataset_st_s_lep = od.Dataset(
 dataset_st_t_t = od.Dataset(
     "st_t_t", 301,
     campaign=campaign,
-    nFiles  = 111,
-    keys    = [
+    n_files=111,
+    keys= [
         "/ST_t-channel_top_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
     ],
 )
@@ -336,8 +432,8 @@ dataset_st_t_t = od.Dataset(
 dataset_st_t_tbar = od.Dataset(
     "st_t_tbar", 302,
     campaign=campaign,
-    nFiles  = 69,
-    keys    = [
+    n_files=69,
+    keys= [
         "/ST_t-channel_antitop_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
     ],
 )
@@ -378,6 +474,10 @@ for d in datasets_data_emu:
     d.add_process(process_data_emu)
 for d in datasets_data_mumu:
     d.add_process(process_data_mumu)
+for d in datasets_data_e:
+    d.add_process(process_data_e)
+for d in datasets_data_mu:
+    d.add_process(process_data_mu)
 
 dataset_tt_dl.add_process(process_tt_dl)
 dataset_tt_sl.add_process(process_tt_sl)

@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 
 
-__all__ = ["AnalysisTask", "DatasetTask", "GridWorkflow"]
+__all__ = ["AnalysisTask", "DatasetTask", "ShiftTask", "GridWorkflow"]
 
 
 import re
@@ -9,6 +9,7 @@ import os
 import abc
 import shutil
 import random
+import itertools
 import collections
 
 import law
@@ -99,36 +100,72 @@ class DatasetTask(AnalysisTask):
         return "_{}To{}".format(self.start_branch, self.end_branch)
 
 
-class DatasetWrapperTask(AnalysisTask, law.WrapperTask):
+class ShiftTask(AnalysisTask):
 
-    datasets = law.CSVParameter(default=[], description="datasets to require")
+    shift = luigi.Parameter(default="nominal", description="systematic shift to apply, default: nominal")
+
+    shifts = set()
+
+    def __init__(self, *args, **kwargs):
+        super(ShiftTask, self).__init__(*args, **kwargs)
+        if self.shift not in self.shifts:
+            raise ValueError("Unknown shift {}, options: {}".format(self.shift, list(self.shifts)))
+
+    def store_parts(self):
+        return super(ShiftTask, self).store_parts() + (self.shift,)
+
+
+class WrapperTask(AnalysisTask, law.WrapperTask):
+
+    datasets = law.CSVParameter(default=[None], description="datasets to require")
+    shifts = law.CSVParameter(default=[None], description="shifts to require")
     skip_datasets = law.CSVParameter(default=[], description="datasets to skip, supports patterns")
+    skip_shifts = law.CSVParameter(default=[], desription="shifts to skip, supports patterns")
     grid_ces = law.CSVParameter(default=[], description="grid CEs to submit to, chosen randomly")
 
     exclude_db = True
 
     def __init__(self, *args, **kwargs):
-        super(DatasetWrapperTask, self).__init__(*args, **kwargs)
+        super(WrapperTask, self).__init__(*args, **kwargs)
 
         if not self.datasets:
             self.datasets = self.get_default_datasets()
 
+        if not self.shifts:
+            self.shifts = self.wrapped_task.shifts
+
         if self.skip_datasets:
             filter_fn = lambda d: not law.util.multi_match(d, self.skip_datasets)
             self.datasets = filter(filter_fn, self.datasets)
+        if self.skip_shifts:
+            filter_fn = lambda d: not law.util.multi_match(d, self.skip_shifts)
+            self.shifts = filter(filter_fn, self.shifts)
 
     @abc.abstractproperty
     def wrapped_task(self):
         return
 
     def get_default_datasets(self):
-        return [dataset.name for dataset in self.config_inst.datasets]
+        if isinstance(self.wrapped_task, DatasetTask):
+            return [dataset.name for dataset in self.config_inst.datasets]
+        else:
+            return [None]
+
+    def get_default_shifts(self):
+        if isinstance(self.wrapped_task, ShiftTask):
+            return self.wrapped_task.shifts
+        else:
+            return [None]
 
     def requires(self):
         cls = self.wrapped_task
 
-        def req(dataset):
-            kwargs = {"dataset": dataset}
+        def req(dataset, shift):
+            kwargs = {}
+            if dataset is not None:
+                kwargs["dataset"] = dataset
+            if shift is not None:
+                kwargs["shift"] = shift
 
             if issubclass(cls, GridWorkflow) and self.grid_ces:
                 kwargs["grid_ce"] = [random.choice(self.grid_ces)]
@@ -136,7 +173,8 @@ class DatasetWrapperTask(AnalysisTask, law.WrapperTask):
 
             return cls.req(self, **kwargs)
 
-        return collections.OrderedDict([(dataset, req(dataset)) for dataset in self.datasets])
+        params_list = itertools.product(self.datasets, self.shifts)
+        return collections.OrderedDict([(params, req(*params)) for params in params_list])
 
 
 class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):

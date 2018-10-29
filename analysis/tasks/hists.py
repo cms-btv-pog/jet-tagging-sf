@@ -3,6 +3,7 @@
 
 import os
 import collections
+import itertools
 import array
 
 import law
@@ -12,18 +13,22 @@ import numpy as np
 from order.util import join_root_selection
 
 from analysis.config.jet_tagging_sf import get_category
-from analysis.tasks.base import AnalysisTask, DatasetTask, DatasetWrapperTask, GridWorkflow
+from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
 from analysis.util import TreeExtender
 
 
-class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
+class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
 
     iteration = luigi.IntParameter(default=0, description="iteration of the scale factor "
         "calculation, starting at zero, default: 0")
     final_it = luigi.BoolParameter(description="Flag for the final iteration of the scale factor "
         "calculation.")
+
+    shifts = {"jes_up", "jes_down"} | {"{}_{}".format(shift, direction) for shift, direction in
+        itertools.product(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1, hfstats2"], ["up", "down"])}
+    # TODO: For the first iteration, only the nomial and jes shifts should be run
 
     file_merging = "trees"
 
@@ -310,7 +315,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                         progress(i)
 
 
-class WriteHistogramsWrapper(DatasetWrapperTask):
+class WriteHistogramsWrapper(WrapperTask):
 
     wrapped_task = WriteHistograms
 
@@ -319,6 +324,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
 
     iteration = WriteHistograms.iteration
     final_it = WriteHistograms.final_it
+    shifts = WriteHistograms.shifts
 
     merge_factor = 12
 

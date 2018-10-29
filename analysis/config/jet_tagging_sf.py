@@ -136,6 +136,15 @@ cfg.set_aux("binning", {
     }
 })
 
+# information related to systematic shifts
+# scaling factors for contamination
+cfg.set_aux("contamination_factors", {
+    "lf_up": 1.2,
+    "lf_down": 0.8,
+    "hf_up": 1.2,
+    "hf_down": 0.8,
+})
+
 # define nested categories (analysis phase space -> hf/lf region -> flavor -> pt bin -> eta bin)
 def get_phasespace_info():
     return [

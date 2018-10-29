@@ -5,15 +5,17 @@ import os
 import array
 import numpy as np
 
-from collections import defaultdict
+from collections import itertools, defaultdict
 
-from analysis.tasks.base import AnalysisTask
+from analysis.tasks.base import ShiftTask
 from analysis.tasks.hists import MergeHistograms
 
 
-class MeasureScaleFactors(AnalysisTask):
+class MeasureScaleFactors(ShiftTask):
 
     iteration = MergeHistograms.iteration
+
+    shifts = MergeHistograms.shifts
 
     def requires(self):
         reqs = {
@@ -180,6 +182,25 @@ class MeasureScaleFactors(AnalysisTask):
 
                 # for the sfs, it's convenient to start with the data hist
                 sf_hist = data_hist.Clone("sf_{}".format(category.name))
+
+                # Implement systematic shifts
+                # contaminations
+                if self.shift in ["lf_up", "lf_down", "hf_up", "hf_down"]:
+                    contamination_scales = self.config_inst.get_aux("contamination_factors")
+                    contamination_factor = contamination_scales[self.shift]
+                    # scale light flavour contamination in heavy flavour region
+                    if self.shift.split("_")[0] == "lf" and region == "HF":
+                        lf_hist.Scale(contamination_factor)
+                    # scale heavy flavour contamination in light flavour region
+                    elif self.shift.split("_")[0] == "hf" and region == "LF":
+                        hf_hist.Scale(contamination_factor)
+
+                # statistical uncertainties
+                stat_uncertainties = ["{}_stats{}_{}".format(*tpl) for tpl in itertools.product(
+                    ["lf", "hf"], ["1", "2"], ["up", "down"]
+                )]
+                if self.shift in stat_uncertainties:
+                    pass
 
                 # normalize MC histograms
                 norm_factor = hist_integral(data_hist) / (hist_integral(lf_hist) + hist_integral(hf_hist))

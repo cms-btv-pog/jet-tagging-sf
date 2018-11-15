@@ -1170,7 +1170,7 @@ JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandi
 
     // eta cut
     double absEta = fabs(jet.eta());
-    if (absEta >= 2.4)
+    if (absEta >= 2.5)
     {
         return J_INVALID;
     }

@@ -14,7 +14,7 @@ import law
 import luigi
 import six
 
-from analysis.tasks.base import AnalysisTask, DatasetTask, DatasetWrapperTask, GridWorkflow
+from analysis.tasks.base import AnalysisTask, DatasetTask, WrapperTask, GridWorkflow
 from analysis.tasks.external import GetDatasetLFNs, DownloadSetupFiles
 from analysis.util import wget, determine_xrd_redirector
 
@@ -145,7 +145,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 raise Exception("output file not exising after cmsRun")
 
 
-class WriteTreesWrapper(DatasetWrapperTask):
+class WriteTreesWrapper(WrapperTask):
 
     wrapped_task = WriteTrees
 
@@ -209,7 +209,7 @@ class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
         return self.glite_output_postfix()
 
 
-class MergeTreesWrapper(DatasetWrapperTask):
+class MergeTreesWrapper(WrapperTask):
 
     wrapped_task = MergeTrees
 
@@ -259,7 +259,7 @@ class MergeMetaData(DatasetTask):
         self.output().dump(stats, formatter="json", indent=4)
 
 
-class MergeMetaDataWrapper(DatasetWrapperTask):
+class MergeMetaDataWrapper(WrapperTask):
 
     wrapped_task = MergeMetaData
 

@@ -120,7 +120,7 @@ class WrapperTask(AnalysisTask, law.WrapperTask):
     datasets = law.CSVParameter(default=[None], description="datasets to require")
     shifts = law.CSVParameter(default=[None], description="shifts to require")
     skip_datasets = law.CSVParameter(default=[], description="datasets to skip, supports patterns")
-    skip_shifts = law.CSVParameter(default=[], desription="shifts to skip, supports patterns")
+    skip_shifts = law.CSVParameter(default=[], description="shifts to skip, supports patterns")
     grid_ces = law.CSVParameter(default=[], description="grid CEs to submit to, chosen randomly")
 
     exclude_db = True

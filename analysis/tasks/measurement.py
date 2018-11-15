@@ -183,8 +183,7 @@ class MeasureScaleFactors(ShiftTask):
                 # for the sfs, it's convenient to start with the data hist
                 sf_hist = data_hist.Clone("sf_{}".format(category.name))
 
-                # Implement systematic shifts
-                # contaminations
+                # systematic shift for purity uncertainty (contamination)
                 if self.shift in ["lf_up", "lf_down", "hf_up", "hf_down"]:
                     contamination_scales = self.config_inst.get_aux("contamination_factors")
                     contamination_factor = contamination_scales[self.shift]
@@ -194,13 +193,6 @@ class MeasureScaleFactors(ShiftTask):
                     # scale heavy flavour contamination in light flavour region
                     elif self.shift.split("_")[0] == "hf" and region == "LF":
                         hf_hist.Scale(contamination_factor)
-
-                # statistical uncertainties
-                stat_uncertainties = ["{}_stats{}_{}".format(*tpl) for tpl in itertools.product(
-                    ["lf", "hf"], ["1", "2"], ["up", "down"]
-                )]
-                if self.shift in stat_uncertainties:
-                    pass
 
                 # normalize MC histograms
                 norm_factor = hist_integral(data_hist) / (hist_integral(lf_hist) + hist_integral(hf_hist))
@@ -216,6 +208,27 @@ class MeasureScaleFactors(ShiftTask):
                 elif region == "LF":
                     sf_hist.Add(hf_hist, -1.)
                     sf_hist.Divide(lf_hist)
+
+                # systematic shift for statistical uncertainties
+                stat_uncertainties = ["{}_stats{}_{}".format(*tpl) for tpl in itertools.product(
+                    ["lf", "hf"], ["1", "2"], ["up", "down"]
+                )]
+                if self.shift in stat_uncertainties:
+                    shift_flavor, shift_type, shift_direction = self.shift.split("_")
+                    if shift_flavor == region.lower(): # TODO: Consistency upper/lower case
+                        nbins = sf_hist.GetNbinsX()
+                        for bin_idx in range(1, nbins + 1):
+                            bin_center = sf_hist.GetBinCenter(bin_idx)
+                            bin_content = sf_hist.GetBinContent(bin_idx)
+                            bin_error = sf_hist.GetBinError(bin_idx)
+                            if shift_type == "stats1":
+                                shift_value = bin_error * (1. - 2 * bin_center)# TODO: Bin at CSV < 0
+                            elif shift_type == "stats2":
+                                shift_value = bin_error * (1. - 6 * bin_center * (1. - bin_center))
+                            else:
+                                raise ValueError("Unknown shift type {}".format(shift_type))
+                            shift_sign = {"up": 1., "down": -1.}[shift_direction]
+                            sf_hist.SetBinContent(bin_content + shift_sign * shift_value)
 
                 # store the corrected sf hist
                 sf_dict[category] = sf_hist

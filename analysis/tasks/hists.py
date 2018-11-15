@@ -259,7 +259,7 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
                                 weights.append(str(lumi_weight))
 
                                 # pu weight
-                                # weights.append("pu_weight")  # TODO: reenable
+                                weights.append("pu_weight")
 
                                 # channel scale weight
                                 if self.iteration > 0:

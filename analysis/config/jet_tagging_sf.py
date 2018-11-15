@@ -590,11 +590,11 @@ cfg.set_aux("get_file_merging", get_file_merging)
 
 # versions
 cfg.set_aux("versions", {
-    "WriteTrees": "prod3",
-    "MergeTrees": "prod3",
-    "MergeMetaData": "prod3",
-    "WriteHistograms": "prod9",
-    "MergeHistograms": "prod10",
-    "MeasureScaleFactors": "prod3",
-    "FitScaleFactors": "prod3",
+    "WriteTrees": "prod4",
+    "MergeTrees": "prod4",
+    "MergeMetaData": "prod4",
+    "WriteHistograms": "prod11",
+    "MergeHistograms": "prod11",
+    "MeasureScaleFactors": "prod4",
+    "FitScaleFactors": "prod4",
 })

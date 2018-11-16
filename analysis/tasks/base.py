@@ -117,8 +117,8 @@ class ShiftTask(AnalysisTask):
 
 class WrapperTask(AnalysisTask, law.WrapperTask):
 
-    datasets = law.CSVParameter(default=[None], description="datasets to require")
-    shifts = law.CSVParameter(default=[None], description="shifts to require")
+    datasets = law.CSVParameter(default=[], description="datasets to require")
+    shifts = law.CSVParameter(default=[], description="shifts to require")
     skip_datasets = law.CSVParameter(default=[], description="datasets to skip, supports patterns")
     skip_shifts = law.CSVParameter(default=[], description="shifts to skip, supports patterns")
     grid_ces = law.CSVParameter(default=[], description="grid CEs to submit to, chosen randomly")
@@ -132,7 +132,7 @@ class WrapperTask(AnalysisTask, law.WrapperTask):
             self.datasets = self.get_default_datasets()
 
         if not self.shifts:
-            self.shifts = self.wrapped_task.shifts
+            self.shifts = self.get_default_shifts()
 
         if self.skip_datasets:
             filter_fn = lambda d: not law.util.multi_match(d, self.skip_datasets)
@@ -146,13 +146,13 @@ class WrapperTask(AnalysisTask, law.WrapperTask):
         return
 
     def get_default_datasets(self):
-        if isinstance(self.wrapped_task, DatasetTask):
+        if issubclass(self.wrapped_task, DatasetTask):
             return [dataset.name for dataset in self.config_inst.datasets]
         else:
             return [None]
 
     def get_default_shifts(self):
-        if isinstance(self.wrapped_task, ShiftTask):
+        if issubclass(self.wrapped_task, ShiftTask):
             return self.wrapped_task.shifts
         else:
             return [None]

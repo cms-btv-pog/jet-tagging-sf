@@ -3,9 +3,10 @@
 
 import os
 import array
+import itertools
 import numpy as np
 
-from collections import itertools, defaultdict
+from collections import defaultdict
 
 from analysis.tasks.base import ShiftTask
 from analysis.tasks.hists import MergeHistograms

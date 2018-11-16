@@ -102,18 +102,33 @@ class DatasetTask(AnalysisTask):
 
 class ShiftTask(AnalysisTask):
 
-    shift = luigi.Parameter(default="nominal", description="systematic shift to apply, default: nominal")
+    shift = luigi.Parameter(default="nominal", significant=False, description="systematic shift to apply, default: nominal")
+    effective_shift = luigi.Parameter(default=None)
 
     shifts = set()
 
+    exclude_params_req = {"effective_shift"}
+
     def __init__(self, *args, **kwargs):
         super(ShiftTask, self).__init__(*args, **kwargs)
-        if self.shift not in self.shifts:
-            raise ValueError("Unknown shift {}, options: {}".format(self.shift, list(self.shifts)))
 
     def store_parts(self):
-        return super(ShiftTask, self).store_parts() + (self.shift,)
+        return super(ShiftTask, self).store_parts() + (self.effective_shift,)
 
+    @classmethod
+    def modify_param_values(cls, params):
+        params = super(ShiftTask, cls).modify_param_values(params)
+        params = cls.get_effective_shift(params)
+        return params
+
+    @classmethod
+    def get_effective_shift(cls, params):
+        # if the task does not implement the provided shift, use the nominal one
+        if params["shift"] in cls.shifts:
+            params["effective_shift"] = params["shift"]
+        else:
+            params["effective_shift"] = "nominal"
+        return params
 
 class WrapperTask(AnalysisTask, law.WrapperTask):
 

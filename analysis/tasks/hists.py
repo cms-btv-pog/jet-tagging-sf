@@ -28,11 +28,19 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
 
     shifts = {"jes_up", "jes_down"} | {"{}_{}".format(shift, direction) for shift, direction in
         itertools.product(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1, hfstats2"], ["up", "down"])}
-    # TODO: For the first iteration, only the nomial and jes shifts should be run
 
     file_merging = "trees"
 
     workflow_run_decorators = [law.decorator.notify]
+
+    @classmethod
+    def get_effective_shift(cls, params):
+        params = super(WriteHistograms, cls).get_effective_shift(params)
+        if params["iteration"] == 0:
+            # For the first iteration, only the nominal and jes shifts should be run
+            if not (shift == "nominal" or shift.startswith("jes_")):
+                params["effective_shift"] = "nominal"
+        return params
 
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors

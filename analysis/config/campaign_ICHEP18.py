@@ -459,12 +459,42 @@ dataset_st_tW_tbar = od.Dataset(
     ],
 )
 
-dataset_WW_dl = od.Dataset(
-    "WW_dl", 401,
+# diboson
+dataset_WW = od.Dataset(
+    "WW", 401,
     campaign=campaign,
-    n_files=25,
+    n_files=93,
     keys=[
-        "/WWTo2L2Nu_NNPDF31_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
+        "/WW_TuneCP5_13TeV-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+)
+
+dataset_WZ = od.Dataset(
+    "WZ", 402,
+    campaign=campaign,
+    n_files=50,
+    keys=[
+        "/WZ_TuneCP5_13TeV-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+)
+
+dataset_ZZ = od.Dataset(
+    "ZZ", 403,
+    campaign=campaign,
+    n_files=23,
+    keys=[
+        "/ZZ_TuneCP5_13TeV-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+)
+
+# W+jets
+dataset_W_lep = od.Dataset(
+    "W_lep", 500,
+    campaign=campaign,
+    n_files=514+740,
+    keys=[
+        "/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
+        "/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v2/MINIAODSIM",
     ],
 )
 
@@ -502,5 +532,7 @@ dataset_st_t_t.add_process(process_st_t_t)
 dataset_st_t_tbar.add_process(process_st_t_tbar)
 dataset_st_tW_t.add_process(process_st_tW_t)
 dataset_st_tW_tbar.add_process(process_st_tW_tbar)
-#dataset_WW_sl.add_process(process_WW_sl)
-dataset_WW_dl.add_process(process_WW_dl)
+dataset_WW.add_process(process_WW)
+dataset_WZ.add_process(process_WZ)
+dataset_ZZ.add_process(process_ZZ)
+dataset_W_lep.add_process(process_W_lep)

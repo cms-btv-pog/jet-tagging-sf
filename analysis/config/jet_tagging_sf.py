@@ -42,7 +42,10 @@ cfg.add_process(process_dy_lep)
 cfg.add_process(process_st_s) # TODO: Include st process instead?
 cfg.add_process(process_st_t)
 cfg.add_process(process_st_tW)
-cfg.add_process(process_WW_dl)
+cfg.add_process(process_WW)
+cfg.add_process(process_WZ)
+cfg.add_process(process_ZZ)
+cfg.add_process(process_W_lep)
 
 # add datasets
 dataset_names = [
@@ -64,7 +67,8 @@ dataset_names = [
     "st_s_lep",
     "st_t_t", "st_t_tbar",
     "st_tW_t", "st_tW_tbar",
-    "WW_dl",
+    "WW", "WZ", "ZZ",
+    "W_lep",
 ]
 for dataset_name in dataset_names:
     dataset = campaign_ICHEP18.get_dataset(dataset_name)

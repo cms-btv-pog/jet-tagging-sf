@@ -12,7 +12,7 @@ Values taken from:
 import order as od
 import scinum as sn
 
-from analysis.config.constants import N_LEPS, BR_W_LEP, BR_WW_DL, BR_WW_SL
+from analysis.config.constants import N_LEPS, BR_W_LEP, BR_Z_CLEP, BR_WW_DL, BR_WW_SL
 
 
 process_data_ee = od.Process(
@@ -311,8 +311,15 @@ process_st_tW_tbar = process_st_tW.add_process(
     },
 )
 
-process_WW = od.Process(
-    "WW", 40,
+# diboson
+
+process_VV = od.Process(
+    "VV", 40,
+    label=r"VV + Jets",
+)
+
+process_WW = process_VV.add_process(
+    "WW", 410,
     label="WW",
     xsecs={
         13: sn.Number(118.7, {
@@ -323,15 +330,56 @@ process_WW = od.Process(
 )
 
 process_WW_dl = process_WW.add_process(
-    "WW_dl", 41,
+    "WW_dl", 411,
     xsecs={
         13: process_WW.get_xsec(13) * BR_WW_DL,
     },
 )
 
 process_WW_sl = process_WW.add_process(
-    "WW_sl", 42,
+    "WW_sl", 412,
     xsecs={
         13: process_WW.get_xsec(13) * BR_WW_SL,
+    },
+)
+
+process_WZ = process_VV.add_process(
+    "WZ", 420,
+    label="WZ",
+    xsecs={
+        13: sn.Number.add(
+            sn.Number(0.106, {
+                "scale": 0.0036,
+                "pdf": 0.0050,
+            }), sn.Number(0.0663, {
+                "scale": 0.0029,
+                "pdf": 0.0032,
+            }),
+            rho=1,
+        ) * N_LEPS / BR_W_LEP * N_LEPS / BR_Z_CLEP,
+    },
+)
+
+process_ZZ = process_VV.add_process(
+    "ZZ", 430,
+    label="ZZ",
+    xsecs={
+        13: sn.Number(0.0719, {
+            "scale": 0.0023,
+            "pdf": 0.0027,
+        }) * (N_LEPS / BR_Z_CLEP)**2 / 2.,
+    },
+)
+
+# W + jets
+
+process_W_lep = od.Process(
+    "W_lep", 50,
+    label="W + Jets, $W \rightarrow l \nu$",
+    xsecs={
+        13: sn.Number(20508.9, {
+            "scale": (165.7, 88.2),
+            "pdf": 770.9,
+        }) * N_LEPS,
     },
 )

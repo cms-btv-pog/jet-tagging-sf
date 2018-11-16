@@ -104,13 +104,13 @@ cfg.set_aux("btagger", {
 
 # flavor IDs for .csv result file
 cfg.set_aux("flavor_ids", { # TODO: c-tagging
-    "LF": 2,
-    "HF": 0,
+    "lf": 2,
+    "hf": 0,
 })
 
 # store binning information
 cfg.set_aux("binning", {
-    "LF": {
+    "lf": {
         "pt": [20, 30, 40, 60, np.inf],
         "abs(eta)": [0., 0.8, 1.6, 2.5],
         "deepcsv": {
@@ -124,7 +124,7 @@ cfg.set_aux("binning", {
             ],
         },
     },
-    "HF": {
+    "hf": {
         "pt": [20, 30, 50, 70, 100, np.inf],
         "abs(eta)": [0., 2.5],
         "deepcsv": {
@@ -186,8 +186,8 @@ def get_region_info(idx, channel, et_miss=30., z_window=10., add_btag_cut=True):
         lf_cuts.append("pass_z_mask == 0")
 
     return [
-        ("HF", join_root_selection(hf_cuts)),
-        ("LF", join_root_selection(lf_cuts)),
+        ("hf", join_root_selection(hf_cuts)),
+        ("lf", join_root_selection(lf_cuts)),
     ]
 
 def get_flavor_info(idx):
@@ -224,12 +224,12 @@ def get_axis_info(idx, axis_var, fmt=None):
         fmt = "jet{}_" + axis_var
 
     binning = cfg.get_aux("binning")
-    hf_bins = binning["HF"][axis_var]
-    lf_bins = binning["LF"][axis_var]
+    hf_bins = binning["hf"][axis_var]
+    lf_bins = binning["lf"][axis_var]
     variable = fmt.format(idx)
     return {
-        "HF": binning_to_selection(hf_bins, variable),
-        "LF": binning_to_selection(lf_bins, variable),
+        "hf": binning_to_selection(hf_bins, variable),
+        "lf": binning_to_selection(lf_bins, variable),
     }
 
 def get_category(pt, eta, region, phase_space="measure"):
@@ -287,17 +287,17 @@ for jet_idx in xrange(1, 5):
         unit="GeV",
         x_title="Jet_{} p_{{T}}".format(jet_idx),
     )
-    for region in [None, "HF", "LF"]:
+    for region in [None, "hf", "lf"]:
         if not region:
             binning = (25, 0., 1.)
             tags = set()
             postfix = ""
-        elif region == "HF":
-            binning = cfg.get_aux("binning")["HF"]["deepcsv"]["plotting"]
+        elif region == "hf":
+            binning = cfg.get_aux("binning")["hf"]["deepcsv"]["plotting"]
             tags = {"skip_LF"}
             postfix = "_HF"
-        elif region == "LF":
-            binning = cfg.get_aux("binning")["LF"]["deepcsv"]["plotting"]
+        elif region == "lf":
+            binning = cfg.get_aux("binning")["lf"]["deepcsv"]["plotting"]
             tags = {"skip_HF"}
             postfix = "_LF"
 
@@ -331,7 +331,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
         for rg_name, rg_sel in get_region_info(1, ch, add_btag_cut=False):
             # we skip the emu channel in the lf region because the DY (the main contribution)
             # should have same-flavored leptons
-            if rg_name == "LF" and ch == ch_emu:
+            if rg_name == "lf" and ch == ch_emu:
                 continue
 
             rg_cat_combined = ch.add_category(
@@ -365,7 +365,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
             # region loop (hf, lf, ...)
             for rg_name, rg_sel in get_region_info(i_tag_jet, ch):
-                if rg_name == "LF" and ch == ch_emu:
+                if rg_name == "lf" and ch == ch_emu:
                     continue
 
                 rg_cat = ch.add_category(

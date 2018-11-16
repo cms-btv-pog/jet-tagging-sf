@@ -137,7 +137,7 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
 
                 # find category in which the scale factor of the jet was computed to get correct histogram
                 # TODO: Handle c-jets
-                region = "HF" if abs(jet_flavor) in (4, 5) else "LF"
+                region = "hf" if abs(jet_flavor) in (4, 5) else "lf"
                 category = get_category(jet_pt, abs(jet_eta), region, phase_space="measure")
 
                 # get scale factor
@@ -269,9 +269,9 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
                                     # apply scale factors only for contamination
                                     if phase_space == "measure" and not self.final_it:
                                         weights.append("scale_factor_c")
-                                        if region == "HF":
+                                        if region == "hf":
                                             weights.append("scale_factor_lf")
-                                        elif region == "LF":
+                                        elif region == "lf":
                                             weights.append("scale_factor_hf")
                                         else:
                                             raise ValueError("Unexpected region {}".format(region))

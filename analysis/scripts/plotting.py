@@ -60,7 +60,7 @@ class PlotFromCSV(PlotTask):
                 "iterativefit"      # measurement type
             )
 
-        flavors = {"LF": 2, "HF": 0}
+        flavors = {"lf": 2, "hf": 0}
         binning = self.config_inst.get_aux("binning")
 
         with inp["sf"].load("r") as input_file:

@@ -41,9 +41,9 @@ class MeasureScaleFactors(ShiftTask):
         Depending on the region, c jets are counted for either the ``"heavy"`` or the ``"light"``
         flavor component.
         """
-        if region == "HF":
+        if region == "hf":
             return "heavy" if flavor == "b" else "light"
-        elif region == "LF":
+        elif region == "lf":
             return "light" if flavor == "udsg" else "heavy"
         else:
             raise ValueError("unexpected region %s" % region)
@@ -85,7 +85,7 @@ class MeasureScaleFactors(ShiftTask):
         # create n-d histograms to hold all scale factors for lf/hf jets
         binning = self.config_inst.get_aux("binning")
         sf_hists_nd = {}
-        for region in ["LF", "HF"]:
+        for region in ["lf", "hf"]:
             eta_edges = array.array("d", binning[region]["abs(eta)"])
             pt_edges = array.array("d", binning[region]["pt"])
             btag_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
@@ -188,10 +188,10 @@ class MeasureScaleFactors(ShiftTask):
                     contamination_scales = self.config_inst.get_aux("contamination_factors")
                     contamination_factor = contamination_scales[self.shift]
                     # scale light flavour contamination in heavy flavour region
-                    if self.shift.split("_")[0] == "lf" and region == "HF":
+                    if self.shift.split("_")[0] == "lf" and region == "hf":
                         lf_hist.Scale(contamination_factor)
                     # scale heavy flavour contamination in light flavour region
-                    elif self.shift.split("_")[0] == "hf" and region == "LF":
+                elif self.shift.split("_")[0] == "hf" and region == "lf":
                         hf_hist.Scale(contamination_factor)
 
                 # normalize MC histograms
@@ -202,10 +202,10 @@ class MeasureScaleFactors(ShiftTask):
                 # subtract lf contamination from hf and vice versa
                 # and do the actual division to compute scale factors
                 # (this is where the physics happens)
-                if region == "HF":
+                if region == "hf":
                     sf_hist.Add(lf_hist, -1.)
                     sf_hist.Divide(hf_hist)
-                elif region == "LF":
+                elif region == "lf":
                     sf_hist.Add(hf_hist, -1.)
                     sf_hist.Divide(lf_hist)
 
@@ -215,7 +215,7 @@ class MeasureScaleFactors(ShiftTask):
                 )]
                 if self.shift in stat_uncertainties:
                     shift_flavor, shift_type, shift_direction = self.shift.split("_")
-                    if shift_flavor == region.lower(): # TODO: Consistency upper/lower case
+                    if shift_flavor == region:
                         nbins = sf_hist.GetNbinsX()
                         for bin_idx in range(1, nbins + 1):
                             bin_center = sf_hist.GetBinCenter(bin_idx)
@@ -322,7 +322,7 @@ class FitScaleFactors(MeasureScaleFactors):
                 x_axis = hist.GetXaxis()
                 interpolation_hist = ROOT.TH1D(hist.GetName() + "_fine", hist.GetTitle(),
                     interpolation_bins, x_axis.GetXmin(), x_axis.GetXmax())
-                if region == "LF":
+                if region == "lf":
                     fit_function = fit_func_pol6()
                     # perform fit
                     hist.Fit(fit_function, "+mrNQ0S")
@@ -331,7 +331,7 @@ class FitScaleFactors(MeasureScaleFactors):
                     # (centers of second and second to last bin)
                     first_point = hist.GetBinCenter(2)
                     last_point = hist.GetBinCenter(nbins - 1)
-                elif region == "HF":
+                elif region == "hf":
                     x_values = ROOT.vector("double")()
                     y_values = ROOT.vector("double")()
                     for bin_idx in range(1, nbins + 1):
@@ -374,10 +374,10 @@ class FitScaleFactors(MeasureScaleFactors):
                         interpolator.Eval(first_point)))
 
                     # intermediate functions
-                    if region == "LF":
+                    if region == "lf":
                         fit_results.append(fit_results_tpl + ", {}, {}, {}".format(first_point,
                             last_point, str(interpolator.GetExpFormula("p"))))
-                    elif region == "HF":  # piecewise linear function
+                    elif region == "hf":  # piecewise linear function
                         for bin_idx in range(1, nbins):
                             if hist.GetBinCenter(bin_idx) < first_point:
                                 continue

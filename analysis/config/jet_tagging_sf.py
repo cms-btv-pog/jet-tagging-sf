@@ -576,14 +576,13 @@ cfg.set_aux("min_bias_xs", sn.Number(69.2, (sn.Number.REL, 0.046)))  # mb
 # file merging information (stage -> dataset -> files after merging)
 cfg.set_aux("file_merging", {
     "trees": {
-        "tt_dl": 49,
-        "dy_lep_50ToInf_Ht70To100": 5,
-        "dy_lep_50ToInf_Ht100To200": 10,
-        "dy_lep_50ToInf_Ht200To400": 9,
-        "dy_lep_50ToInf_Ht400To600": 10,
-        "dy_lep_50ToInf_Ht600To800": 8,
-        "dy_lep_50ToInf_Ht800To1200": 3,
-        "dy_lep_50ToInf": 7,
+        "tt_dl": 105,
+        "tt_sl": 155,
+        "dy_lep_50ToInf": 41,
+        "st_s_lep": 3,
+        "st_tW_t": 4,
+        "st_tW_tbar": 4,
+        "W_lep": 2,
     }
 })
 

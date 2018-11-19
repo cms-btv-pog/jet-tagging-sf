@@ -185,14 +185,14 @@ class MeasureScaleFactors(ShiftTask):
                 sf_hist = data_hist.Clone("sf_{}".format(category.name))
 
                 # systematic shift for purity uncertainty (contamination)
-                if self.shift in ["lf_up", "lf_down", "hf_up", "hf_down"]:
+                if self.effective_shift in ["lf_up", "lf_down", "hf_up", "hf_down"]:
                     contamination_scales = self.config_inst.get_aux("contamination_factors")
-                    contamination_factor = contamination_scales[self.shift]
+                    contamination_factor = contamination_scales[self.effective_shift]
                     # scale light flavour contamination in heavy flavour region
-                    if self.shift.split("_")[0] == "lf" and region == "hf":
+                    if self.effective_shift.split("_")[0] == "lf" and region == "hf":
                         lf_hist.Scale(contamination_factor)
                     # scale heavy flavour contamination in light flavour region
-                elif self.shift.split("_")[0] == "hf" and region == "lf":
+                elif self.effective_shift.split("_")[0] == "hf" and region == "lf":
                         hf_hist.Scale(contamination_factor)
 
                 # normalize MC histograms
@@ -214,8 +214,8 @@ class MeasureScaleFactors(ShiftTask):
                 stat_uncertainties = ["{}_stats{}_{}".format(*tpl) for tpl in itertools.product(
                     ["lf", "hf"], ["1", "2"], ["up", "down"]
                 )]
-                if self.shift in stat_uncertainties:
-                    shift_flavor, shift_type, shift_direction = self.shift.split("_")
+                if self.effective_shift in stat_uncertainties:
+                    shift_flavor, shift_type, shift_direction = self.effective_shift.split("_")
                     if shift_flavor == region:
                         nbins = sf_hist.GetNbinsX()
                         for bin_idx in range(1, nbins + 1):

@@ -19,35 +19,16 @@ from analysis.tasks.external import CalculatePileupWeights
 from analysis.util import TreeExtender
 
 
-class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
+class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     iteration = luigi.IntParameter(default=0, description="iteration of the scale factor "
         "calculation, starting at zero, default: 0")
     final_it = luigi.BoolParameter(description="Flag for the final iteration of the scale factor "
         "calculation.")
 
-    # systematic shifts (JES shifts are added in get_param_values)
-    shifts = {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
-        jes_sources, ["up", "down"])} | \
-        {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
-            ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1, hf_stats2"], ["up", "down"])}
-
     file_merging = "trees"
 
     workflow_run_decorators = [law.decorator.notify]
-
-    @classmethod
-    def get_effective_shift(cls, params):
-        params = super(WriteHistograms, cls).get_effective_shift(params)
-        if "iteration" not in params:
-            return params
-        if params["iteration"] == 0:
-            # For the first iteration, only the nominal and jes shifts should be run
-            if not params["shift"].startswith("jes"):
-                params["effective_shift"] = "nominal"
-        if params["dataset"].startswith("data_"): # TODO: Ask for dataset.is_data instead
-            params["effective_shift"] = "nominal"
-        return params
 
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors
@@ -90,6 +71,12 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
     def output(self):
         return self.wlcg_target("hists_{}.root".format(self.branch))
 
+    def get_jec_identifier(self, shift):
+        if shift.startswith("jes"):
+            return "_" + shift
+        else:
+            return ""
+
     def get_pileup_weighter(self, inp):
         with inp.load() as pu_file:
             pu_hist = pu_file.Get("pileup_weights")
@@ -113,8 +100,8 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
 
         return add_branch, add_value
 
-    def get_scale_factor_weighter(self, inp):
-        with inp.load() as sfs:
+    def get_scale_factor_weighter(self, inp, shift):
+        with inp.load() as sfs: # TODO: load histograms according to shift
             sf_hists = {}
             for category in sfs.GetListOfKeys():
                 category_dir = sfs.Get(category.GetName())
@@ -125,26 +112,28 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
                 sf_hists[category.GetName()] = hist
 
         btag_var = self.config_inst.get_aux("btagger")["variable"]
+        identifier = self.get_jec_identifier(shift)
 
         def add_branch(extender):
             unpack_vars = sum(
-                [["jet{}_pt".format(idx), "jet{}_flavor".format(idx), "jet{}_eta".format(idx),
-                "jet{}_{}".format(idx, btag_var)] for idx in range(1, 5)],
+                [["jet{}_pt{}".format(idx, identifier), "jet{}_flavor{}".format(idx, identifier),
+                "jet{}_eta{}".format(idx, identifier), "jet{}_{}{}".format(idx, btag_var, identifier)]
+                for idx in range(1, 5)],
                 []
             )
-            extender.add_branch("scale_factor_lf", unpack=unpack_vars)
-            extender.add_branch("scale_factor_c", unpack=unpack_vars)
-            extender.add_branch("scale_factor_hf", unpack=unpack_vars)
+            extender.add_branch("scale_factor_lf_{}".format(shift), unpack=unpack_vars)
+            extender.add_branch("scale_factor_c_{}".format(shift), unpack=unpack_vars)
+            extender.add_branch("scale_factor_hf_{}".format(shift), unpack=unpack_vars)
 
         def add_value(entry):
             scale_factor_lf = 1.
             scale_factor_c = 1.
             scale_factor_hf = 1.
             for jet_idx in range(1, 5):
-                jet_pt = getattr(entry, "jet{}_pt".format(jet_idx))[0]
-                jet_eta = getattr(entry, "jet{}_eta".format(jet_idx))[0]
-                jet_flavor = getattr(entry, "jet{}_flavor".format(jet_idx))[0]
-                jet_btag = getattr(entry, "jet{}_{}".format(jet_idx, btag_var))[0]
+                jet_pt = getattr(entry, "jet{}_pt{}".format(jet_idx, identifier))[0]
+                jet_eta = getattr(entry, "jet{}_eta{}".format(jet_idx, identifier))[0]
+                jet_flavor = getattr(entry, "jet{}_flavor{}".format(jet_idx, identifier))[0]
+                jet_btag = getattr(entry, "jet{}_{}{}".format(jet_idx, btag_var, identifier))[0]
 
                 # stop when number of jets is exceeded
                 if jet_flavor < -999.:
@@ -167,9 +156,9 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
                 else:
                     scale_factor_lf *= scale_factor
 
-            entry.scale_factor_lf[0] = scale_factor_lf
-            entry.scale_factor_c[0] = scale_factor_c
-            entry.scale_factor_hf[0] = scale_factor_hf
+            getattr(entry, "scale_factor_lf_{}".format(shift))[0] = scale_factor_lf
+            getattr(entry, "scale_factor_c_{}".format(shift))[0] = scale_factor_c
+            getattr(entry, "scale_factor_hf_{}".format(shift))[0] = scale_factor_hf
 
         return add_branch, add_value
 
@@ -200,6 +189,13 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
         # build a progress callback
         progress = self.create_progress_callback(len(categories))
 
+        # set shifts
+        shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
+            jes_sources, ["up", "down"])}
+        if self.iteration > 0:
+            shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1, hf_stats2"], ["up", "down"])}
+
         # open the output file
         with outp.localize("w") as tmp:
             with tmp.dump("RECREATE") as output_file:
@@ -221,21 +217,23 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
                     self.publish_message("{} events in tree".format(tree.GetEntries()))
 
                     # identifier for jec shifted variables
-     	            if self.effective_shift.startswith("jes"):
-                        jec_identifier = "_" + self.effective_shift
-       	       	    else:
-       	       	        jec_identifier = ""
+                    for shift in shifts:
+                        jec_identifier = self.get_jec_identifier(shift)
 
-                    # pt and eta aliases for jets and leptons
-                    for obj in ["jet1", "jet2", "jet3", "jet4", "lep1", "lep2"]:
-                        identifier = jec_identifier if obj.startswith("jet") else ""
+                        # pt aliases for jets
+                        for obj in ["jet1", "jet2", "jet3", "jet4"]:
+                            tree.SetAlias("{0}_pt{1}".format(obj, jec_identifier),
+                                "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, jec_identifier))
+                        # b-tagging alias
+                        btag_var = self.config_inst.get_aux("btagger")["variable"]
+                        for obj in ["jet1", "jet2"]: #, "jet3", "jet4"]:
+                            variable = self.config_inst.get_variable("{0}_{1}".format(obj, btag_var))
+                            tree.SetAlias(variable.name + jec_identifier, variable.expression.format(
+                                **{"jec_identifier": jec_identifier}))
+                    # pt aliases for leptons
+                    for obj in ["lep1", "lep2"]:
                         tree.SetAlias("{0}_pt".format(obj),
-                            "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, identifier))
-                    # b-tagging alias
-                    btag_var = self.config_inst.get_aux("btagger")["variable"]
-                    for obj in ["jet1", "jet2", "jet3", "jet4"]:
-                        variable = self.config_inst.get_variable("{0}_{1}".format(obj, btag_var))
-                        tree.SetAlias(variable.name, variable.expression)
+                            "({0}_px**2 + {0}_py**2)**0.5".format(obj))
 
                     # extend the tree
                     if self.dataset_inst.is_mc:
@@ -248,8 +246,10 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
                             # weights from previous iterations
                             if self.iteration > 0:
                                 # b-tagging scale factors
-                                weighters.append(self.get_scale_factor_weighter(
-                                    inp["sf"]["sf"]))
+                                for shift in shifts:
+                                    jec_identifier = self.get_jec_identifier(shift)
+                                    weighters.append(self.get_scale_factor_weighter(
+                                        inp["sf"]["sf"], jec_identifier))
 
                             input_file.cd()
                             with TreeExtender(tree) as te:
@@ -269,70 +269,76 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
                         region = category.get_aux("region", None)
 
                         for process in processes:
-                            # weights
-                            weights = []
-                            if self.dataset_inst.is_mc:
-                                weights.append("gen_weight")
-                                # lumi weight
-                                lumi = self.config_inst.get_aux("lumi")[channel]
-                                x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal
-                                sum_weights = inp["meta"].load()["event_weights"]["sum"]
-                                lumi_weight = lumi * x_sec / sum_weights
-                                weights.append(str(lumi_weight))
+                            for shift in shifts:
+                                jec_identifier = self.get_jec_identifier(shift)
+                                # weights
+                                weights = []
+                                if self.dataset_inst.is_mc:
+                                    weights.append("gen_weight")
+                                    # lumi weight
+                                    lumi = self.config_inst.get_aux("lumi")[channel]
+                                    x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal
+                                    sum_weights = inp["meta"].load()["event_weights"]["sum"]
+                                    lumi_weight = lumi * x_sec / sum_weights
+                                    weights.append(str(lumi_weight))
 
-                                # pu weight
-                                weights.append("pu_weight")
+                                    # pu weight
+                                    weights.append("pu_weight")
 
-                                # channel scale weight
-                                if self.iteration > 0:
-                                    # b-tag scale factor weights
-                                    phase_space = category.get_aux("phase_space", None)
-                                    # In measurement categories,
-                                    # apply scale factors only for contamination
-                                    if phase_space == "measure" and not self.final_it:
-                                        weights.append("scale_factor_c")
-                                        if region == "hf":
-                                            weights.append("scale_factor_lf")
-                                        elif region == "lf":
-                                            weights.append("scale_factor_hf")
+                                    # channel scale weight
+                                    if self.iteration > 0:
+                                        # b-tag scale factor weights
+                                        phase_space = category.get_aux("phase_space", None)
+                                        # In measurement categories,
+                                        # apply scale factors only for contamination
+                                        if phase_space == "measure" and not self.final_it:
+                                            weights.append("scale_factor_c_{}".format(shift))
+                                            if region == "hf":
+                                                weights.append("scale_factor_lf_{}".format(shift))
+                                            elif region == "lf":
+                                                weights.append("scale_factor_hf_{}".format(shift))
+                                            else:
+                                                raise ValueError("Unexpected region {}".format(region))
                                         else:
-                                            raise ValueError("Unexpected region {}".format(region))
-                                    else:
-                                        weights.append("scale_factor_lf")
-                                        weights.append("scale_factor_c")
-                                        weights.append("scale_factor_hf")
+                                            weights.append("scale_factor_lf_{}".format(shift))
+                                            weights.append("scale_factor_c_{}".format(shift))
+                                            weights.append("scale_factor_hf_{}".format(shift))
 
-                            # totalWeight alias
-                            while len(weights) < 2:
-                                weights.insert(0, "1")
-                            tree.SetAlias("totalWeight", join_root_selection(weights, op="*"))
+                                # totalWeight alias
+                                while len(weights) < 2:
+                                    weights.insert(0, "1")
+                                tree.SetAlias("totalWeight", join_root_selection(weights, op="*"))
 
-                            # change into the correct directory
-                            process_dirs[(category.name, process.name)].cd()
+                                # change into the correct directory
+                                process_dirs[(category.name, process.name)].cd()
 
-                            # actual projecting
-                            for variable in self.config_inst.variables:
-                                if region and variable.has_tag("skip_{}".format(region)):
-                                    continue
+                                # actual projecting
+                                for variable in self.config_inst.variables:
+                                    if region and variable.has_tag("skip_{}".format(region)):
+                                        continue
 
-                                hist = ROOT.TH1F(variable.name, variable.full_title(root=True),
-                                    variable.n_bins, array.array("f", variable.bin_edges))
-                                hist.Sumw2()
+                                    hist = ROOT.TH1F("{}_{}".format(variable.name, shift),
+                                        variable.full_title(root=True), variable.n_bins,
+                                        array.array("f", variable.bin_edges))
+                                    hist.Sumw2()
 
-                                # build the full selection string, including the total event weight
-                                selection = [
-                                    category.selection,
-                                    "jetmet_pass{} == 1".format(jec_identifier),
-                                    "{} != -10000".format(variable.expression),
-                                ]
-                                if variable.selection:
-                                    selection.append(variable.selection)
-                                selection = join_root_selection(selection)
-                                selection = join_root_selection(selection, "totalWeight", op="*")
+                                    # build the full selection string, including the total event weight
+                                    selection = [
+                                        category.selection,
+                                        "jetmet_pass{jec_identifier} == 1",
+                                        "{} != -10000".format(variable.expression),
+                                    ]
+                                    if variable.selection:
+                                        selection.append(variable.selection)
+                                    selection = join_root_selection(selection).format(
+                                        **{"jec_identifier": jec_identifier})
+                                    selection = join_root_selection(selection, "totalWeight", op="*")
 
-                                # project and write the histogram
-                                tree.Project(variable.name, variable.expression, selection)
-                                hist.Write()
+                                    # project and write the histogram
+                                    tree.Project("{}_{}".format(variable.name, shift),
+                                        variable.expression.format(**{"jec_identifier": jec_identifier}),
+                                        selection)
+                                    hist.Write()
 
                         progress(i)
 
@@ -346,7 +352,6 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
 
     iteration = WriteHistograms.iteration
     final_it = WriteHistograms.final_it
-    shifts = WriteHistograms.shifts
 
     merge_factor = 12
 

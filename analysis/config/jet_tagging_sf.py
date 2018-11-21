@@ -162,8 +162,8 @@ cfg.set_aux("contamination_factors", {
 # define nested categories (analysis phase space -> hf/lf region -> flavor -> pt bin -> eta bin)
 def get_phasespace_info():
     return [
-        ("measure", join_root_selection(["n_jets == 2", "mll > 12", "dr_ll > 0.2"])),
-        ("closure", join_root_selection(["n_jets >= 2", "mll > 12", "dr_ll > 0.2"])),
+        ("measure", join_root_selection(["n_jets{jec_identifier} == 2", "mll > 12", "dr_ll > 0.2"])),
+        ("closure", join_root_selection(["n_jets{jec_identifier} >= 2", "mll > 12", "dr_ll > 0.2"])),
     ]
 
 def get_region_info(idx, channel, et_miss=30., z_window=10., add_btag_cut=True):
@@ -192,7 +192,7 @@ def get_region_info(idx, channel, et_miss=30., z_window=10., add_btag_cut=True):
         lf_cuts.append("abs(mll - {}) < {}".format(Z_MASS.nominal, z_window))
 
         # z peak diamond
-        lf_cuts.append("pass_z_mask == 0")
+        lf_cuts.append("pass_z_mask{jec_identifier} == 0")
 
     return [
         ("hf", join_root_selection(hf_cuts)),
@@ -273,29 +273,29 @@ def get_category(pt, eta, region, phase_space="measure"):
 #    binning=(25, 0., 5.,),
 #    x_title="dR(ll)",
 #)
-cfg.add_variable(
-    name="n_jets",
-    expression="n_jets",
-    binning=(10, 0., 10.,),
-    x_title="N(jets)",
-)
-for lep_idx in xrange(1, 3):
-    cfg.add_variable(
-        name="lep{}_pt".format(lep_idx),
-        expression="(lep{}_px**2 + lep{}_py**2)**0.5".format(lep_idx, lep_idx),
-        binning=(25, 0., 500.,),
-        unit="GeV",
-        x_title="Lep_{} p_{{T}}".format(lep_idx),
-    )
+#cfg.add_variable(
+#    name="n_jets",
+#    expression="n_jets",
+#    binning=(10, 0., 10.,),
+#    x_title="N(jets)",
+#)
+#for lep_idx in xrange(1, 3):
+#    cfg.add_variable(
+#        name="lep{}_pt".format(lep_idx),
+#        expression="(lep{}_px**2 + lep{}_py**2)**0.5".format(lep_idx, lep_idx),
+#        binning=(25, 0., 500.,),
+#        unit="GeV",
+#        x_title="Lep_{} p_{{T}}".format(lep_idx),
+#    )
 
-for jet_idx in xrange(1, 5):
-    cfg.add_variable(
-        name="jet{}_pt".format(jet_idx),
-        expression="jet{}_pt".format(jet_idx),
-        binning=(25, 0., 500.,),
-        unit="GeV",
-        x_title="Jet_{} p_{{T}}".format(jet_idx),
-    )
+for jet_idx in xrange(1, 3):
+    #cfg.add_variable(
+    #    name="jet{}_pt".format(jet_idx),
+    #    expression="jet{}_pt".format(jet_idx),
+    #    binning=(25, 0., 500.,),
+    #    unit="GeV",
+    #    x_title="Jet_{} p_{{T}}".format(jet_idx),
+    #)
     for region in [None, "hf", "lf"]:
         if not region:
             binning = (25, 0., 1.)
@@ -310,23 +310,23 @@ for jet_idx in xrange(1, 5):
             tags = {"skip_HF"}
             postfix = "_LF"
 
-        cfg.add_variable(
-            name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
-            expression="jet{}_deepcsv_b".format(jet_idx),
-            binning=binning,
-            x_title="Jet_{} prob_{{b}}".format(jet_idx),
-            tags=tags,
-        )
-        cfg.add_variable(
-            name="jet{}_deepcsv_bb{}".format(jet_idx, postfix),
-            expression="jet{}_deepcsv_bb".format(jet_idx),
-            binning=binning,
-            x_title="Jet_{} prob_{{bb}}".format(jet_idx),
-            tags=tags,
-        )
+        #cfg.add_variable(
+        #    name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
+        #    expression="jet{}_deepcsv_b".format(jet_idx),
+        #    binning=binning,
+        #    x_title="Jet_{} prob_{{b}}".format(jet_idx),
+        #    tags=tags,
+        #)
+        #cfg.add_variable(
+        #    name="jet{}_deepcsv_bb{}".format(jet_idx, postfix),
+        #    expression="jet{}_deepcsv_bb".format(jet_idx),
+        #    binning=binning,
+        #    x_title="Jet_{} prob_{{bb}}".format(jet_idx),
+        #    tags=tags,
+        #)
         cfg.add_variable(
             name="jet{}_deepcsv_bcomb{}".format(jet_idx, postfix),
-            expression="jet{0}_deepcsv_b + jet{0}_deepcsv_bb".format(jet_idx),
+            expression="jet{0}_deepcsv_b{{jec_identifier}} + jet{0}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
             binning=binning,
             x_title="Jet_{} prob_{{b+bb}}".format(jet_idx),
             tags=tags,

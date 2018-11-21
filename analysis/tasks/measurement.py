@@ -16,7 +16,7 @@ class MeasureScaleFactors(ShiftTask):
 
     iteration = MergeHistograms.iteration
 
-    shifts = MergeHistograms.shifts
+    shifts = {} #TODO
 
     def requires(self):
         reqs = {
@@ -101,7 +101,7 @@ class MeasureScaleFactors(ShiftTask):
         with inp["hist"].load("r") as input_file:
             # get scale factor to scale MC (withouts b-tag SFs) to data per channel
             if self.iteration == 0:
-                variable_name = "jet1_pt"
+                variable_name = "jet1_deepcsv_bcomb"
                 scales = defaultdict(dict)
                 for channel, region_categories in scale_categories.items():
                     for region, category in region_categories.items():

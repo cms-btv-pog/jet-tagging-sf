@@ -222,8 +222,12 @@ class MeasureScaleFactors(ShiftTask):
                             bin_center = sf_hist.GetBinCenter(bin_idx)
                             bin_content = sf_hist.GetBinContent(bin_idx)
                             bin_error = sf_hist.GetBinError(bin_idx)
+                            # handle csv values smaller than 0
+                            if bin_center < 0.:
+                                bin_center = 0.
+
                             if shift_type == "stats1":
-                                shift_value = bin_error * (1. - 2 * bin_center)# TODO: Bin at CSV < 0
+                                shift_value = bin_error * (1. - 2 * bin_center)
                             elif shift_type == "stats2":
                                 shift_value = bin_error * (1. - 6 * bin_center * (1. - bin_center))
                             else:

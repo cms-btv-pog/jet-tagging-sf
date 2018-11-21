@@ -45,6 +45,8 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
             # For the first iteration, only the nominal and jes shifts should be run
             if not params["shift"].startswith("jes"):
                 params["effective_shift"] = "nominal"
+        if params["dataset"].startswith("data_"): # TODO: Ask for dataset.is_data instead
+            params["effective_shift"] = "nominal"
         return params
 
     def workflow_requires(self):
@@ -226,7 +228,7 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
 
                     # pt and eta aliases for jets and leptons
                     for obj in ["jet1", "jet2", "jet3", "jet4", "lep1", "lep2"]:
-                        identifier = jec_identifier if obj.startswith("jet") else ""   
+                        identifier = jec_identifier if obj.startswith("jet") else ""
                         tree.SetAlias("{0}_pt".format(obj),
                             "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, identifier))
                     # b-tagging alias

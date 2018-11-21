@@ -190,7 +190,16 @@ class WrapperTask(AnalysisTask, law.WrapperTask):
 
             return cls.req(self, **kwargs)
 
-        params_list = itertools.product(self.datasets, self.shifts)
+        # get parameters, require shifts only for MC
+        params_list = []
+        for dataset in self.datasets:
+            for shift in self.shifts:
+                if dataset is not None and shift is not None:
+                    # require shifts only for MC
+                    if self.config_inst.get_dataset(dataset).is_data and shift != "nominal":
+                        continue
+                params_list.append((dataset, shift))
+
         return collections.OrderedDict([(params, req(*params)) for params in params_list])
 
 

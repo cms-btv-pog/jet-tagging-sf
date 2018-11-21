@@ -190,11 +190,14 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         progress = self.create_progress_callback(len(categories))
 
         # set shifts
-        shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
-            jes_sources, ["up", "down"])}
-        if self.iteration > 0:
-            shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1, hf_stats2"], ["up", "down"])}
+        if self.dataset_inst.is_data:
+            shifts = {"nominal"}
+        else:
+            shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                jes_sources, ["up", "down"])}
+            if self.iteration > 0:
+                shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                    ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1, hf_stats2"], ["up", "down"])}
 
         # open the output file
         with outp.localize("w") as tmp:

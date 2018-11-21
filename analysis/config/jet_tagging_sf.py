@@ -82,6 +82,15 @@ ch_mumu = cfg.add_channel("mumu", 3)
 ch_e = cfg.add_channel("e", 4)
 ch_mu = cfg.add_channel("mu", 5)
 
+# define configurations that are not part of a config
+jes_sources = [
+    "AbsoluteStat", "AbsoluteScale", "AbsoluteMPFBias", "Fragmentation", "SinglePionECAL",
+    "SinglePionHCAL", "FlavorQCD", "TimePtEta", "RelativeJEREC1", "RelativeJEREC2", "RelativeJERHF",
+    "RelativePtBB", "RelativePtEC1", "RelativePtEC2", "RelativePtHF", "RelativeBal", "RelativeFSR",
+    "RelativeStatFSR", "RelativeStatEC", "RelativeStatHF", "PileUpDataMC", "PileUpPtRef",
+    "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", #"Total",
+]
+
 # store channels per real dataset
 cfg.set_aux("dataset_channels", {
     dataset: cfg.get_channel(dataset.name.split("_")[-1])
@@ -361,6 +370,10 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                 rg_merged_cat = cfg.get_category(rg_merged_name)
             rg_merged_cat.add_category(rg_cat_combined)
 
+        # TODO: Only for fast calculation now, remove later
+        if ps_name == "closure":
+            continue
+
         # loop over both jet1 jet2 permutations
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
             # region loop (hf, lf, ...)
@@ -539,14 +552,6 @@ cfg.set_aux("jes_levels", {
     "data": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
     "mc": ["L1FastJet", "L2Relative", "L3Absolute"],
 })
-
-cfg.set_aux("jes_sources", [
-    "AbsoluteStat", "AbsoluteScale", "AbsoluteMPFBias", "Fragmentation", "SinglePionECAL",
-    "SinglePionHCAL", "FlavorQCD", "TimePtEta", "RelativeJEREC1", "RelativeJEREC2", "RelativeJERHF",
-    "RelativePtBB", "RelativePtEC1", "RelativePtEC2", "RelativePtHF", "RelativeBal", "RelativeFSR",
-    "RelativeStatFSR", "RelativeStatEC", "RelativeStatHF", "PileUpDataMC", "PileUpPtRef",
-    "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
-])
 
 cfg.set_aux("pileup_mc", [
     3.39597497605e-05, 6.63688402133e-06, 1.39533611284e-05, 3.64963078209e-05, 6.00872171664e-05,

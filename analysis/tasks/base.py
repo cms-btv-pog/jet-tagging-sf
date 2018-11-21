@@ -123,6 +123,8 @@ class ShiftTask(AnalysisTask):
 
     @classmethod
     def get_effective_shift(cls, params):
+        if "shift" not in params:
+            return params
         # if the task does not implement the provided shift, use the nominal one
         if params["shift"] in cls.shifts:
             params["effective_shift"] = params["shift"]

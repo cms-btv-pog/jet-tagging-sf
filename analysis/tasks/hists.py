@@ -12,7 +12,7 @@ import six
 import numpy as np
 from order.util import join_root_selection
 
-from analysis.config.jet_tagging_sf import get_category
+from analysis.config.jet_tagging_sf import get_category, jes_sources
 from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
@@ -26,8 +26,11 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
     final_it = luigi.BoolParameter(description="Flag for the final iteration of the scale factor "
         "calculation.")
 
-    shifts = {"jes_up", "jes_down"} | {"{}_{}".format(shift, direction) for shift, direction in
-        itertools.product(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1, hfstats2"], ["up", "down"])}
+    # systematic shifts (JES shifts are added in get_param_values)
+    shifts = {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
+        jes_sources, ["up", "down"])} | \
+        {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
+            ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1, hf_stats2"], ["up", "down"])}
 
     file_merging = "trees"
 
@@ -36,9 +39,11 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
     @classmethod
     def get_effective_shift(cls, params):
         params = super(WriteHistograms, cls).get_effective_shift(params)
+        if "iteration" not in params:
+            return params
         if params["iteration"] == 0:
             # For the first iteration, only the nominal and jes shifts should be run
-            if not (shift == "nominal" or shift.startswith("jes_")):
+            if not params["shift"].startswith("jes"):
                 params["effective_shift"] = "nominal"
         return params
 
@@ -213,10 +218,17 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
                     tree = input_file.Get("tree")
                     self.publish_message("{} events in tree".format(tree.GetEntries()))
 
+                    # identifier for jec shifted variables
+     	            if self.effective_shift.startswith("jes"):
+                        jec_identifier = "_" + self.effective_shift
+       	       	    else:
+       	       	        jec_identifier = ""
+
                     # pt and eta aliases for jets and leptons
                     for obj in ["jet1", "jet2", "jet3", "jet4", "lep1", "lep2"]:
+                        identifier = jec_identifier if obj.startswith("jet") else ""   
                         tree.SetAlias("{0}_pt".format(obj),
-                            "({0}_px**2 + {0}_py**2)**0.5".format(obj))
+                            "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, identifier))
                     # b-tagging alias
                     btag_var = self.config_inst.get_aux("btagger")["variable"]
                     for obj in ["jet1", "jet2", "jet3", "jet4"]:
@@ -308,7 +320,7 @@ class WriteHistograms(DatasetTask, ShiftTask, GridWorkflow, law.LocalWorkflow):
                                 # build the full selection string, including the total event weight
                                 selection = [
                                     category.selection,
-                                    "jetmet_pass == 1",
+                                    "jetmet_pass{} == 1".format(jec_identifier),
                                     "{} != -10000".format(variable.expression),
                                 ]
                                 if variable.selection:

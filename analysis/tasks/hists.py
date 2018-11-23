@@ -229,7 +229,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                 "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, jec_identifier))
                         # b-tagging alias
                         btag_var = self.config_inst.get_aux("btagger")["variable"]
-                        for obj in ["jet1", "jet2"]: #, "jet3", "jet4"]:
+                        for obj in ["jet1", "jet2", "jet3", "jet4"]:
                             variable = self.config_inst.get_variable("{0}_{1}".format(obj, btag_var))
                             tree.SetAlias(variable.name + jec_identifier, variable.expression.format(
                                 **{"jec_identifier": jec_identifier}))
@@ -271,23 +271,29 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                         # inclusive regions ("measure", "closure")
                         region = category.get_aux("region", None)
 
+                        # set weights that are common for all shifts
+                        base_weights = []
+                        if self.dataset_inst.is_mc: # TODO: Should be done separately for each process
+                            base_weights.append("gen_weight")
+                            # lumi weight
+                            lumi = self.config_inst.get_aux("lumi")[channel]
+                            x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal
+                            sum_weights = inp["meta"].load()["event_weights"]["sum"]
+                            lumi_weight = lumi * x_sec / sum_weights
+                            base_weights.append(str(lumi_weight))
+
+                            # pu weight
+                            base_weights.append("pu_weight")
+
                         for process in processes:
+                            # change into the correct directory
+                            process_dirs[(category.name, process.name)].cd()
                             for shift in shifts:
                                 jec_identifier = self.get_jec_identifier(shift)
+
                                 # weights
-                                weights = []
+                                weights = base_weights[:]
                                 if self.dataset_inst.is_mc:
-                                    weights.append("gen_weight")
-                                    # lumi weight
-                                    lumi = self.config_inst.get_aux("lumi")[channel]
-                                    x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal
-                                    sum_weights = inp["meta"].load()["event_weights"]["sum"]
-                                    lumi_weight = lumi * x_sec / sum_weights
-                                    weights.append(str(lumi_weight))
-
-                                    # pu weight
-                                    weights.append("pu_weight")
-
                                     # channel scale weight
                                     if self.iteration > 0:
                                         # b-tag scale factor weights
@@ -312,11 +318,10 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                     weights.insert(0, "1")
                                 tree.SetAlias("totalWeight", join_root_selection(weights, op="*"))
 
-                                # change into the correct directory
-                                process_dirs[(category.name, process.name)].cd()
-
                                 # actual projecting
                                 for variable in self.config_inst.variables:
+                                    if variable.has_tag("skip_all"):
+                                        continue
                                     if region and variable.has_tag("skip_{}".format(region)):
                                         continue
 

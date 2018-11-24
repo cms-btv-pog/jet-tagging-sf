@@ -8,7 +8,8 @@ import numpy as np
 
 from collections import defaultdict
 
-from analysis.tasks.base import ShiftTask
+from analysis.config.jet_tagging_sf import jes_sources
+from analysis.tasks.base import ShiftTask, WrapperTask
 from analysis.tasks.hists import MergeHistograms
 
 
@@ -16,15 +17,17 @@ class MeasureScaleFactors(ShiftTask):
 
     iteration = MergeHistograms.iteration
 
-    shifts = {} #TODO
+    shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                jes_sources, ["up", "down"])} | {"{}_{}".format(shift, direction) for shift, direction in
+                itertools.product(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
 
     def requires(self):
         reqs = {
             "hist": MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
                 _prefer_cli=["version"])
         }
-        if self.iteration > 0:
-            reqs["scale"] = MeasureScaleFactors.req(self, iteration=0,
+        if self.iteration > 0 or self.effective_shift != "nominal":
+            reqs["scale"] = MeasureScaleFactors.req(self, iteration=0, shift="nominal",
                 version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
         return reqs
 
@@ -33,7 +36,7 @@ class MeasureScaleFactors(ShiftTask):
 
     def output(self):
         outputs = {"scale_factors": self.wlcg_target("scale_factors.root")}
-        if self.iteration == 0:
+        if self.iteration == 0 and self.shift == "nominal":
             outputs["channel_scales"] = self.wlcg_target("channel_scales.json")
         return outputs
 
@@ -67,7 +70,7 @@ class MeasureScaleFactors(ShiftTask):
 
         # get categories from which to determine the rate scaling of MC to data
         # only needed for the first iteration, where the scaling is saved for further use
-        if self.iteration == 0:
+        if self.iteration == 0 and self.shift == "nominal":
             scale_categories = {}
             for channel in self.config_inst.channels:
                 scale_categories[channel] = {}
@@ -100,7 +103,7 @@ class MeasureScaleFactors(ShiftTask):
 
         with inp["hist"].load("r") as input_file:
             # get scale factor to scale MC (withouts b-tag SFs) to data per channel
-            if self.iteration == 0:
+            if self.iteration == 0 and self.shift == "nominal":
                 variable_name = "jet1_deepcsv_bcomb"
                 scales = defaultdict(dict)
                 for channel, region_categories in scale_categories.items():
@@ -112,8 +115,7 @@ class MeasureScaleFactors(ShiftTask):
                         for process_key in category_dir.GetListOfKeys():
                             process = self.config_inst.get_process(process_key.GetName())
                             process_dir = category_dir.GetDirectory(process.name)
-
-                            hist = process_dir.Get(variable_name)
+                            hist = process_dir.Get("{}_{}_{}".format(variable_name, region.upper(), self.shift))
                             if process.is_data:
                                 data_yield += hist_integral(hist)
                             else:
@@ -135,14 +137,19 @@ class MeasureScaleFactors(ShiftTask):
                     channel = leaf_cat.get_aux("channel")
                     category_dir = input_file.GetDirectory(leaf_cat.name)
 
-                    # get variable for b-tagging discriminant of probe jet
                     i_probe_jet = leaf_cat.get_aux("i_probe_jet")
                     btag_variable = btagger_cfg["variable"]
-                    variable_name = "jet{}_{}_{}".format(i_probe_jet, btag_variable, region)
 
                     for process_key in category_dir.GetListOfKeys():
                         process = self.config_inst.get_process(process_key.GetName())
                         process_dir = category_dir.GetDirectory(process.name)
+
+                        # get variable for b-tagging discriminant of probe jet
+                        if process.is_data:
+                            hist_shift = "nominal"
+                        else:  # TODO: make nicer
+                            hist_shift = self.effective_shift if not (self.iteration == 0 and not self.effective_shift.startswith("jes")) else "nominal"
+                        variable_name = "jet{}_{}_{}_{}".format(i_probe_jet, btag_variable, region.upper(), hist_shift)
 
                         # we cannot distinguish flavors in data
                         if process.is_data and flavor != "inclusive":
@@ -192,7 +199,7 @@ class MeasureScaleFactors(ShiftTask):
                     if self.effective_shift.split("_")[0] == "lf" and region == "hf":
                         lf_hist.Scale(contamination_factor)
                     # scale heavy flavour contamination in light flavour region
-                elif self.effective_shift.split("_")[0] == "hf" and region == "lf":
+                    elif self.effective_shift.split("_")[0] == "hf" and region == "lf":
                         hf_hist.Scale(contamination_factor)
 
                 # normalize MC histograms
@@ -233,7 +240,7 @@ class MeasureScaleFactors(ShiftTask):
                             else:
                                 raise ValueError("Unknown shift type {}".format(shift_type))
                             shift_sign = {"up": 1., "down": -1.}[shift_direction]
-                            sf_hist.SetBinContent(bin_content + shift_sign * shift_value)
+                            sf_hist.SetBinContent(bin_idx, bin_content + shift_sign * shift_value)
 
                 # store the corrected sf hist
                 sf_dict[category] = sf_hist
@@ -258,7 +265,7 @@ class MeasureScaleFactors(ShiftTask):
                         sf_hists_nd[region].Write("sf")
 
             # for the first iteration, also save the channel rate scale factors
-            if self.iteration == 0:
+            if self.iteration == 0 and self.shift == "nominal":
                 outp["channel_scales"].dump(scales, indent=4)
 
 
@@ -412,3 +419,9 @@ class FitScaleFactors(MeasureScaleFactors):
                 with outp["csv"].localize("w") as tmp:
                     with tmp.open("w") as result_file:
                         result_file.write("\n".join(fit_results))
+
+
+class FitScaleFactorsWrapper(WrapperTask):
+
+    wrapped_task = FitScaleFactors
+

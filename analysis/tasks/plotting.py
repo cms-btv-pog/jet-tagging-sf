@@ -39,6 +39,7 @@ class PlotVariable(PlotTask):
     variable = luigi.Parameter(default="jet{i_probe_jet}_deepcsv_bcomb")
     mc_split = luigi.ChoiceParameter(choices=["process", "flavor"])
     normalize = luigi.BoolParameter()
+
     compare_it = luigi.IntParameter(default=-1, description="Secondary iteration to compare to. Can"
         "not be the final iteration.")
 
@@ -184,13 +185,17 @@ class PlotVariable(PlotTask):
 class PlotScaleFactor(AnalysisTask):
     plot_type = luigi.ChoiceParameter(choices=["plot", "hist"])
     hist_name = "sf"
+
+    shifts = CSVParameter(default=["nominal"])
     iterations = CSVParameter(default=[0])
 
     def requires(self):
         reqs = OrderedDict()
         for iteration in self.iterations:
-            reqs[iteration] = FitScaleFactors.req(self, iteration=iteration,
-                version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+            reqs[iteration] = OrderedDict()
+            for shift in self.shifts:
+                reqs[iteration][shift] = FitScaleFactors.req(self, iteration=iteration,
+                    shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
         return reqs
 
     def output(self):
@@ -210,48 +215,52 @@ class PlotScaleFactor(AnalysisTask):
 
         plots = {}
 
-        for iteration, inp_target in inp.items():
-            with inp_target.load("r") as input_file:
-                for category_key in input_file.GetListOfKeys():
-                    if not self.config_inst.has_category(category_key.GetName()):
-                        continue
+        for iteration, inp_dict in inp.items():
+            for shift, inp_target in inp_dict.items():
+                with inp_target["sf"].load("r") as input_file:
+                    for category_key in input_file.GetListOfKeys():
+                        if not self.config_inst.has_category(category_key.GetName()):
+                            continue
 
-                    category = self.config_inst.get_category(category_key.GetName())
-                    category_dir = input_file.Get(category_key.GetName())
+                        category = self.config_inst.get_category(category_key.GetName())
+                        category_dir = input_file.Get(category_key.GetName())
 
-                    hist = category_dir.Get(self.hist_name)
+                        hist = category_dir.Get(self.hist_name)
 
-                    if self.plot_type == "plot":
-                        if category in plots:
-                            fig = plots[category][0]
-                            ax = plots[category][1]
-                        else:
-                            fig = plt.figure()
-                            ax = fig.add_subplot(111)
-                            ax.set_title(category.name)
-                            plots[category] = (fig, ax)
+                        if self.plot_type == "plot":
+                            if category in plots:
+                                fig = plots[category][0]
+                                ax = plots[category][1]
+                            else:
+                                fig = plt.figure()
+                                ax = fig.add_subplot(111)
+                                ax.set_title(category.name)
+                                plots[category] = (fig, ax)
 
-                        x_values = []
-                        y_values = []
-                        for bin_idx in xrange(1, hist.GetNbinsX() + 1):
-                            x_values.append(hist.GetBinCenter(bin_idx))
-                            y_values.append(hist.GetBinContent(bin_idx))
+                            x_values = []
+                            y_values = []
+                            for bin_idx in xrange(1, hist.GetNbinsX() + 1):
+                                x_values.append(hist.GetBinCenter(bin_idx))
+                                y_values.append(hist.GetBinContent(bin_idx))
 
-                        ax.plot(x_values, y_values)
-                    elif self.plot_type == "hist":
-                        if category in plots:
-                            plot = plots[category]
-                        else:
-                            plot = ROOTPlot(category.name, category.name)
-                            plot.create_pads()
-                            plots[category] = plot
-                        plot.cd(0, 0)
-                        hist.GetYaxis().SetRangeUser(0., 2.0)
-                        plot.draw({"sf": hist})
+                            ax.plot(x_values, y_values, label="{}, it {}".format(shift, iteration))
+                        elif self.plot_type == "hist":
+                            if category in plots:
+                                plot = plots[category]
+                            else:
+                                plot = ROOTPlot(category.name, category.name)
+                                plot.create_pads()
+                                plots[category] = plot
+                            plot.cd(0, 0)
+                            hist.GetYaxis().SetRangeUser(0., 2.0)
+                            plot.draw({"sf": hist})
         # save plots
         for category in plots:
             if self.plot_type == "plot":
                 fig = plots[category][0]
+                ax = plots[category][1]
+                handles, labels = ax.get_legend_handles_labels()
+                ax.legend(handles, labels)
                 fig.savefig(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))
             elif self.plot_type == "hist":
                 plot = plots[category]

@@ -35,8 +35,8 @@ config_ICHEP18 = cfg = analysis.add_config(campaign=campaign_ICHEP18)
 cfg.add_process(process_data_ee)
 cfg.add_process(process_data_emu)
 cfg.add_process(process_data_mumu)
-cfg.add_process(process_data_e)
-cfg.add_process(process_data_mu)
+#cfg.add_process(process_data_e)
+#cfg.add_process(process_data_mu)
 cfg.add_process(process_tt_dl)
 cfg.add_process(process_tt_sl)
 cfg.add_process(process_dy_lep)
@@ -53,8 +53,8 @@ dataset_names = [
     "data_B_ee", "data_C_ee", "data_D_ee", "data_E_ee", "data_F_ee",
     "data_B_emu", "data_C_emu", "data_D_emu", "data_E_emu", "data_F_emu",
     "data_B_mumu", "data_C_mumu", "data_D_mumu", "data_E_mumu", "data_F_mumu",
-    "data_B_e", "data_C_e", "data_D_e", "data_E_e", "data_F_e",
-    "data_B_mu", "data_C_mu", "data_D_mu", "data_E_mu", "data_F_mu",
+    #"data_B_e", "data_C_e", "data_D_e", "data_E_e", "data_F_e",
+    #"data_B_mu", "data_C_mu", "data_D_mu", "data_E_mu", "data_F_mu",
     "tt_dl", "tt_sl",
     #"dy_lep_4To50_Ht70To100",
     #"dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
@@ -79,8 +79,8 @@ for dataset_name in dataset_names:
 ch_ee = cfg.add_channel("ee", 1)
 ch_emu = cfg.add_channel("emu", 2)
 ch_mumu = cfg.add_channel("mumu", 3)
-ch_e = cfg.add_channel("e", 4)
-ch_mu = cfg.add_channel("mu", 5)
+#ch_e = cfg.add_channel("e", 4)
+#ch_mu = cfg.add_channel("mu", 5)
 
 # define configurations that are not part of a config
 jes_sources = [
@@ -112,8 +112,9 @@ cfg.set_aux("btagger", {
 })
 
 # flavor IDs for .csv result file
-cfg.set_aux("flavor_ids", { # TODO: c-tagging
+cfg.set_aux("flavor_ids", {
     "lf": 2,
+    "c": 1,
     "hf": 0,
 })
 
@@ -288,7 +289,7 @@ def get_category(pt, eta, region, phase_space="measure"):
 #        x_title="Lep_{} p_{{T}}".format(lep_idx),
 #    )
 
-for jet_idx in xrange(1, 3):
+for jet_idx in xrange(1, 5):
     #cfg.add_variable(
     #    name="jet{}_pt".format(jet_idx),
     #    expression="jet{}_pt".format(jet_idx),
@@ -299,17 +300,19 @@ for jet_idx in xrange(1, 3):
     for region in [None, "hf", "lf"]:
         if not region:
             binning = (25, 0., 1.)
-            tags = set()
+            tags = {"skip_lf", "skip_hf"}
             postfix = ""
         elif region == "hf":
             binning = cfg.get_aux("binning")["hf"]["deepcsv"]["plotting"]
-            tags = {"skip_LF"}
+            tags = {"skip_lf"}
             postfix = "_HF"
         elif region == "lf":
             binning = cfg.get_aux("binning")["lf"]["deepcsv"]["plotting"]
-            tags = {"skip_HF"}
+            tags = {"skip_hf"}
             postfix = "_LF"
 
+        if jet_idx > 2:
+            tags = tags | {"skip_all"}
         #cfg.add_variable(
         #    name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
         #    expression="jet{}_deepcsv_b".format(jet_idx),
@@ -434,6 +437,22 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                                         "pt": pt_range,
                                     }
                                 )
+                                if rg_name == "hf":
+                                    # add c categories (not written to histograms)
+                                    c_vars = (ps_name, "c", pt_name, eta_name)
+                                    c_name = "{}__{}__pt{}__eta{}".format(*c_vars)
+                                    label = "{}, {} region, pt {}, eta {}".format(*c_vars)
+                                    cfg.add_category(
+                                        name=c_name,
+                                        label=label,
+                                        tags={"c"},
+                                        aux={
+                                            "phase_space": ps_name,
+                                            "region": "c",
+                                            "eta": eta_range,
+                                            "pt": pt_range,
+                                        }
+                                    )
                             else:
                                 merged_cat = cfg.get_category(merged_name)
                             merged_cat.add_category(eta_cat)
@@ -443,8 +462,8 @@ cfg.set_aux("lumi", {
     ch_ee: 41296.082,
     ch_emu: 41296.082,
     ch_mumu: 41296.082,
-    ch_e: 41296.082,
-    ch_mu: 41296.082,
+    #ch_e: 41296.082,
+    #ch_mu: 41296.082,
 })
 
 # run ranges
@@ -486,14 +505,14 @@ cfg.set_aux("triggers", {
         "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*", # only 2017 C-F
         "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*", # only 2017 C-F
     ],
-    ch_e: [
-        "HLT_Ele35_WPTight_Gsf_v*",
-        "HLT_Ele28_eta2p1_WPTight_Gsf_HT150_v*",
-    ],
-    ch_mu: [
-        "HLT_IsoMu27_v*",
-        "HLT_IsoMu24_eta2p1_v*", # only 2017 B, C, D
-    ],
+    #ch_e: [
+    #    "HLT_Ele35_WPTight_Gsf_v*",
+    #    "HLT_Ele28_eta2p1_WPTight_Gsf_HT150_v*",
+    #],
+    #ch_mu: [
+    #    "HLT_IsoMu27_v*",
+    #    "HLT_IsoMu24_eta2p1_v*", # only 2017 B, C, D
+    #],
 })
 
 # special triggers per real dataset
@@ -509,12 +528,12 @@ for era in ["C", "D", "E", "F"]:
             "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*",
         ],
     })
-for era in ["E", "F"]:
-    cfg.set_aux("data_triggers", {
-        cfg.get_dataset("data_{}_mu".format(era)): [
-            "HLT_IsoMu27_v*",
-        ],
-    })
+#for era in ["E", "F"]:
+#    cfg.set_aux("data_triggers", {
+#        cfg.get_dataset("data_{}_mu".format(era)): [
+#            "HLT_IsoMu27_v*",
+#        ],
+#    })
 
 # MET filters
 cfg.set_aux("metFilters", {
@@ -581,13 +600,11 @@ cfg.set_aux("min_bias_xs", sn.Number(69.2, (sn.Number.REL, 0.046)))  # mb
 # file merging information (stage -> dataset -> files after merging)
 cfg.set_aux("file_merging", {
     "trees": {
-        "tt_dl": 105,
-        "tt_sl": 155,
-        "dy_lep_50ToInf": 41,
-        "st_s_lep": 3,
-        "st_tW_t": 4,
-        "st_tW_tbar": 4,
-        "W_lep": 2,
+        "tt_dl": 140,
+        "tt_sl": 4,
+        "dy_lep_50ToInf": 90,
+        "st_tW_t": 2,
+        "st_tW_tbar": 2,
     }
 })
 
@@ -599,11 +616,13 @@ cfg.set_aux("get_file_merging", get_file_merging)
 
 # versions
 cfg.set_aux("versions", {
-    "WriteTrees": "prod4",
-    "MergeTrees": "prod4",
-    "MergeMetaData": "prod4",
-    "WriteHistograms": "prod11",
-    "MergeHistograms": "prod11",
+    "WriteTrees": "prod5",
+    "MergeTrees": "prod5",
+    "MergeMetaData": "prod5",
+    "WriteHistograms": "prod12",
+    "MergeHistograms": "prod12",
     "MeasureScaleFactors": "prod4",
     "FitScaleFactors": "prod4",
+    "GetScaleFactorWeights": "prod4",
+    "MergeScaleFactorWeights": "prod4",
 })

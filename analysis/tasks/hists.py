@@ -661,6 +661,9 @@ class GetScaleFactorWeightsWrapper(WrapperTask):
 
 class MergeScaleFactorWeights(AnalysisTask):
 
+    iteration = GetScaleFactorWeights.iteration
+    normalize_cerrs = GetScaleFactorWeights.normalize_cerrs
+
     def requires(self):
         return {dataset: GetScaleFactorWeights.req(self, dataset=dataset,
             version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
@@ -668,6 +671,10 @@ class MergeScaleFactorWeights(AnalysisTask):
 
     def output(self):
         return self.wlcg_target("stats.json")
+
+    def store_parts(self):
+        c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
+        return super(FixNormalization, self).store_parts() + (self.iteration,) + (c_err_part,)
 
     @law.decorator.notify
     def run(self):

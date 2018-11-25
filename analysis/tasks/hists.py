@@ -30,6 +30,19 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     workflow_run_decorators = [law.decorator.notify]
 
+    def __init__(self, *args, **kwargs):
+        super(WriteHistograms, self).__init__(*args, **kwargs)
+        # set shifts
+        if self.dataset_inst.is_data:
+            self.shifts = {"nominal"}
+        else:
+            self.shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                jes_sources, ["up", "down"])}
+            if self.iteration > 0:
+                self.shifts = self.shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                    ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
+
+
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors
 
@@ -44,8 +57,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
             if self.iteration > 0:
-                reqs["sf"] = FitScaleFactors.req(self, iteration=self.iteration - 1,
-                    version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+                reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration - 1,
+                    shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+                    for shift in self.shifts}
 
         return reqs
 
@@ -61,8 +75,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         if self.dataset_inst.is_mc:
             reqs["pu"] = CalculatePileupWeights.req(self)
         if self.iteration > 0:
-            reqs["sf"] = FitScaleFactors.req(self, iteration=self.iteration - 1,
-                version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+            reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration - 1,
+                shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+                for shift in self.shifts}
         return reqs
 
     def store_parts(self):
@@ -101,7 +116,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         return add_branch, add_value
 
     def get_scale_factor_weighter(self, inp, shift):
-        with inp.load() as sfs: # TODO: load histograms according to shift
+        with inp.load() as sfs:
             sf_hists = {}
             for category in sfs.GetListOfKeys():
                 category_dir = sfs.Get(category.GetName())
@@ -189,16 +204,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         # build a progress callback
         progress = self.create_progress_callback(len(categories))
 
-        # set shifts
-        if self.dataset_inst.is_data:
-            shifts = {"nominal"}
-        else:
-            shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                jes_sources, ["up", "down"])}
-            if self.iteration > 0:
-                shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                    ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1, hf_stats2"], ["up", "down"])}
-
         # open the output file
         with outp.localize("w") as tmp:
             with tmp.dump("RECREATE") as output_file:
@@ -220,7 +225,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     self.publish_message("{} events in tree".format(tree.GetEntries()))
 
                     # identifier for jec shifted variables
-                    for shift in shifts:
+                    for shift in self.shifts:
                         jec_identifier = self.get_jec_identifier(shift)
 
                         # pt aliases for jets
@@ -249,10 +254,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             # weights from previous iterations
                             if self.iteration > 0:
                                 # b-tagging scale factors
-                                for shift in shifts:
-                                    jec_identifier = self.get_jec_identifier(shift)
+                                for shift in self.shifts:
                                     weighters.append(self.get_scale_factor_weighter(
-                                        inp["sf"]["sf"], jec_identifier))
+                                        inp["sf"][shift]["sf"], shift))
 
                             input_file.cd()
                             with TreeExtender(tree) as te:
@@ -288,7 +292,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                         for process in processes:
                             # change into the correct directory
                             process_dirs[(category.name, process.name)].cd()
-                            for shift in shifts:
+                            for shift in self.shifts:
                                 jec_identifier = self.get_jec_identifier(shift)
 
                                 # weights

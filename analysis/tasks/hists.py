@@ -589,7 +589,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
         # prepare dict for outputs
         # shift -> category -> sum weights/ sum weighted sfs
-        output_data = {shift: defaultdict(lambda: defaultdict(float)) for shift self.shifts}
+        output_data = {shift: defaultdict(lambda: defaultdict(float)) for shift in self.shifts}
 
         # open the input file and get the tree
         with inp["tree"].load("READ", cache=False) as input_file:

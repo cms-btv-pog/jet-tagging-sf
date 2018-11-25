@@ -541,8 +541,12 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     break
 
                 # find category in which the scale factor of the jet was computed to get correct histogram
-                # TODO: Handle c-jets
-                region = "hf" if abs(jet_flavor) in (4, 5) else "lf"
+                if abs(jet_flavor) == 5:
+                    region = "hf"
+                elif abs(jet_flavor) == 4:
+                    region = "c"
+                else:
+                    region = "lf"
                 category = get_category(jet_pt, abs(jet_eta), region, phase_space="measure")
 
                 # get scale factor

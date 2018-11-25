@@ -442,3 +442,237 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
 
     def arc_output_postfix(self):
         return self.glite_output_postfix()
+
+
+class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
+
+    iteration = WriteHistograms.iteration
+    file_merging = WriteHistograms.file_merging
+
+    normalize_cerrs = luigi.BoolParameter()
+
+    def __init__(self, *args, **kwargs):
+        super(FixNormalization, self).__init__(*args, **kwargs)
+        # set shifts
+        if self.dataset_inst.is_data:
+            raise Exception("FixNormalization task should only run for MC.")  # MC? ttbar? all?
+
+        if self.normalize_cerrs:
+            self.shifts = {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                ["c_stats1", "c_stats2"], ["up", "down"])}
+        else:
+            self.shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                jes_sources, ["up", "down"])} | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
+
+    def workflow_requires(self):
+        from analysis.tasks.measurement import FitScaleFactors
+
+        reqs = super(FixNormalization, self).workflow_requires()
+
+        if not self.cancel_jobs and not self.cleanup_jobs:
+            reqs["meta"] = MergeMetaData.req(self, version=self.get_version(MergeMetaData),
+                _prefer_cli=["version"])
+            reqs["pu"] = CalculatePileupWeights.req(self)
+            if not self.pilot:
+                reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
+                    version=self.get_version(MergeTrees), _prefer_cli=["version"])
+
+            reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration,
+                shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+                for shift in self.shifts}
+
+        return reqs
+
+    def requires(self):
+        from analysis.tasks.measurement import FitScaleFactors
+
+        reqs = {
+            "tree": MergeTrees.req(self, cascade_tree=self.branch, branch=0,
+                version=self.get_version(MergeTrees), _prefer_cli=["version", "workflow"]),
+            "meta": MergeMetaData.req(self, version=self.get_version(MergeMetaData),
+                _prefer_cli=["version"]),
+        }
+        reqs["pu"] = CalculatePileupWeights.req(self)
+        reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration,
+            shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+            for shift in self.shifts}
+        return reqs
+
+    def store_parts(self):
+        c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
+        return super(FixNormalization, self).store_parts() + (self.iteration,) + (c_err_part,)
+
+    def output(self):
+        return self.wlcg_target("stats_{}.json".format(self.branch))
+
+    get_jec_identifier = WriteHistograms.get_jec_identifier
+
+    def get_scale_factor(self, inp, shift):
+        with inp.load() as sfs:
+            sf_hists = {}
+            for category in sfs.GetListOfKeys():
+                category_dir = sfs.Get(category.GetName())
+                hist = category_dir.Get("sf")
+                # decouple from open file
+                hist.SetDirectory(0)
+
+                sf_hists[category.GetName()] = hist
+
+        btag_var = self.config_inst.get_aux("btagger")["variable"]
+        identifier = self.get_jec_identifier(shift)
+
+        def get_value(entry):
+            scale_factors = []
+            for jet_idx in range(1, 5):
+                jet_pt = getattr(entry, "jet{}_pt{}".format(jet_idx, identifier))[0]
+                jet_eta = getattr(entry, "jet{}_eta{}".format(jet_idx, identifier))[0]
+                jet_flavor = getattr(entry, "jet{}_flavor{}".format(jet_idx, identifier))[0]
+                jet_btag = getattr(entry, "jet{}_{}{}".format(jet_idx, btag_var, identifier))[0]
+
+                # stop when number of jets is exceeded
+                if jet_flavor < -999.:
+                    break
+
+                # find category in which the scale factor of the jet was computed to get correct histogram
+                # TODO: Handle c-jets
+                region = "hf" if abs(jet_flavor) in (4, 5) else "lf"
+                category = get_category(jet_pt, abs(jet_eta), region, phase_space="measure")
+
+                # get scale factor
+                sf_hist = sf_hists[category.name]
+                bin_idx = sf_hist.FindBin(jet_btag)
+
+                # scale factor histograms for c jets are only present for the
+                # c error calculation. Before that, the scale factor is 1
+                if abs(jet_flavor == 4) and not self.normalize_cerrs:
+                    scale_factor = 1.
+                else:
+                    scale_factor = sf_hist.GetBinContent(bin_idx)
+
+                scale_factors.append((category, scale_factor))
+
+            return scale_factors
+
+        return get_value
+
+    @law.decorator.notify
+    def run(self):
+        import ROOT
+
+        inp = self.input()
+        outp = self.output()
+        outp.parent.touch(0o0770)
+
+        # get child categories
+        categories = []
+        channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
+            if self.dataset_inst.is_data else self.config_inst.channels.values()
+        for channel in channels:
+            for category, _, children in channel.walk_categories():
+                if not children:
+                    categories.append((channel, category))
+        categories = list(set(categories))
+
+        # get processes
+        if len(self.dataset_inst.processes) != 1:
+            raise NotImplementedError("only datasets with exactly one linked process can be"
+                " handled, got {}".format(len(self.dataset_inst.processes)))
+        processes = list(self.dataset_inst.processes.values())
+
+        # prepare dict for outputs
+        # category -> sum weights/ sum weighted sfs
+        output_data = defaultdict(lambda: defaultdict(float))
+
+        # open the input file and get the tree
+        with inp["tree"].load("READ", cache=False) as input_file:
+            tree = input_file.Get("tree")
+            self.publish_message("{} events in tree".format(tree.GetEntries()))
+
+            # identifier for jec shifted variables
+            for shift in self.shifts:
+                jec_identifier = self.get_jec_identifier(shift)
+
+                # pt aliases for jets
+                for obj in ["jet1", "jet2", "jet3", "jet4"]:
+                    tree.SetAlias("{0}_pt{1}".format(obj, jec_identifier),
+                        "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, jec_identifier))
+                # b-tagging alias
+                btag_var = self.config_inst.get_aux("btagger")["variable"]
+                for obj in ["jet1", "jet2", "jet3", "jet4"]:
+                    variable = self.config_inst.get_variable("{0}_{1}".format(obj, btag_var))
+                    tree.SetAlias(variable.name + jec_identifier, variable.expression.format(
+                        **{"jec_identifier": jec_identifier}))
+            # pt aliases for leptons
+            for obj in ["lep1", "lep2"]:
+                tree.SetAlias("{0}_pt".format(obj),
+                    "({0}_px**2 + {0}_py**2)**0.5".format(obj))
+
+            scale_factor_getters = {}
+            for shift in self.shifts:
+                scale_factor_getters.append(self.get_scale_factors(inp["sf"][shift]["sf"], shift))
+
+            # get info to scale event weight to lumi
+            x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal
+            sum_weights = inp["meta"].load()["event_weights"]["sum"]
+            lumi_factor = x_sec / sum_weights
+
+            input_file.cd()
+            with TreeExtender(tree) as te:
+                # unpack all branches
+                te.unpack_branch("*")
+                for entry in te:
+                    # get event weight
+                    gen_weight = entry.gen_weight[0]
+                    channel_id = entry.channel[0]
+                    channel = self.config_inst.get_channel(channel_id)
+                    lumi = self.config_inst.get_aux("lumi")[channel]
+
+                    evt_weight = gen_weight * lumi * lumi_factor
+
+                    for shift in self.shifts:
+                        # event has to pass base selection
+                        jec_identifier = self.get_jec_identifier(shift)
+                        if getattr(entry, "jetmet_pass{} == 1".format(jec_identifier))[0] != 1:
+                            continue
+
+                        # calculate per-jet b-tagging weights
+                        for get_value in scale_factor_getters:
+                            scale_factors = get_value(entry)
+                            # save sum for latter normalization
+                            for sf_value, category in scale_factors:
+                                output_data[category]["sum_sf"] += sf_value * evt_weight
+                                output_data[category]["sum_weights"] += evt_weight
+
+        # save outputs
+        self.output().dump(output_data, formatter="json", indent=4)
+
+
+class MergeScaleFactorWeights(AnalysisTask):
+
+    def requires(self):
+        return {dataset: GetScaleFactorWeights.req(self, dataset=dataset,
+            version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
+            for dataset in self.config_inst.datasets if not dataset.is_data}
+
+    def output(self):
+        return self.wlcg_target("stats.json")
+
+    @law.decorator.notify
+    def run(self):
+        stats = defaultdict(lambda: defaultdict(float))
+
+        def load(inp):
+            with inp.load(formatter="json", cache=False) as inp_data:
+                for category, cat_dict in inp_data.items():
+                    for key, value in inp_data.items():
+                        stats[category][key] += value
+
+        def callback(i):
+            self.publish_message("loading meta data {} / {}".format(i + 1, len(coll)))
+            self.publish_progress(100. * (i + 1) / len(coll))
+
+        coll = self.input()["collection"] # TODO: sum collections
+        law.util.map_verbose(load, coll.targets.values(), every=25, callback=callback)
+
+        self.output().dump(stats, formatter="json", indent=4)

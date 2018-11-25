@@ -588,8 +588,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         process = processes[0]
 
         # prepare dict for outputs
-        # category -> sum weights/ sum weighted sfs
-        output_data = defaultdict(lambda: defaultdict(float))
+        # shift -> category -> sum weights/ sum weighted sfs
+        output_data = {shift: defaultdict(lambda: defaultdict(float)) for shift self.shifts}
 
         # open the input file and get the tree
         with inp["tree"].load("READ", cache=False) as input_file:
@@ -647,8 +647,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                         scale_factors = scale_factor_getters[shift](entry)
                         # save sum for latter normalization
                         for category, sf_value in scale_factors:
-                            output_data[category.name]["sum_sf"] += sf_value * evt_weight
-                            output_data[category.name]["sum_weights"] += evt_weight
+                            output_data[shift][category.name]["sum_sf"] += sf_value * evt_weight
+                            output_data[shift][category.name]["sum_weights"] += evt_weight
 
         # save outputs
         self.output().dump(output_data, formatter="json", indent=4)
@@ -674,17 +674,19 @@ class MergeScaleFactorWeights(AnalysisTask):
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
-        return super(FixNormalization, self).store_parts() + (self.iteration,) + (c_err_part,)
+        return super(MergeScaleFactorWeights, self).store_parts() + (self.iteration,) + (c_err_part,)
 
     @law.decorator.notify
     def run(self):
-        stats = defaultdict(lambda: defaultdict(float))
+        # shift -> category -> values
+        stats = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
 
         def load(inp):
             with inp.load(formatter="json", cache=False) as inp_data:
-                for category, cat_dict in inp_data.items():
-                    for key, value in inp_data.items():
-                        stats[category][key] += value
+                for shift, shift_dict in inp_data.items():
+                    for category, cat_dict in shift_dict.items():
+                        for key, value in cat_dict.items():
+                            stats[shift][category][key] += value
 
         def callback(i):
             self.publish_message("loading meta data {} / {}".format(i + 1, len(coll)))

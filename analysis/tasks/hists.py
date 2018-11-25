@@ -11,6 +11,7 @@ import luigi
 import six
 import numpy as np
 from order.util import join_root_selection
+from collections import defaultdict
 
 from analysis.config.jet_tagging_sf import get_category, jes_sources
 from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow
@@ -444,6 +445,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
         return self.glite_output_postfix()
 
 
+# TODO: Remove redundancies between GetScaleFactorWeights and WriteHistograms?
 class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     iteration = WriteHistograms.iteration
@@ -452,10 +454,10 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
     normalize_cerrs = luigi.BoolParameter()
 
     def __init__(self, *args, **kwargs):
-        super(FixNormalization, self).__init__(*args, **kwargs)
+        super(GetScaleFactorWeights, self).__init__(*args, **kwargs)
         # set shifts
         if self.dataset_inst.is_data:
-            raise Exception("FixNormalization task should only run for MC.")  # MC? ttbar? all?
+            raise Exception("GetScaleFactorWeights task should only run for MC.")
 
         if self.normalize_cerrs:
             self.shifts = {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
@@ -468,7 +470,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors
 
-        reqs = super(FixNormalization, self).workflow_requires()
+        reqs = super(GetScaleFactorWeights, self).workflow_requires()
 
         if not self.cancel_jobs and not self.cleanup_jobs:
             reqs["meta"] = MergeMetaData.req(self, version=self.get_version(MergeMetaData),
@@ -501,14 +503,18 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
-        return super(FixNormalization, self).store_parts() + (self.iteration,) + (c_err_part,)
+        return super(GetScaleFactorWeights, self).store_parts() + (self.iteration,) + (c_err_part,)
 
     def output(self):
         return self.wlcg_target("stats_{}.json".format(self.branch))
 
-    get_jec_identifier = WriteHistograms.get_jec_identifier
+    def get_jec_identifier(self, shift):
+        if shift.startswith("jes"):
+            return "_" + shift
+        else:
+            return ""
 
-    def get_scale_factor(self, inp, shift):
+    def get_scale_factors(self, inp, shift):
         with inp.load() as sfs:
             sf_hists = {}
             for category in sfs.GetListOfKeys():
@@ -546,7 +552,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 # scale factor histograms for c jets are only present for the
                 # c error calculation. Before that, the scale factor is 1
                 if abs(jet_flavor == 4) and not self.normalize_cerrs:
-                    scale_factor = 1.
+                    continue
                 else:
                     scale_factor = sf_hist.GetBinContent(bin_idx)
 
@@ -579,6 +585,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
             raise NotImplementedError("only datasets with exactly one linked process can be"
                 " handled, got {}".format(len(self.dataset_inst.processes)))
         processes = list(self.dataset_inst.processes.values())
+        process = processes[0]
 
         # prepare dict for outputs
         # category -> sum weights/ sum weighted sfs
@@ -610,7 +617,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
             scale_factor_getters = {}
             for shift in self.shifts:
-                scale_factor_getters.append(self.get_scale_factors(inp["sf"][shift]["sf"], shift))
+                scale_factor_getters[shift] = self.get_scale_factors(inp["sf"][shift]["sf"], shift)
 
             # get info to scale event weight to lumi
             x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal
@@ -633,19 +640,23 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     for shift in self.shifts:
                         # event has to pass base selection
                         jec_identifier = self.get_jec_identifier(shift)
-                        if getattr(entry, "jetmet_pass{} == 1".format(jec_identifier))[0] != 1:
+                        if getattr(entry, "jetmet_pass{}".format(jec_identifier))[0] != 1:
                             continue
 
                         # calculate per-jet b-tagging weights
-                        for get_value in scale_factor_getters:
-                            scale_factors = get_value(entry)
-                            # save sum for latter normalization
-                            for sf_value, category in scale_factors:
-                                output_data[category]["sum_sf"] += sf_value * evt_weight
-                                output_data[category]["sum_weights"] += evt_weight
+                        scale_factors = scale_factor_getters[shift](entry)
+                        # save sum for latter normalization
+                        for category, sf_value in scale_factors:
+                            output_data[category.name]["sum_sf"] += sf_value * evt_weight
+                            output_data[category.name]["sum_weights"] += evt_weight
 
         # save outputs
         self.output().dump(output_data, formatter="json", indent=4)
+
+
+class GetScaleFactorWeightsWrapper(WrapperTask):
+
+    wrapped_task = GetScaleFactorWeights
 
 
 class MergeScaleFactorWeights(AnalysisTask):

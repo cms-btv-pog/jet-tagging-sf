@@ -669,7 +669,7 @@ class MergeScaleFactorWeights(AnalysisTask):
     normalize_cerrs = GetScaleFactorWeights.normalize_cerrs
 
     def requires(self):
-        return {dataset: GetScaleFactorWeights.req(self, dataset=dataset,
+        return {dataset.name: GetScaleFactorWeights.req(self, dataset=dataset.name,
             version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
             for dataset in self.config_inst.datasets if not dataset.is_data}
 
@@ -686,17 +686,25 @@ class MergeScaleFactorWeights(AnalysisTask):
         stats = defaultdict(lambda: defaultdict(lambda: defaultdict(float)))
 
         def load(inp):
-            with inp.load(formatter="json", cache=False) as inp_data:
-                for shift, shift_dict in inp_data.items():
-                    for category, cat_dict in shift_dict.items():
-                        for key, value in cat_dict.items():
-                            stats[shift][category][key] += value
+            inp_dict = inp.load()
+            for shift, shift_dict in inp_dict.items():
+                for category, cat_dict in shift_dict.items():
+                    for key, value in cat_dict.items():
+                        stats[shift][category][key] += value
 
         def callback(i):
-            self.publish_message("loading meta data {} / {}".format(i + 1, len(coll)))
-            self.publish_progress(100. * (i + 1) / len(coll))
+            self.publish_message("loading meta data {} / {}".format(i + 1, len(input_files)))
+            self.publish_progress(100. * (i + 1) / len(input_files))
 
-        coll = self.input()["collection"] # TODO: sum collections
-        law.util.map_verbose(load, coll.targets.values(), every=25, callback=callback)
+        input_files = []
+        for dataset, inputs in self.input().items():
+            input_files.extend(inputs["collection"].targets.values())
 
-        self.output().dump(stats, formatter="json", indent=4)
+        law.util.map_verbose(load, input_files, every=25, callback=callback)
+
+        output_dict = defaultdict(dict)
+        for shift, shift_dict in stats.items():
+            for category, cat_dict in shift_dict.items():
+                output_dict[shift][category] = cat_dict["sum_weights"] / cat_dict["sum_sf"]
+
+        self.output().dump(output_dict, formatter="json", indent=4)

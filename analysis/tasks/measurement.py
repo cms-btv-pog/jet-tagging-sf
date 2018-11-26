@@ -280,8 +280,8 @@ class MeasureCScaleFactors(MeasureScaleFactors):
 
         reqs = {}
         reqs["scale_factors"] = {
-            shift: FitScaleFactors.req(self, shift=shift, fix_normalization=True,
-                version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+            shift: MeasureScaleFactors.req(self, shift=shift,
+                version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
             for shift in MeasureScaleFactors.shifts if shift not in lf_shifts
         }
         reqs["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=False,
@@ -307,7 +307,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         # create histogram for c flavour nominal, and up and down shifts
         btagger_cfg = self.config_inst.get_aux("btagger")
         binning = self.config_inst.get_aux("binning")
-        btag_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
+        btag_edges = array.array("d", binning["hf"][btagger_cfg["name"]]["measurement"])
         n_bins = len(btag_edges) - 1
 
         sf_dict = {}
@@ -326,7 +326,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         # get nominal b flavour histograms
         nominal_hists = {}
         inp_files = inp["scale_factors"].pop("nominal")
-        with inp_files["sf"].load(formatter="root")	as inp_file:
+        with inp_files["scale_factors"].load(formatter="root") as inp_file:
             # get normalization info
             norm_factors = inp["norm"].load()["nominal"]
 
@@ -336,12 +336,13 @@ class MeasureCScaleFactors(MeasureScaleFactors):
 
                 inp_hist = inp_file.Get(inp_cat_name).Get("sf")
                 inp_hist.Scale(norm_factors[inp_cat_name])
+
                 # Decouple from file
                 inp_hist.SetDirectory(0)
                 nominal_hists[inp_cat_name] = inp_hist
 
         for shift, inp_files in inp["scale_factors"].items():
-            with inp_files["sf"].load(formatter="root") as inp_file:
+            with inp_files["scale_factors"].load(formatter="root") as inp_file:
                 # get normalization info
                 norm_factors = inp["norm"].load()[shift]
 
@@ -351,6 +352,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
 
                     inp_hist = inp_file.Get(inp_cat_name).Get("sf")
                     inp_hist.Scale(norm_factors[inp_cat_name])
+
                     # divide by nominal hist to get relative errors
                     inp_hist.Divide(nominal_hists[inp_cat_name])
 
@@ -379,18 +381,22 @@ class MeasureCScaleFactors(MeasureScaleFactors):
                     bin_error_down = abs(b_sf - 1.)
                 bin_error = max([bin_error_up, bin_error_down])
 
-                # handle csv values smaller than 0
-                if bin_center < 0.:
-                    bin_center = 0.
-
                 if shift_type == "stats1":
-                    shift_value = bin_error * (1. - 2 * bin_center)
+                    if bin_center < 0:
+                        shift_value = bin_error_up if shift_direction == "up" else bin_error_down
+                    else:
+                        shift_value = bin_error * (1. - 2 * bin_center)
                 elif shift_type == "stats2":
-                    shift_value = bin_error * (1. - 6 * bin_center * (1. - bin_center))
+                    if bin_center < 0:
+                        shift_value = 0.
+                    else:
+                        shift_value = bin_error * (1. - 6 * bin_center * (1. - bin_center))
                 else:
                     raise ValueError("Unknown shift type {}".format(shift_type))
+
                 shift_sign = {"up": 1., "down": -1.}[shift_direction]
-                    sf_hist.SetBinContent(bin_idx, 1. + shift_sign * shift_value)
+                content = 1. + shift_sign * shift_value
+                sf_hist.SetBinContent(bin_idx, content if content > 0. else 0.)
  
 
         # open the output file
@@ -400,6 +406,11 @@ class MeasureCScaleFactors(MeasureScaleFactors):
                     category_dir = output_file.mkdir(category.name)
                     category_dir.cd()
                     sf_dict[category].Write("sf")
+
+
+class MeasureCScaleFactorsWrapper(WrapperTask):
+
+    wrapped_task = MeasureCScaleFactors
 
 
 class FitScaleFactors(MeasureScaleFactors):

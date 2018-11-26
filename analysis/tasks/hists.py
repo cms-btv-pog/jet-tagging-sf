@@ -547,18 +547,18 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     region = "c"
                 else:
                     region = "lf"
+
+                if region == "c" and not self.normalize_cerrs:
+                    continue
+                elif region != "c" and self.normalize_cerrs:
+                    continue
+
                 category = get_category(jet_pt, abs(jet_eta), region, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]
                 bin_idx = sf_hist.FindBin(jet_btag)
-
-                # scale factor histograms for c jets are only present for the
-                # c error calculation. Before that, the scale factor is 1
-                if abs(jet_flavor == 4) and not self.normalize_cerrs:
-                    continue
-                else:
-                    scale_factor = sf_hist.GetBinContent(bin_idx)
+                scale_factor = sf_hist.GetBinContent(bin_idx)
 
                 scale_factors.append((category, scale_factor))
 

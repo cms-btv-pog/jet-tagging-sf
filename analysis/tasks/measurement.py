@@ -10,7 +10,7 @@ import numpy as np
 from collections import defaultdict
 
 from analysis.config.jet_tagging_sf import jes_sources
-from analysis.tasks.base import ShiftTask, WrapperTask
+from analysis.tasks.base import AnalysisTask, ShiftTask, WrapperTask
 from analysis.tasks.hists import MergeHistograms, GetScaleFactorWeights, MergeScaleFactorWeights
 
 
@@ -321,7 +321,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
 
         # category -> bin -> value
         sum_sqerrors_up = defaultdict(lambda: defaultdict(float))
-       	sum_sqerrors_down = defaultdict(lambda: defaultdict(float))
+        sum_sqerrors_down = defaultdict(lambda: defaultdict(float))
 
         # get nominal b flavour histograms
         nominal_hists = {}
@@ -397,7 +397,6 @@ class MeasureCScaleFactors(MeasureScaleFactors):
                 shift_sign = {"up": 1., "down": -1.}[shift_direction]
                 content = 1. + shift_sign * shift_value
                 sf_hist.SetBinContent(bin_idx, content if content > 0. else 0.)
- 
 
         # open the output file
         with outp["scale_factors"].localize("w") as tmp:
@@ -469,7 +468,7 @@ class FitScaleFactors(MeasureScaleFactors):
 
         def fit_func_pol6(x_min=0.0, x_max=0.5):
             # 6th degree polynomial for LF region
-            func = ROOT.TF1("f_pol6", "pol6(0)", x_min, x_max)
+            func = ROOT.TF1("f_pol6", "[0] + x*([1] + x*([2] + x*([3] + x*([4] + x*([5] + x*[6])))))", x_min, x_max)
             for i_param in range(func.GetNpar()):
                 func.SetParameter(i_param, 1.)
             return func
@@ -565,7 +564,28 @@ class FitScaleFactors(MeasureScaleFactors):
                     results["pt_max"] = min(pt_range[1], 10000.)  # replace inf
                     results["flavor_id"] = self.config_inst.get_aux("flavor_ids")[region]
 
-                    fit_results_tpl = "3, iterativefit, central, {flavor_id}, {eta_min}, " \
+                    if self.effective_shift == "nominal":
+                        sysType = "central"
+                    else:
+                        sys_name, direction = self.effective_shift.rsplit("_", 1)
+                        sysType = "{}_{}".format(direction,
+                            sys_name.replace("c_stats", "cferr").replace("lf_stats", "lfstats").replace("hf_stats", "hfstats")
+                        )
+                    results["sysType"] = sysType
+
+                    # skip unwanted combinations (e.g. lf stats for hf scale factors)
+                    if "lfstats" in sysType and region != "lf":
+                        continue
+                    if "hfstats" in sysType and region != "hf":
+                        continue
+                    if "cferr" in sysType and region != "c":
+                        continue
+                    if self.effective_shift in ["lf_up", "lf_down"] and region != "hf":
+                        continue
+                    if self.effective_shift in ["hf_up", "hf_down"] and region != "lf":
+                        continue
+
+                    fit_results_tpl = "3, iterativefit, {sysType}, {flavor_id}, {eta_min}, " \
                         "{eta_max}, {pt_min}, {pt_max}".format(**results)
                     fit_results.append(fit_results_tpl + ", -15, 0, {}".format(hist.GetBinContent(1)))
                     fit_results.append(fit_results_tpl + ", 0, {}, {}".format(first_point,
@@ -610,3 +630,133 @@ class FitScaleFactors(MeasureScaleFactors):
 class FitScaleFactorsWrapper(WrapperTask):
 
     wrapped_task = FitScaleFactors
+
+
+class CreateScaleFactorResults(AnalysisTask):
+
+    iteration = MeasureScaleFactors.iteration
+
+    def requires(self):
+        reqs = {shift: FitScaleFactors.req(self, shift=shift, fix_normalization=True,
+            version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+            for shift in FitScaleFactors.shifts}
+        return reqs
+
+    def store_parts(self):
+        return super(CreateScaleFactorResults, self).store_parts() + (self.iteration,)
+
+    def output(self):
+        outp = {}
+        outp["csv"] = self.wlcg_target("scale_factors.csv")
+        outp["root_lf"] = self.wlcg_target("scale_factors_lf.root")
+        outp["root_hf"] = self.wlcg_target("scale_factors_hf.root")
+        return outp
+
+    def run(self):
+        def get_hist_name(category, shift):
+            _, region, pt_range, eta_range = category.split("__")
+            name = "c_csv" if region == "c" else "csv"
+            name += "_ratio"
+
+            # get pt and eta indices of category
+            pt_lower = int(pt_range.split("To")[0][2:])
+            eta_lower = eta_range.split("To")[0][3:]
+
+            if region in ("hf", "c"):
+                eta_bin = 0
+                pt_bin = {20: 0, 30: 1, 50: 2, 70: 3, 100: 4}[pt_lower]
+            elif region == "lf":
+                eta_bin = {"0": 0, "0p8": 1, "1p6": 2}[eta_lower]
+                pt_bin = {20: 0, 30: 1, 40: 2, 60: 3}[pt_lower]
+            else:
+                raise ValueError("Unknown region {}".format(region))
+
+            name += "_Pt{}".format(pt_bin)
+            name += "_Eta{}".format(eta_bin)
+
+            name += "_final"
+
+            # Parse uncertainty names
+            if shift != "nominal":
+                uncertainty = shift.replace("_", "").replace("lf", "LF").replace("hf", "HF")
+                uncertainty = uncertainty.replace("jes", "JES").replace("up", "Up").replace("down", "Down")
+                if "LFstats" in uncertainty and region == "lf":
+                    uncertainty = uncertainty.replace("LFstats", "Stats")
+                elif "LFStats" in uncertainty:
+                    return None, None
+
+                if "HFstats" in uncertainty and region == "hf":
+                    uncertainty = uncertainty.replace("HFstats", "Stats")
+                elif "HFStats" in uncertainty:
+                    return None, None
+
+                if "cstats" in uncertainty and region == "c":
+                    uncertainty = uncertainty.replace("cstats", "cErr")
+                elif "cstats" in uncertainty:
+                    return None, None
+
+                # contaminations
+                if "lf" in uncertainty and region != "hf":
+                    return None, None
+                if "hf" in uncertainty and region != "lf":
+                    return None, None
+
+                name += "_{}".format(uncertainty)
+            return name, region
+
+        import ROOT
+
+        inp = self.input()
+        outp = self.output()
+
+        csv_results = ["3, iterativefit, central, 1, 0.0, 2.5, 20.0, 10000, -15, 1.1, 1.0\n"]
+        hf_hists = []
+        lf_hists = []
+
+        for shift, inp_files in inp.items():
+            # combine csv files for b-tag reader
+            with inp_files["csv"].open("r") as csv_file:
+                for line in csv_file.readlines():
+                    if not line.endswith("\n"):
+                        line += "\n"
+                    csv_results.append(line)
+
+
+            # combine histogram files
+            with inp_files["sf"].load("r") as root_file:
+                for category_key in root_file.GetListOfKeys():
+                    category_dir = root_file.Get(category_key.GetName())
+
+                    hist = category_dir.Get("sf")
+                    name, region = get_hist_name(category_key.GetName(), shift)
+                    if name is None:
+                        continue
+
+                    hist.SetDirectory(0)
+                    if region in ("hf", "c"):
+                        hf_hists.append((name, hist))
+                    elif region == "lf":
+                        lf_hists.append((name, hist))
+                    else:
+                        raise ValueError("Unknown region {}".format(region))
+
+        # add nominal c tag histogram (flat value of 1)
+        c_hist = hf_hists[0][1].Clone()
+        for bin_idx in range(1, c_hist.GetNbinsX() + 1):
+            c_hist.SetBinContent(bin_idx, 1.)
+        for iPt in range(5):
+            hf_hists.append(("c_csv_ratio_Pt{}_Eta0_final".format(iPt), c_hist.Clone()))
+
+        with outp["root_lf"].localize("w") as tmp:
+            with tmp.dump("RECREATE") as output_file:
+                for name, hist in lf_hists:
+                    hist.Write(name)
+
+        with outp["root_hf"].localize("w") as tmp:
+            with tmp.dump("RECREATE") as output_file:
+                for name, hist in hf_hists:
+                    hist.Write(name)
+
+        with outp["csv"].localize("w") as tmp:
+            with tmp.open("w") as result_file:
+                result_file.write("".join(csv_results))

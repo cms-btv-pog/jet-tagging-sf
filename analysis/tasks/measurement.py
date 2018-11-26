@@ -10,7 +10,7 @@ from collections import defaultdict
 
 from analysis.config.jet_tagging_sf import jes_sources
 from analysis.tasks.base import ShiftTask, WrapperTask
-from analysis.tasks.hists import MergeHistograms
+from analysis.tasks.hists import MergeHistograms, GetScaleFactorWeights
 
 
 class MeasureScaleFactors(ShiftTask):
@@ -269,19 +269,97 @@ class MeasureScaleFactors(ShiftTask):
                 outp["channel_scales"].dump(scales, indent=4)
 
 
-class FitScaleFactors(MeasureScaleFactors):
-
-    final_it = MergeHistograms.final_it
+class MeasureCScaleFactors(MeasureScaleFactors):
+    shifts = {"{}_{}".format(shift, direction) for shift, direction in
+        itertools.product(["c_stats1", "c_stats2"], ["up", "down"])}
 
     def requires(self):
-        return MeasureScaleFactors.req(self, version=self.get_version(MeasureScaleFactors),
-            _prefer_cli=["version"])
+        lf_shifts = {"{}_{}".format(shift, direction) for shift, direction in
+            itertools.product(["hf", "lf_stats1", "lf_stats2"], ["up", "down"])}
+
+        reqs = {
+            shift: FitScaleFactors.req(self, shift=shift, fix_normalization=True,
+                version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+            for shift in MeasureScaleFactors.shift if shift not in lf_shifts
+        }
+        return reqs
+
+    def output(self):
+        return {"scale_factors": self.wlcg_target("scale_factors.root")}
+
+    def run(self):
+        import ROOT
+
+        inp = self.input()
+        outp = self.output()
+
+        # get categories in which we measure the scale factors
+        # these are stored in the config itself as we measure them inclusively over channels
+        categories = []
+        for category, _, _ in self.config_inst.walk_categories():
+            if category.has_tag("c"):
+                categories.append(category)
+
+        # create histogram for
+
+        for shift, inp_files in inp.items():
+            with inp[] #TODO
+
+        # open the output file
+        with outp["scale_factors"].localize("w") as tmp:
+            with tmp.dump("RECREATE") as output_file:
+                for category in categories:
+                    category_dir = output_file.mkdir(category.name)
+                    category_dir.cd()
+                    sf_dict[category].Write("sf")
+                for region in sf_hists_nd:
+                    region_dir = output_file.mkdir(region)
+                    region_dir.cd()
+                    sf_hists_nd[region].Write("sf")
+
+
+class FitScaleFactors(MeasureScaleFactors):
+
+    fix_normalization = luigi.BoolParameter()
+
+    shifts = MeasureScaleFactors.shifts | MeasureCScaleFactors.shifts
+
+    def __init__(self, *args, **kwargs):
+        super(FitScaleFactors, self).__init__(*args, **kwargs)
+
+        self.has_c_shift = self.shift in MeasureCScaleFactors.shifts
+
+    def requires(self):
+        reqs = {}
+        # get scale factor histograms
+        if self.has_c_shift:
+            reqs["sf"] = MeasureCScaleFactors.req(self,
+                version=self.get_version(MeasureCScaleFactors), _prefer_cli=["version"])
+        else:
+            reqs["sf"] = MeasureScaleFactors.req(self,
+                version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
+
+        # get scaling factors to normalize scale factors
+        if self.fix_normalization:
+            if self.has_c_shift:
+                reqs["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=True,
+                    version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
+            else:
+                reqs["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=False,
+                version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
+        return reqs
+
+    def store_parts(self):
+        normalization_part = "rescaled" if self.fix_normalization else "unscaled"
+        return super(MeasureScaleFactors, self).store_parts() + (normalization_part,)
 
     def output(self):
         outp = {
             "sf": self.wlcg_target("scale_factors.root")
         }
-        if self.final_it:
+        # if the scale factors are normalized, this is the final task
+        # and the .csv output for the b-tag reader should be created
+        if self.fix_normalization:
             outp["csv"] = self.wlcg_target("scale_factors.csv")
         return outp
 
@@ -294,13 +372,15 @@ class FitScaleFactors(MeasureScaleFactors):
         interpolation_type = ROOT.Math.Interpolation.kAKIMA
         interpolation_bins = 1000
 
-        def fit_func_pol6(x_min=0.0, x_max=0.5):  # 6th degree polynomial for LF region
+        def fit_func_pol6(x_min=0.0, x_max=0.5):
+            # 6th degree polynomial for LF region
             func = ROOT.TF1("f_pol6", "pol6(0)", x_min, x_max)
             for i_param in range(func.GetNpar()):
                 func.SetParameter(i_param, 1.)
             return func
 
-        def fit_func_pol1(x_min, x_max, init_params=[1., 1.]):  # 1st degree polynomial for final fit in HF region
+        def fit_func_pol1(x_min, x_max, init_params=[1., 1.]):
+            # 1st degree polynomial for final fit in HF region and for c jets
             func = ROOT.TF1("f_pol1", "pol1(0)", x_min, x_max)
             if not len(init_params) == func.GetNpar():
                 raise ValueError("Expected {} parameter values, but got {}".format(func.GetNpar(),
@@ -311,14 +391,22 @@ class FitScaleFactors(MeasureScaleFactors):
         # get categories in which to fit the scale factors
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
-            if category.has_tag("merged") and category.get_aux("phase_space") == "measure":
-                categories.append(category)
+            if self.has_c_shift:
+                if category.get_aux("region") == "c":
+                    categories.append(category)
+            else:
+                if category.has_tag("merged") and category.get_aux("phase_space") == "measure":
+                    categories.append(category)
+
+        # get scaling factors for normalization
+        if self.fix_normalization:
+            norm_factors = inp["norm"].load()[self.effective_shift]
 
         # contents of .csv file for scale factors
         fit_results = []
         # finely binned histograms to write to the output file
         hist_dict = {}
-        with inp["scale_factors"].load("r") as input_file:
+        with inp["sf"]["scale_factors"].load("r") as input_file:
             for category in categories:
                 region = category.get_aux("region")
                 category_dir = input_file.GetDirectory(category.name)
@@ -330,6 +418,9 @@ class FitScaleFactors(MeasureScaleFactors):
                         "factor hist." % category_dir)
                 hist = category_dir.Get(hist_keys[0].GetName())
                 nbins = hist.GetNbinsX()
+
+                if self.fix_normalization:
+                    hist.Scale(norm_factors[category.name])
 
                 x_axis = hist.GetXaxis()
                 interpolation_hist = ROOT.TH1D(hist.GetName() + "_fine", hist.GetTitle(),
@@ -343,7 +434,7 @@ class FitScaleFactors(MeasureScaleFactors):
                     # (centers of second and second to last bin)
                     first_point = hist.GetBinCenter(2)
                     last_point = hist.GetBinCenter(nbins - 1)
-                elif region == "hf":
+                elif region in ("hf", "c"):
                     x_values = ROOT.vector("double")()
                     y_values = ROOT.vector("double")()
                     for bin_idx in range(1, nbins + 1):
@@ -370,8 +461,8 @@ class FitScaleFactors(MeasureScaleFactors):
                         interpolation_hist.SetBinContent(bin_idx, interpolator.Eval(bin_center))
                 hist_dict[category] = interpolation_hist
 
-                # fill .csv file in final iteration
-                if self.final_it:
+                # fill .csv file in final iteration (after normalization fix)
+                if self.fix_normalization:
                     results = {}
                     results["eta_min"], results["eta_max"] = category.get_aux("eta")
                     pt_range = category.get_aux("pt")
@@ -389,7 +480,7 @@ class FitScaleFactors(MeasureScaleFactors):
                     if region == "lf":
                         fit_results.append(fit_results_tpl + ", {}, {}, {}".format(first_point,
                             last_point, str(interpolator.GetExpFormula("p"))))
-                    elif region == "hf":  # piecewise linear function
+                    elif region in ("hf", "c"):  # piecewise linear function
                         for bin_idx in range(1, nbins):
                             if hist.GetBinCenter(bin_idx) < first_point:
                                 continue
@@ -415,7 +506,7 @@ class FitScaleFactors(MeasureScaleFactors):
                         category_dir = output_file.mkdir(category.name)
                         category_dir.cd()
                         hist.Write("sf")
-            if self.final_it:
+            if self.fix_normalization:
                 with outp["csv"].localize("w") as tmp:
                     with tmp.open("w") as result_file:
                         result_file.write("\n".join(fit_results))
@@ -424,4 +515,3 @@ class FitScaleFactors(MeasureScaleFactors):
 class FitScaleFactorsWrapper(WrapperTask):
 
     wrapped_task = FitScaleFactors
-

@@ -445,7 +445,7 @@ class FitScaleFactors(MeasureScaleFactors):
 
     def store_parts(self):
         normalization_part = "rescaled" if self.fix_normalization else "unscaled"
-        return super(MeasureScaleFactors, self).store_parts() + (normalization_part,)
+        return super(FitScaleFactors, self).store_parts() + (normalization_part,)
 
     def output(self):
         outp = {

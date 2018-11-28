@@ -202,9 +202,9 @@ def get_region_info(idx, channel, et_miss=30., z_window=10., add_btag_cut=True):
 
 def get_flavor_info(idx):
     return [
-        ("b", "abs(jet%d_flavor) == 5" % idx),
-        ("c", "abs(jet%d_flavor) == 4" % idx),
-        ("udsg", "abs(jet%d_flavor) != 5 && abs(jet%d_flavor) != 4" % (idx, idx)),
+        ("b", "abs(jet%d_flavor{jec_identifier}) == 5" % idx),
+        ("c", "abs(jet%d_flavor{jec_identifier}) == 4" % idx),
+        ("udsg", "abs(jet%d_flavor{jec_identifier}) != 5 && abs(jet%d_flavor{jec_identifier}) != 4" % (idx, idx)),
         ("inclusive", "1 * 1"),
     ]
 
@@ -399,7 +399,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                     )
 
                     # pt loop
-                    for pt_name, pt_sel, pt_range in get_axis_info(i_probe_jet, "pt")[rg_name]:
+                    for pt_name, pt_sel, pt_range in get_axis_info(i_probe_jet, "pt", "jet{}_pt{{jec_identifier}}")[rg_name]:
                         pt_cat = fl_cat.add_category(
                             name="{}__pt{}".format(fl_cat.name, pt_name),
                             label="{}, pt {}".format(fl_cat.label, pt_name),
@@ -407,7 +407,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
                         )
 
                         # eta loop
-                        for eta_name, eta_sel, eta_range in get_axis_info(i_probe_jet, "abs(eta)", fmt="abs(jet{}_eta)")[rg_name]:
+                        for eta_name, eta_sel, eta_range in get_axis_info(i_probe_jet, "abs(eta)", fmt="abs(jet{}_eta{{jec_identifier}})")[rg_name]:
                             eta_cat = pt_cat.add_category(
                                 name="{}__eta{}".format(pt_cat.name, eta_name),
                                 label="{}, eta {}".format(pt_cat.label, eta_name),
@@ -619,10 +619,11 @@ cfg.set_aux("versions", {
     "WriteTrees": "prod5",
     "MergeTrees": "prod5",
     "MergeMetaData": "prod5",
-    "WriteHistograms": "prod12",
-    "MergeHistograms": "prod12",
-    "MeasureScaleFactors": "prod4",
-    "FitScaleFactors": "prod4",
-    "GetScaleFactorWeights": "prod4",
-    "MergeScaleFactorWeights": "prod4",
+    "WriteHistograms": "prod13",
+    "MergeHistograms": "prod13",
+    "MeasureCScaleFactors": "prod6",
+    "MeasureScaleFactors": "prod6",
+    "FitScaleFactors": "prod6",
+    "GetScaleFactorWeights": "prod6",
+    "MergeScaleFactorWeights": "prod6",
 })

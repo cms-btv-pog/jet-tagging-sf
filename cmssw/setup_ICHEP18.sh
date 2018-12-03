@@ -1,4 +1,4 @@
-#!/usr/bin/env 
+#!/usr/bin/env
 
 action() {
     local origin="$( pwd )"
@@ -6,7 +6,7 @@ action() {
     [ -z "$scram_cores" ] && scram_cores="1"
 
     export SCRAM_ARCH="slc6_amd64_gcc630"
-    export CMSSW_VERSION="CMSSW_9_4_8"
+    export CMSSW_VERSION="CMSSW_9_4_9"
     export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
@@ -27,7 +27,6 @@ action() {
         # ECAL scale and resolution corrections
         # https://twiki.cern.ch/twiki/bin/viewauth/CMS/Egamma2017DataRecommendations
         git cms-merge-topic cms-egamma:EgammaPostRecoTools_940
-        git cms-merge-topic cms-egamma:Egamma80XMiniAODV2_946
 
         scram b -j "$scram_cores"
 

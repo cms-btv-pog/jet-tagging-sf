@@ -249,6 +249,8 @@ datasets_data_mu = [
 
 # MC datasets
 
+# tt
+
 dataset_tt_dl = od.Dataset(
     "tt_dl", 101,
     campaign=campaign,
@@ -268,6 +270,8 @@ dataset_tt_sl = od.Dataset(
         "/TTToSemiLeptonic_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
     ],
 )
+
+# Drell-Yan
 
 # TODO: Add when available (current one is mislabelled)
 #dataset_dy_lep_4To50_Ht70To100 = od.Dataset(
@@ -410,6 +414,8 @@ dataset_dy_lep_50ToInf = od.Dataset(
     ],
 )
 
+# single top
+
 # s-channel
 dataset_st_s_lep = od.Dataset(
     "st_s_lep", 300,
@@ -460,6 +466,7 @@ dataset_st_tW_tbar = od.Dataset(
 )
 
 # diboson
+
 dataset_WW = od.Dataset(
     "WW", 401,
     campaign=campaign,
@@ -497,6 +504,54 @@ dataset_W_lep = od.Dataset(
         "/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v2/MINIAODSIM",
     ],
 )
+
+# tt+X
+
+dataset_ttH = od.Dataset(
+    "ttH", 600,
+    campaign=campaign,
+    n_files=208,
+    keys=[
+        "/ttH_M125_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+)
+
+dataset_ttWJets_lep = od.Dataset(
+    "ttWJets_lep", 700,
+    campaign=campaign,
+    n_files=90,
+    keys=[
+        "/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+)
+
+dataset_ttWJets_had = od.Dataset(
+    "ttWJets_had", 701,
+    campaign=campaign,
+    n_files=18,
+    keys=[
+        "/TTWJetsToQQ_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
+    ],
+)
+
+dataset_ttZJets_lep = od.Dataset(
+    "ttZJets_lep", 710,
+    campaign=campaign,
+    n_files=130,
+    keys=[
+        "/TTZToLLNuNu_M-10_TuneCP5_13TeV-amcatnlo-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+)
+
+dataset_ttZJets_had = od.Dataset(
+    "ttZJets_had", 711,
+    campaign=campaign,
+    n_files=16,
+    keys=[
+        "/TTZToQQ_TuneCP5_13TeV-amcatnlo-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
+    ],
+)
+
 
 # link processes to datasets
 for d in datasets_data_ee:
@@ -536,3 +591,8 @@ dataset_WW.add_process(process_WW)
 dataset_WZ.add_process(process_WZ)
 dataset_ZZ.add_process(process_ZZ)
 dataset_W_lep.add_process(process_W_lep)
+dataset_ttH.add_process(process_ttH)
+dataset_ttWJets_lep.add_process(process_ttWJets_lep)
+dataset_ttWJets_had.add_process(process_ttWJets_had)
+dataset_ttZJets_lep.add_process(process_ttZJets_lep)
+dataset_ttZJets_had.add_process(process_ttZJets_had)

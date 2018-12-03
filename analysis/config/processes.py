@@ -375,7 +375,7 @@ process_ZZ = process_VV.add_process(
 
 process_W_lep = od.Process(
     "W_lep", 50,
-    label="W + Jets, $W \rightarrow l \nu$",
+    label=r"W + Jets, $W \rightarrow l \nu$",
     xsecs={
         13: sn.Number(20508.9, {
             "scale": (165.7, 88.2),
@@ -383,3 +383,86 @@ process_W_lep = od.Process(
         }) * N_LEPS,
     },
 )
+
+# tt + X
+
+process_ttH = od.Process(
+    "ttH", 60,
+    label=r"$t\bar{t}$ + H",
+    xsecs={
+        13: sn.Number(0.5071, {
+            "scale": ("rel", 0.058, 0.092),
+            "pdf": ("rel", 0.036),
+        })
+    }
+)
+
+
+process_ttVJets = od.Process(
+    "ttVJets", 70,
+    label=r"$t\bar{t}$V + Jets",
+)
+
+process_ttWJets = process_ttVJets.add_process(
+    "ttWJets", 710,
+    label=r"$t\bar{t}$ + W + Jets"
+)
+
+process_ttWJets_lep = process_ttWJets.add_process(
+    "ttWJets_lep", 711,
+    label=r"$t\bar{t}$ + W(lep) + Jets",
+    xsecs={
+        13: sn.Number(0.2043, {
+            "scale": 0.0020
+        })
+    }
+)
+
+process_ttWJets_had = process_ttWJets.add_process(
+    "ttWJets_had", 712,
+    label=r"$t\bar{t}$ + W(had) + Jets",
+    xsecs={
+        13: sn.Number(0.4062, {
+            "scale": 0.0021
+        })
+    }
+)
+
+process_ttWJets.xsecs = {
+    13: sn.Number.add(process_ttWJets_lep.get_xsec(13), process_ttWJets_had.get_xsec(13), rho=1)
+}
+
+
+process_ttZJets = process_ttVJets.add_process(
+    "ttZJets", 720,
+    label=r"$t\bar{t}$ + Z + Jets"
+)
+
+process_ttZJets_lep = process_ttZJets.add_process(
+    "ttZJets_lep", 721,
+    label=r"$t\bar{t}$ + Z(lep) + Jets",
+    xsecs={
+        13: sn.Number(0.2529, {
+            "scale": 0.0004
+        })
+    }
+)
+
+process_ttZJets_had = process_ttZJets.add_process(
+    "ttZJets_had", 722,
+    label=r"$t\bar{t}$ + Z(had) + Jets",
+    xsecs={
+        13: sn.Number(0.5297, {
+            "scale": 0.0008
+        })
+    }
+)
+
+process_ttZJets.xsecs = {
+    13: sn.Number.add(process_ttZJets_lep.get_xsec(13), process_ttZJets_had.get_xsec(13), rho=1)
+}
+
+
+process_ttVJets.xsecs = {
+    13: sn.Number.add(process_ttWJets.get_xsec(13), process_ttZJets.get_xsec(13), rho=1)
+}

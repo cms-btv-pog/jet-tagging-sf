@@ -19,7 +19,7 @@ from analysis.config.constants import Z_MASS
 from analysis.config.processes import process_data_e, process_data_mu, process_data_ee, \
     process_data_emu, process_data_mumu, process_tt_dl, process_tt_sl, process_dy_lep, \
     process_st_s, process_st_t, process_st_tW, process_WW, process_WZ, process_ZZ, \
-    process_W_lep
+    process_W_lep, process_ttH, process_ttVJets
 
 
 # define the analysis
@@ -47,6 +47,8 @@ cfg.add_process(process_WW)
 cfg.add_process(process_WZ)
 cfg.add_process(process_ZZ)
 cfg.add_process(process_W_lep)
+cfg.add_process(process_ttH)
+cfg.add_process(process_ttVJets)
 
 # add datasets
 dataset_names = [
@@ -70,7 +72,10 @@ dataset_names = [
     "st_tW_t", "st_tW_tbar",
     "WW", "WZ", "ZZ",
     "W_lep",
+    "ttH",
+    "ttWJets_lep", "ttWJets_had", "ttZJets_lep", "ttZJets_had",
 ]
+
 for dataset_name in dataset_names:
     dataset = campaign_ICHEP18.get_dataset(dataset_name)
     cfg.add_dataset(dataset)

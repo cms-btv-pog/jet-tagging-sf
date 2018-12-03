@@ -88,7 +88,7 @@ jes_sources = [
     "SinglePionHCAL", "FlavorQCD", "TimePtEta", "RelativeJEREC1", "RelativeJEREC2", "RelativeJERHF",
     "RelativePtBB", "RelativePtEC1", "RelativePtEC2", "RelativePtHF", "RelativeBal", "RelativeFSR",
     "RelativeStatFSR", "RelativeStatEC", "RelativeStatHF", "PileUpDataMC", "PileUpPtRef",
-    "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", #"Total",
+    "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
 ]
 
 # store channels per real dataset
@@ -119,6 +119,21 @@ cfg.set_aux("flavor_ids", {
 })
 
 # store binning information
+hf_binning = {
+    "pt": [20, 30, 50, 70, 100, np.inf],
+    "abs(eta)": [0., 2.5],
+    "deepcsv": {
+        "plotting": [
+            -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+            0.4257, 0.4941, 0.5553, 0.6165, 0.6777, 0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968,
+            1.01,
+        ],
+        "measurement": [
+            -2.01, 0.0, 0.1522, 0.2205, 0.2889, 0.3573, 0.4257, 0.4941, 0.5553, 0.6165, 0.6777,
+            0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968, 1.01
+        ],
+    },
+}
 cfg.set_aux("binning", {
     "lf": {
         "pt": [20, 30, 40, 60, np.inf],
@@ -134,21 +149,8 @@ cfg.set_aux("binning", {
             ],
         },
     },
-    "hf": {
-        "pt": [20, 30, 50, 70, 100, np.inf],
-        "abs(eta)": [0., 2.5],
-        "deepcsv": {
-            "plotting": [
-                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
-                0.4257, 0.4941, 0.5553, 0.6165, 0.6777, 0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968,
-                1.01,
-            ],
-            "measurement": [
-                -2.01, 0.0, 0.1522, 0.2205, 0.2889, 0.3573, 0.4257, 0.4941, 0.5553, 0.6165, 0.6777,
-                0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968, 1.01
-            ],
-        },
-    }
+    "hf": hf_binning,
+    "c": hf_binning,
 })
 
 # information related to systematic shifts
@@ -478,7 +480,7 @@ rr = cfg.set_aux("run_ranges", {
 # global tags
 cfg.set_aux("global_tag", {
     "data": "94X_dataRun2_ReReco_EOY17_v6",
-    "mc": "94X_mc2017_realistic_v13",
+    "mc": "94X_mc2017_realistic_v14",
 })
 
 # lumi, normtag and pileup file
@@ -551,19 +553,19 @@ cfg.set_aux("metFilters", {
 })
 
 # JER
-cfg.set_aux("jer_version", "Summer16_25nsV1")
+cfg.set_aux("jer_version", "Fall17_V3")
 
 # JES
 cfg.set_aux("jes_version", {
     "data": [
-        rr["B"] + ("Fall17_17Nov2017B_V6_DATA",),
-        rr["C"] + ("Fall17_17Nov2017C_V6_DATA",),
-        rr["D"] + ("Fall17_17Nov2017D_V6_DATA",),
-        rr["E"] + ("Fall17_17Nov2017E_V6_DATA",),
-        rr["F"] + ("Fall17_17Nov2017F_V6_DATA",),
+        rr["B"] + ("Fall17_17Nov2017B_V32_DATA",),
+        rr["C"] + ("Fall17_17Nov2017C_V32_DATA",),
+        rr["D"] + ("Fall17_17Nov2017DE_V32_DATA",),
+        rr["E"] + ("Fall17_17Nov2017DE_V32_DATA",),
+        rr["F"] + ("Fall17_17Nov2017F_V32_DATA",),
     ],
     "mc": [
-        (1, int(1e9), "Fall17_17Nov2017_V6_MC"),
+        (1, int(1e9), "Fall17_17Nov2017_V32_MC"),
     ],
 })
 

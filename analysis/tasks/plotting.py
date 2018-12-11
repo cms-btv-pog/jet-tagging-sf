@@ -7,6 +7,8 @@ import tarfile
 from collections import defaultdict, OrderedDict
 
 import numpy as np
+import array
+
 import matplotlib
 matplotlib.use('Agg')
 import matplotlib.pyplot as plt
@@ -183,19 +185,23 @@ class PlotVariable(PlotTask):
 
 
 class PlotScaleFactor(AnalysisTask):
-    plot_type = luigi.ChoiceParameter(choices=["plot", "hist"])
     hist_name = "sf"
 
     shifts = CSVParameter(default=["nominal"])
     iterations = CSVParameter(default=[0])
+    fix_normalization = FitScaleFactors.fix_normalization
 
     def requires(self):
         reqs = OrderedDict()
         for iteration in self.iterations:
             reqs[iteration] = OrderedDict()
             for shift in self.shifts:
-                reqs[iteration][shift] = FitScaleFactors.req(self, iteration=iteration,
-                    shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+                reqs[iteration][shift] = {
+                    "fit": FitScaleFactors.req(self, iteration=iteration, shift=shift,
+                        version=self.get_version(FitScaleFactors), _prefer_cli=["version"]),
+                    "hist": MeasureScaleFactors.req(self, iteration=iteration, shift=shift,
+                        version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
+                    }
         return reqs
 
     def output(self):
@@ -215,57 +221,72 @@ class PlotScaleFactor(AnalysisTask):
 
         plots = {}
 
+        def rebin_hist(hist, region):
+            # truncate < 0 bin
+            binning = self.config_inst.get_aux("binning")
+            btagger_cfg = self.config_inst.get_aux("btagger")
+
+            bin_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
+            bin_edges[0] = -0.1
+            n_bins = len(bin_edges) - 1
+            hist_rebinned = hist.Rebin(n_bins, "rebinned_{}".format(hist.GetName()), bin_edges)
+            # because of the truncation, the first bin content is filled into the underflow bin, fix this
+            hist_rebinned.SetBinContent(1, hist.GetBinContent(1))
+            hist_rebinned.SetBinError(1, hist.GetBinError(1))
+            return hist_rebinned
+
         for iteration, inp_dict in inp.items():
             for shift, inp_target in inp_dict.items():
-                with inp_target["sf"].load("r") as input_file:
-                    for category_key in input_file.GetListOfKeys():
+                with inp_target["fit"]["sf"].load("r") as fit_file, \
+                    inp_target["hist"]["scale_factors"].load("r") as hist_file:
+                    for category_key in fit_file.GetListOfKeys():
                         if not self.config_inst.has_category(category_key.GetName()):
                             continue
 
                         category = self.config_inst.get_category(category_key.GetName())
-                        category_dir = input_file.Get(category_key.GetName())
+                        pt_range = category.get_aux("pt")
+                        eta_range = category.get_aux("eta")
+                        region = category.get_aux("region")
+                        fit_category_dir = fit_file.Get(category_key.GetName())
+                        hist_category_dir = hist_file.Get(category_key.GetName())
 
-                        hist = category_dir.Get(self.hist_name)
+                        fit_hist = fit_category_dir.Get(self.hist_name)
+                        hist = hist_category_dir.Get(self.hist_name)
+                        hist = rebin_hist(hist, region)
 
-                        if self.plot_type == "plot":
-                            if category in plots:
-                                fig = plots[category][0]
-                                ax = plots[category][1]
-                            else:
-                                fig = plt.figure()
-                                ax = fig.add_subplot(111)
-                                ax.set_title(category.name)
-                                plots[category] = (fig, ax)
+                        if category in plots:
+                            plot = plots[category]
+                        else:
+                            plot = ROOTPlot(category.name, category.name)
+                            plot.create_pads(lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
+                            plots[category] = plot
+                        plot.cd(0, 0)
+                        fit_hist.GetXaxis().SetRangeUser(-.1, 1.0)
+                        fit_hist.GetYaxis().SetRangeUser(0., 2.0)
+                        fit_hist.GetXaxis().SetTitle("DeepCSV")
+                        fit_hist.GetXaxis().SetTitleSize(.045)
+                        fit_hist.GetYaxis().SetTitle("SF")
+                        fit_hist.GetYaxis().SetTitleSize(.045)
 
-                            x_values = []
-                            y_values = []
-                            for bin_idx in xrange(1, hist.GetNbinsX() + 1):
-                                x_values.append(hist.GetBinCenter(bin_idx))
-                                y_values.append(hist.GetBinContent(bin_idx))
+                        line = ROOT.TLine(0., 0., 0., 2.)
+                        line.SetLineStyle(9)
 
-                            ax.plot(x_values, y_values, label="{}, it {}".format(shift, iteration))
-                        elif self.plot_type == "hist":
-                            if category in plots:
-                                plot = plots[category]
-                            else:
-                                plot = ROOTPlot(category.name, category.name)
-                                plot.create_pads()
-                                plots[category] = plot
-                            plot.cd(0, 0)
-                            hist.GetYaxis().SetRangeUser(0., 2.0)
-                            plot.draw({"sf": hist})
+                        plot.draw({"sf": fit_hist})
+                        plot.draw({"hist": hist}, options="SAME")
+                        plot.draw({"line": line})
+                        # add category information to plot
+                        if not np.isinf(pt_range[1]):
+                            text = r"#splitline{%d < p_{T} < %d}{%.1f < |#eta| < %.1f}" % \
+                                (pt_range[0], pt_range[1], eta_range[0], eta_range[1])
+                        else:
+                            text = r"#splitline{p_{T} > %d}{%.1f < |#eta| < %.1f}" % \
+                                (pt_range[0], eta_range[0], eta_range[1])
+                        plot.draw_text(text, .7, .8, size=0.04)
         # save plots
         for category in plots:
-            if self.plot_type == "plot":
-                fig = plots[category][0]
-                ax = plots[category][1]
-                handles, labels = ax.get_legend_handles_labels()
-                ax.legend(handles, labels)
-                fig.savefig(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))
-            elif self.plot_type == "hist":
-                plot = plots[category]
-                plot.save(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))
-                del plot
+            plot = plots[category]
+            plot.save(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))
+            del plot
 
         with outp.localize("w") as tmp:
             with tarfile.open(tmp.path, "w:gz") as tar:

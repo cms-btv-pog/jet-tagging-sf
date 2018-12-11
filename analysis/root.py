@@ -36,10 +36,19 @@ class ROOTPad(object):
         self.pad = ROOT.TPad(*args, **kwargs)
         self.pad.Draw()
 
+    def draw_base_text(self, lumi=-1.):
         self.legend = ROOT.TLegend(0.5, 0.7, 0.88, 0.88)
         self.legend.SetNColumns(2)
 
+        self.text = ROOT.TLatex()
+        self.text.SetTextSize(0.04)
+        self.text.DrawLatexNDC(.7, .91, "%.2f fb^{-1}(13 TeV)" % lumi)
+
         self.objects = []
+
+    def draw_text(self, text, xpos, ypos, size=0.04):
+        self.text.SetTextSize(size)
+        self.text.DrawLatexNDC(xpos, ypos, text)
 
     def add_object(self, obj):
         # separate objects from their root files so that the plot persists if the file is closed
@@ -111,9 +120,9 @@ class ROOTPad(object):
         self.add_object(graph)
         graph.Draw(" ".join(options))
 
-    def save(self):
+    def save(self, draw_legend=False):
         self.pad.cd()
-        if hasattr(self, "legend"):
+        if draw_legend:
             self.legend.Draw()
         self.pad.Update()
 
@@ -128,6 +137,7 @@ class ROOTPlot(object):
 
     def __init__(self, *args, **kwargs):
         ROOT.gStyle.SetOptStat(0)
+        ROOT.gStyle.SetOptTitle(0)
         ROOT.gStyle.SetLegendBorderSize(0)
 
         self.canvas = ROOT.TCanvas(*args, **kwargs)
@@ -135,7 +145,7 @@ class ROOTPlot(object):
         # store all used ROOT object to make sure they are not cleaned up
         self.objects = []
 
-    def create_pads(self, n_pads_x=1, n_pads_y=1, limits_x=None, limits_y=None):
+    def create_pads(self, n_pads_x=1, n_pads_y=1, limits_x=None, limits_y=None, lumi=-1.):
         if limits_x is None:
             limits_x = [idx / float(n_pads_x) for idx in range(n_pads_x + 1)]
         if limits_y is None:
@@ -148,6 +158,7 @@ class ROOTPlot(object):
                 name = "{}_{}_{}".format(hash(self), idx_x, idx_y)
                 pad = ROOTPad(name, name, limits_x[idx_x], limits_y[idx_y],
                     limits_x[idx_x + 1], limits_y[idx_y + 1])
+                pad.draw_base_text(lumi=lumi)
                 self.pads[(idx_x, idx_y)] = pad
                 self.open_pad = pad
 
@@ -161,6 +172,9 @@ class ROOTPlot(object):
 
     def draw_as_graph(self, *args, **kwargs):
         self.open_pad.draw_as_graph(*args, **kwargs)
+
+    def draw_text(self, *args, **kwargs):
+        self.open_pad.draw_text(*args, **kwargs)
 
     def save(self, path):
         for pad in self.pads.values():

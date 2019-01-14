@@ -498,7 +498,7 @@ dataset_ZZ = od.Dataset(
 dataset_W_lep = od.Dataset(
     "W_lep", 500,
     campaign=campaign,
-    n_files=514+740,
+    n_files=514+738,
     keys=[
         "/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
         "/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v2/MINIAODSIM",

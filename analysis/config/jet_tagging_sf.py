@@ -275,35 +275,36 @@ def get_category(pt, eta, region, phase_space="measure"):
         raise ValueError("Expected one single matching category, but got {}".format(matches))
 
 # variables
-#cfg.add_variable(
-#    name="dr_ll",
-#    expression="dr_ll",
-#    binning=(25, 0., 5.,),
-#    x_title="dR(ll)",
-#)
-#cfg.add_variable(
-#    name="n_jets",
-#    expression="n_jets",
-#    binning=(10, 0., 10.,),
-#    x_title="N(jets)",
-#)
-#for lep_idx in xrange(1, 3):
-#    cfg.add_variable(
-#        name="lep{}_pt".format(lep_idx),
-#        expression="(lep{}_px**2 + lep{}_py**2)**0.5".format(lep_idx, lep_idx),
-#        binning=(25, 0., 500.,),
-#        unit="GeV",
-#        x_title="Lep_{} p_{{T}}".format(lep_idx),
-#    )
+cfg.add_variable(
+    name="dr_ll",
+    expression="dr_ll",
+    binning=(25, 0., 5.,),
+    x_title="dR(ll)",
+)
+cfg.add_variable(
+    name="n_jets",
+    expression="n_jets",
+    binning=(10, 0., 10.,),
+    x_title="N(jets)",
+)
+for lep_idx in xrange(1, 3):
+    cfg.add_variable(
+        name="lep{}_pt".format(lep_idx),
+        expression="(lep{}_px**2 + lep{}_py**2)**0.5".format(lep_idx, lep_idx),
+        binning=(25, 0., 500.,),
+        unit="GeV",
+        x_title="Lep_{} p_{{T}}".format(lep_idx),
+    )
 
 for jet_idx in xrange(1, 5):
-    #cfg.add_variable(
-    #    name="jet{}_pt".format(jet_idx),
-    #    expression="jet{}_pt".format(jet_idx),
-    #    binning=(25, 0., 500.,),
-    #    unit="GeV",
-    #    x_title="Jet_{} p_{{T}}".format(jet_idx),
-    #)
+    cfg.add_variable(
+        name="jet{}_pt".format(jet_idx),
+        expression="jet{}_pt".format(jet_idx),
+        binning=(25, 0., 500.,),
+        unit="GeV",
+        x_title="Jet_{} p_{{T}}".format(jet_idx),
+        tags={"basic"}
+    )
     for region in [None, "hf", "lf"]:
         if not region:
             binning = (25, 0., 1.)
@@ -318,22 +319,22 @@ for jet_idx in xrange(1, 5):
             tags = {"skip_hf"}
             postfix = "_LF"
 
-        if jet_idx > 2:
-            tags = tags | {"skip_all"}
-        #cfg.add_variable(
-        #    name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
-        #    expression="jet{}_deepcsv_b".format(jet_idx),
-        #    binning=binning,
-        #    x_title="Jet_{} prob_{{b}}".format(jet_idx),
-        #    tags=tags,
-        #)
-        #cfg.add_variable(
-        #    name="jet{}_deepcsv_bb{}".format(jet_idx, postfix),
-        #    expression="jet{}_deepcsv_bb".format(jet_idx),
-        #    binning=binning,
-        #    x_title="Jet_{} prob_{{bb}}".format(jet_idx),
-        #    tags=tags,
-        #)
+        if jet_idx <= 2:
+            tags = tags | {"measurement"}
+        cfg.add_variable(
+            name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
+            expression="jet{}_deepcsv_b".format(jet_idx),
+            binning=binning,
+            x_title="Jet_{} prob_{{b}}".format(jet_idx),
+            tags=tags,
+        )
+        cfg.add_variable(
+            name="jet{}_deepcsv_bb{}".format(jet_idx, postfix),
+            expression="jet{}_deepcsv_bb".format(jet_idx),
+            binning=binning,
+            x_title="Jet_{} prob_{{bb}}".format(jet_idx),
+            tags=tags,
+        )
         cfg.add_variable(
             name="jet{}_deepcsv_bcomb{}".format(jet_idx, postfix),
             expression="jet{0}_deepcsv_b{{jec_identifier}} + jet{0}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
@@ -383,7 +384,6 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
         # TODO: Only for fast calculation now, remove later
         if ps_name == "closure":
             continue
-
         # loop over both jet1 jet2 permutations
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
             # region loop (hf, lf, ...)

@@ -26,19 +26,33 @@ from analysis.tasks.measurement import MeasureScaleFactors, FitScaleFactors
 
 
 class PlotTask(AnalysisTask):
-    iteration = MergeHistograms.iteration
-    final_it = MergeHistograms.final_it
+    def rebin_hist(hist, region):
+        # truncate < 0 bin
+        binning = self.config_inst.get_aux("binning")
+        btagger_cfg = self.config_inst.get_aux("btagger")
 
-    def store_parts(self):
-        return super(PlotTask, self).store_parts() + (self.iteration,)
+        bin_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
+
+        bin_edges[0] = -0.1
+        n_bins = len(bin_edges) - 1
+        hist_rebinned = hist.Rebin(n_bins, "rebinned_{}".format(hist.GetName()), bin_edges)
+        # because of the truncation, the first bin content is filled into the underflow bin, fix this
+        hist_rebinned.SetBinContent(1, hist.GetBinContent(1))
+        hist_rebinned.SetBinError(1, hist.GetBinError(1))
+        return hist_rebinned
 
     def output(self):
         return self.local_target("plots.tgz")
 
 
 class PlotVariable(PlotTask):
+    iteration = MergeHistograms.iteration
+    final_it = MergeHistograms.final_it
+
     category_tag = luigi.Parameter(default="merged")
-    variable = luigi.Parameter(default="jet{i_probe_jet}_deepcsv_bcomb")
+    variable = luigi.CSVParameter(default="jet{i_probe_jet}_deepcsv_bcomb_{region}_nominal",
+        description="Variable to plot, or multiple variables that are filled into one histogram. "
+        "{} accesses auxiliary category information.")
     mc_split = luigi.ChoiceParameter(choices=["process", "flavor"])
     normalize = luigi.BoolParameter()
 
@@ -46,16 +60,18 @@ class PlotVariable(PlotTask):
         "not be the final iteration.")
 
     def requires(self):
-        reqs = {
-            "hist": MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
-                _prefer_cli=["version"])
-        }
+        reqs = {"hists": OrderedDict()}
+
         if self.compare_it >= 0:
             if self.compare_it == self.iteration:
                 raise ValueError("Trying to compare identical iterations {} and {}".format(
                     self.iteration, self.compare_it))
-            reqs["compare"] = MergeHistograms.req(self, branch=0, iteration=self.compare_it, final_it=False,
+            reqs["hists"]["secondary"] = MergeHistograms.req(self, branch=0, iteration=self.compare_it, final_it=False,
                 version=self.get_version(MergeHistograms), _prefer_cli=["version"])
+
+        reqs["hists"]["primary"] = MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
+            _prefer_cli=["version"])
+
         if self.normalize:
             reqs["scale"] = MeasureScaleFactors.req(self, iteration=0,
                 version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
@@ -108,9 +124,6 @@ class PlotVariable(PlotTask):
                         if children:
                             continue
 
-                        # create variable name from template
-                        variable = self.variable.format(**leaf_cat.aux)
-
                         flavor = leaf_cat.get_aux("flavor", None)
                         if self.normalize:
                             channel = leaf_cat.get_aux("channel")
@@ -127,16 +140,19 @@ class PlotVariable(PlotTask):
                                     continue
                                 elif process.is_mc and flavor == "inclusive":
                                     continue
+                            for variable in variables:
+                                # create variable name from template
+                                variable = self.variable.format(**leaf_cat.aux)
 
-                            hist = process_dir.Get(variable)
-                            if process.is_data:
-                                data_hist = add_hist(data_hist, hist)
-                            else:
-                                if self.normalize:  # apply "trigger" sfs as aprt of the normalization
-                                    hist.Scale(scales[channel.name][region])
+                                hist = process_dir.Get(variable)
+                                if process.is_data:
+                                    data_hist = add_hist(data_hist, hist)
+                                else:
+                                    if self.normalize:  # apply "trigger" sfs as aprt of the normalization
+                                        hist.Scale(scales[channel.name][region])
 
-                                key = process.name if self.mc_split == "process" else flavor
-                                mc_hists[key] = add_hist(mc_hists[key], hist)
+                                    key = process.name if self.mc_split == "process" else flavor
+                                    mc_hists[key] = add_hist(mc_hists[key], hist)
 
                     if self.normalize:  # normalize mc yield to data in this category
                         mc_yield = sum(hist.Integral() for hist in mc_hists.values())
@@ -220,20 +236,6 @@ class PlotScaleFactor(AnalysisTask):
         local_tmp.touch()
 
         plots = {}
-
-        def rebin_hist(hist, region):
-            # truncate < 0 bin
-            binning = self.config_inst.get_aux("binning")
-            btagger_cfg = self.config_inst.get_aux("btagger")
-
-            bin_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
-            bin_edges[0] = -0.1
-            n_bins = len(bin_edges) - 1
-            hist_rebinned = hist.Rebin(n_bins, "rebinned_{}".format(hist.GetName()), bin_edges)
-            # because of the truncation, the first bin content is filled into the underflow bin, fix this
-            hist_rebinned.SetBinContent(1, hist.GetBinContent(1))
-            hist_rebinned.SetBinError(1, hist.GetBinError(1))
-            return hist_rebinned
 
         for iteration, inp_dict in inp.items():
             for shift, inp_target in inp_dict.items():

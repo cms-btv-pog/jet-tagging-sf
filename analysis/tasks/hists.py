@@ -43,7 +43,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 self.shifts = self.shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
                     ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
 
-
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors
 
@@ -59,7 +58,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
             if self.iteration > 0:
                 reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration - 1,
-                    shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+                    shift=shift, fix_normalization=self.final_it,
+                    version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
                     for shift in self.shifts}
 
         return reqs
@@ -77,7 +77,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
             reqs["pu"] = CalculatePileupWeights.req(self)
         if self.iteration > 0:
             reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration - 1,
-                shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+                shift=shift, fix_normalization=self.final_it,
+                version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
                 for shift in self.shifts}
         return reqs
 
@@ -93,13 +94,16 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         else:
             return ""
 
-    def get_pileup_weighter(self, inp):
-        with inp.load() as pu_file:
-            pu_hist = pu_file.Get("pileup_weights")
-            pu_values = [
+    def get_pileup_weighter(self, inp, meta):
+        with inp.load() as pu_file: # TODO: Generalize, use either mc pileup or calculate
+            pu_hist = pu_file.Get("pileup_data")
+            pu_values_data = [
                 pu_hist.GetBinContent(i)
                 for i in range(1, pu_hist.GetNbinsX() + 1)
             ]
+        pu_values_mc = meta.load()["pileup"]
+        pu_values_mc = [count / sum(pu_values_mc) for count in pu_values_mc]
+        pu_values = [ pu_frac_data / pu_frac_mc if pu_frac_mc > 0 else 0. for pu_frac_mc, pu_frac_data in zip(pu_values_mc, pu_values_data)]
 
         def add_branch(extender):
             extender.add_branch("pu_weight", unpack="pu")
@@ -250,7 +254,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             weighters = []
 
                             # pileup weight
-                            weighters.append(self.get_pileup_weighter(inp["pu"]))
+                            weighters.append(self.get_pileup_weighter(inp["pu"], inp["meta"]))
 
                             # weights from previous iterations
                             if self.iteration > 0:

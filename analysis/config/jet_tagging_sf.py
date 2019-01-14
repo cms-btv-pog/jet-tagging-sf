@@ -484,8 +484,8 @@ rr = cfg.set_aux("run_ranges", {
 
 # global tags
 cfg.set_aux("global_tag", {
-    "data": "94X_dataRun2_ReReco_EOY17_v6",
-    "mc": "94X_mc2017_realistic_v14",
+    "data": "94X_dataRun2_v11",
+    "mc": "94X_mc2017_realistic_v17",
 })
 
 # lumi, normtag and pileup file
@@ -612,6 +612,7 @@ cfg.set_aux("file_merging", {
         "dy_lep_50ToInf": 90,
         "st_tW_t": 2,
         "st_tW_tbar": 2,
+        "ttZJets_lep": 5,
     }
 })
 
@@ -623,14 +624,14 @@ cfg.set_aux("get_file_merging", get_file_merging)
 
 # versions
 cfg.set_aux("versions", {
-    "WriteTrees": "prod5",
-    "MergeTrees": "prod5",
-    "MergeMetaData": "prod5",
-    "WriteHistograms": "prod13",
-    "MergeHistograms": "prod13",
-    "MeasureCScaleFactors": "prod6",
-    "MeasureScaleFactors": "prod6",
-    "FitScaleFactors": "prod6",
-    "GetScaleFactorWeights": "prod6",
-    "MergeScaleFactorWeights": "prod6",
+    "WriteTrees": "prod7",
+    "MergeTrees": "prod7",
+    "MergeMetaData": "prod7",
+    "WriteHistograms": "prod15",
+    "MergeHistograms": "prod15",
+    "MeasureCScaleFactors": "prod8",
+    "MeasureScaleFactors": "prod8",
+    "FitScaleFactors": "prod8",
+    "GetScaleFactorWeights": "prod8",
+    "MergeScaleFactorWeights": "prod8",
 })

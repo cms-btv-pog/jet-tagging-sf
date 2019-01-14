@@ -234,6 +234,7 @@ private:
     TH1F* weightHist_;
     TH1F* selectedWeightHist_;
     TH1F* cutflowHist_;
+    TH1F* pileupHist_;
     size_t nJESRanges_;
     size_t nJESFilesPerRange_;
     std::vector<std::pair<string, string> > jetVariations_;
@@ -284,6 +285,7 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , weightHist_(nullptr)
     , selectedWeightHist_(nullptr)
     , cutflowHist_(nullptr)
+    , pileupHist_(nullptr)
     , jerResolution_(nullptr)
     , jerScaleFactor_(nullptr)
     , rnd_(0)
@@ -471,6 +473,7 @@ void TreeMaker::beginJob()
     weightHist_ = new TH1F("event_weights", "", 2, -1., 1.);
     selectedWeightHist_ = new TH1F("selected_event_weights", "", 2, -1., 1.);
     cutflowHist_ = new TH1F("cutflow", "", 6, 0., 6.);
+    pileupHist_ = new TH1F("pileup", "", 100, 0., 100.);
 
     // add branches based on added variables
     for (size_t i = 0; i < varMap_.size(); i++)
@@ -521,6 +524,7 @@ void TreeMaker::endJob()
     weightHist_->Write();
     selectedWeightHist_->Write();
     cutflowHist_->Write();
+    pileupHist_->Write();
     tfileMeta_->Close();
 }
 
@@ -540,6 +544,18 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     eventHist_->Fill(histPos, 1.);
     weightHist_->Fill(histPos, genWeight);
 
+    // get vertex
+    edm::Handle<std::vector<reco::Vertex> > verticesHandle;
+    event.getByToken(vertexToken_, verticesHandle);
+    std::vector<reco::Vertex> vertices(*verticesHandle);
+    reco::Vertex vertex = vertices.front();
+
+    // read pu infos
+    float pu = isData_ ? vertices.size() : readPU(event);
+
+    // fill pileup hist
+    pileupHist_->Fill(pu, genWeight);
+
     // read the rho value
     double rho = readRho(event);
 
@@ -550,19 +566,13 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     }
     cutflowHist_->Fill(cutflowBin++);
 
-    // read the select the vertex
-    edm::Handle<std::vector<reco::Vertex> > verticesHandle;
-    event.getByToken(vertexToken_, verticesHandle);
-    std::vector<reco::Vertex> vertices(*verticesHandle);
-    reco::Vertex vertex = vertices.front();
+    // select the vertex
+
     if (vertexID(vertex) != V_VALID)
     {
         return;
     }
     cutflowHist_->Fill(cutflowBin++);
-
-    // read pu infos
-    float pu = isData_ ? vertices.size() : readPU(event);
 
     // read and select electrons
     std::vector<pat::Electron> electrons;

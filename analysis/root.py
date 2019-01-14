@@ -42,7 +42,7 @@ class ROOTPad(object):
 
         self.text = ROOT.TLatex()
         self.text.SetTextSize(0.04)
-        self.text.DrawLatexNDC(.7, .91, "%.2f fb^{-1}(13 TeV)" % lumi)
+        self.text.DrawLatexNDC(.7, .91, "%.1f fb^{-1}(13 TeV)" % lumi)
 
         self.objects = []
 

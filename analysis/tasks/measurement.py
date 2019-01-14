@@ -364,6 +364,9 @@ class MeasureCScaleFactors(MeasureScaleFactors):
                             sum_sqerrors_down[category][bin_idx] += error**2
 
         for category, sf_hist in sf_dict.items():
+            # c scale factors are determined in hf categories
+            inp_cat_name = category.name.replace("_c_", "_hf_")
+
             _, shift_type, shift_direction = self.effective_shift.split("_")
             for bin_idx in range(1, n_bins + 1):
                 bin_center = sf_hist.GetBinCenter(bin_idx)
@@ -573,16 +576,8 @@ class FitScaleFactors(MeasureScaleFactors):
                         )
                     results["sysType"] = sysType
 
-                    # skip unwanted combinations (e.g. lf stats for hf scale factors)
-                    if "lfstats" in sysType and region != "lf":
-                        continue
-                    if "hfstats" in sysType and region != "hf":
-                        continue
+                    # skip unwanted combinations
                     if "cferr" in sysType and region != "c":
-                        continue
-                    if self.effective_shift in ["lf_up", "lf_down"] and region != "hf":
-                        continue
-                    if self.effective_shift in ["hf_up", "hf_down"] and region != "lf":
                         continue
 
                     fit_results_tpl = "3, iterativefit, {sysType}, {flavor_id}, {eta_min}, " \
@@ -680,25 +675,10 @@ class CreateScaleFactorResults(AnalysisTask):
             if shift != "nominal":
                 uncertainty = shift.replace("_", "").replace("lf", "LF").replace("hf", "HF")
                 uncertainty = uncertainty.replace("jes", "JES").replace("up", "Up").replace("down", "Down")
-                if "LFstats" in uncertainty and region == "lf":
-                    uncertainty = uncertainty.replace("LFstats", "Stats")
-                elif "LFStats" in uncertainty:
-                    return None, None
-
-                if "HFstats" in uncertainty and region == "hf":
-                    uncertainty = uncertainty.replace("HFstats", "Stats")
-                elif "HFStats" in uncertainty:
-                    return None, None
 
                 if "cstats" in uncertainty and region == "c":
                     uncertainty = uncertainty.replace("cstats", "cErr")
                 elif "cstats" in uncertainty:
-                    return None, None
-
-                # contaminations
-                if "lf" in uncertainty and region != "hf":
-                    return None, None
-                if "hf" in uncertainty and region != "lf":
                     return None, None
 
                 name += "_{}".format(uncertainty)

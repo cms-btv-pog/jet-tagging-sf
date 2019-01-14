@@ -26,7 +26,7 @@ from analysis.tasks.measurement import MeasureScaleFactors, FitScaleFactors
 
 
 class PlotTask(AnalysisTask):
-    def rebin_hist(hist, region):
+    def rebin_hist(self, hist, region):
         # truncate < 0 bin
         binning = self.config_inst.get_aux("binning")
         btagger_cfg = self.config_inst.get_aux("btagger")
@@ -50,11 +50,13 @@ class PlotVariable(PlotTask):
     final_it = MergeHistograms.final_it
 
     category_tag = luigi.Parameter(default="merged")
-    variable = luigi.CSVParameter(default="jet{i_probe_jet}_deepcsv_bcomb_{region}_nominal",
+    variable = CSVParameter(default=["jet{i_probe_jet}_deepcsv_bcomb_{region}_nominal"],
         description="Variable to plot, or multiple variables that are filled into one histogram. "
         "{} accesses auxiliary category information.")
     mc_split = luigi.ChoiceParameter(choices=["process", "flavor"])
-    normalize = luigi.BoolParameter()
+    normalize = luigi.BoolParameter(description="Normalize MC histogram to data histogram")
+    truncate = luigi.BoolParameter(description="Truncate the bin below zero, to be used "
+        "for b-tag variable plots.")
 
     compare_it = luigi.IntParameter(default=-1, description="Secondary iteration to compare to. Can"
         "not be the final iteration.")
@@ -107,13 +109,13 @@ class PlotVariable(PlotTask):
 
         # create plot objects
         plot_dict = {}
-        limits_x = np.linspace(0., 1., len(inp) + 1)
+        limits_x = np.linspace(0., 1., len(inp["hists"]) + 1)
         for category in categories:
             plot = ROOTPlot(category.name, category.name)
-            plot.create_pads(n_pads_x=len(inp), n_pads_y=2, limits_x=limits_x, limits_y=[0., 0.3, 1.0])
+            plot.create_pads(n_pads_x=len(inp["hists"]), n_pads_y=2, limits_x=limits_x, limits_y=[0., 0.3, 1.0])
             plot_dict[category] = plot
 
-        for target_idx, inp_target in enumerate(inp.values()):
+        for target_idx, inp_target in enumerate(inp["hists"].values()):
             with inp_target.load("r") as input_file:
                 for category in categories:
                     data_hist = None
@@ -125,9 +127,8 @@ class PlotVariable(PlotTask):
                             continue
 
                         flavor = leaf_cat.get_aux("flavor", None)
-                        if self.normalize:
-                            channel = leaf_cat.get_aux("channel")
-                            region = leaf_cat.get_aux("region")
+                        channel = leaf_cat.get_aux("channel")
+                        region = leaf_cat.get_aux("region")
 
                         category_dir = input_file.GetDirectory(leaf_cat.name)
                         for process_key in category_dir.GetListOfKeys():
@@ -140,11 +141,15 @@ class PlotVariable(PlotTask):
                                     continue
                                 elif process.is_mc and flavor == "inclusive":
                                     continue
-                            for variable in variables:
+                            for variable in self.variable:
                                 # create variable name from template
-                                variable = self.variable.format(**leaf_cat.aux)
+                                variable = variable.format(**leaf_cat.aux)
+                                variable = variable.replace("hf", "HF").replace("lf", "LF") # TODO: Remove once capitalization is consistent
 
                                 hist = process_dir.Get(variable)
+                                if self.truncate:
+                                    hist = self.rebin_hist(hist, region)
+
                                 if process.is_data:
                                     data_hist = add_hist(data_hist, hist)
                                 else:
@@ -191,7 +196,8 @@ class PlotVariable(PlotTask):
 
         for category, plot in plot_dict.items():
             plot.save(os.path.join(local_tmp.path,
-                "{}_{}.pdf".format(category.name, self.variable)))
+                "{}_{}.pdf".format(category.name, self.variable)),
+                draw_legend=True, lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
             del plot
 
         with outp.localize("w") as tmp:
@@ -254,13 +260,13 @@ class PlotScaleFactor(AnalysisTask):
 
                         fit_hist = fit_category_dir.Get(self.hist_name)
                         hist = hist_category_dir.Get(self.hist_name)
-                        hist = rebin_hist(hist, region)
+                        hist = self.rebin_hist(hist, region)
 
                         if category in plots:
                             plot = plots[category]
                         else:
                             plot = ROOTPlot(category.name, category.name)
-                            plot.create_pads(lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
+                            plot.create_pads()
                             plots[category] = plot
                         plot.cd(0, 0)
                         fit_hist.GetXaxis().SetRangeUser(-.1, 1.0)
@@ -287,7 +293,8 @@ class PlotScaleFactor(AnalysisTask):
         # save plots
         for category in plots:
             plot = plots[category]
-            plot.save(os.path.join(local_tmp.path, "{}.pdf".format(category.name)))
+            plot.save(os.path.join(local_tmp.path, "{}.pdf".format(category.name)),
+                lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
             del plot
 
         with outp.localize("w") as tmp:

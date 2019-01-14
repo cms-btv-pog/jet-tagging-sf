@@ -36,15 +36,12 @@ class ROOTPad(object):
         self.pad = ROOT.TPad(*args, **kwargs)
         self.pad.Draw()
 
-    def draw_base_text(self, lumi=-1.):
+        self.objects = []
+
+
+    def draw_base_legend(self):
         self.legend = ROOT.TLegend(0.5, 0.7, 0.88, 0.88)
         self.legend.SetNColumns(2)
-
-        self.text = ROOT.TLatex()
-        self.text.SetTextSize(0.04)
-        self.text.DrawLatexNDC(.7, .91, "%.1f fb^{-1}(13 TeV)" % lumi)
-
-        self.objects = []
 
     def draw_text(self, text, xpos, ypos, size=0.04):
         self.text.SetTextSize(size)
@@ -78,7 +75,8 @@ class ROOTPad(object):
                 obj.SetLineColor(tcolors.get(key, 1))
                 obj.SetFillStyle(1001)
 
-                self.legend.AddEntry(obj, key, "f")
+                if key in tcolors:
+                    self.legend.AddEntry(obj, key, "f")
 
                 stack.Add(obj)
                 self.add_object(obj)
@@ -86,7 +84,8 @@ class ROOTPad(object):
             draw_objs = [stack]
         else:
             for key, obj in sorted(obj_dict.items()):
-                self.legend.AddEntry(obj, key, "l")
+                if key in tcolors:
+                    self.legend.AddEntry(obj, key, "l")
                 obj.SetLineColor(tcolors.get(key, 1))
             draw_objs = obj_dict.values()
 
@@ -145,7 +144,7 @@ class ROOTPlot(object):
         # store all used ROOT object to make sure they are not cleaned up
         self.objects = []
 
-    def create_pads(self, n_pads_x=1, n_pads_y=1, limits_x=None, limits_y=None, lumi=-1.):
+    def create_pads(self, n_pads_x=1, n_pads_y=1, limits_x=None, limits_y=None):
         if limits_x is None:
             limits_x = [idx / float(n_pads_x) for idx in range(n_pads_x + 1)]
         if limits_y is None:
@@ -158,7 +157,7 @@ class ROOTPlot(object):
                 name = "{}_{}_{}".format(hash(self), idx_x, idx_y)
                 pad = ROOTPad(name, name, limits_x[idx_x], limits_y[idx_y],
                     limits_x[idx_x + 1], limits_y[idx_y + 1])
-                pad.draw_base_text(lumi=lumi)
+                pad.draw_base_legend()
                 self.pads[(idx_x, idx_y)] = pad
                 self.open_pad = pad
 
@@ -176,9 +175,16 @@ class ROOTPlot(object):
     def draw_text(self, *args, **kwargs):
         self.open_pad.draw_text(*args, **kwargs)
 
-    def save(self, path):
+    def save(self, path, lumi=-1., **kwargs):
         for pad in self.pads.values():
-            pad.save()
+            pad.save(**kwargs)
+
+        if lumi > 0:
+            self.canvas.cd()
+            self.lumi = ROOT.TLatex()
+            self.lumi.SetTextSize(0.03)
+            self.lumi.DrawLatexNDC(.8, .94, "%.1f fb^{-1}(13 TeV)" % lumi)
+
         self.canvas.Update()
         self.canvas.SaveAs(path)
 

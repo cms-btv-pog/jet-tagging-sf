@@ -16,18 +16,21 @@ import tarfile
 
 from analysis.tasks.plotting import PlotTask
 from analysis.tasks.measurement import FitScaleFactors
+from analysis.tasks.hists import MergeHistograms
 from analysis.config.jet_tagging_sf import binning_to_selection
 from law.target.local import LocalDirectoryTarget
 
 dirname = os.path.abspath(os.path.dirname(__file__))
 
 class PlotFromCSV(PlotTask):
-
+    shift = FitScaleFactors.shift
+    iteration = FitScaleFactors.iteration
+    fix_normalization = FitScaleFactors.fix_normalization
     inputFile = os.path.join(dirname, "DeepCSV_94XSF_V3_B_F.csv")
 
     def requires(self):
         return FitScaleFactors.req(self, version=self.get_version(FitScaleFactors),
-                _prefer_cli=["version"])
+                 _prefer_cli=["version"])
 
     def run(self):
         ROOT.PyConfig.IgnoreCommandLineOptions = True
@@ -43,9 +46,11 @@ class PlotFromCSV(PlotTask):
 
         calib = ROOT.BTagCalibration("csvv1", self.inputFile)
 
+        shift, direction = self.shift.rsplit("_", 1)
+        sysType = direction + "_" + shift # TODO: Different shift name mappings
+
         v_sys = getattr(ROOT, 'vector<string>')()
-        v_sys.push_back('up_lf')
-        v_sys.push_back('down_lf')
+        v_sys.push_back(sysType)
 
         reader = ROOT.BTagCalibrationReader(
             3,              # 0 is for loose op, 1: medium, 2: tight, 3: discr. reshaping
@@ -60,7 +65,7 @@ class PlotFromCSV(PlotTask):
                 "iterativefit"      # measurement type
             )
 
-        flavors = {"lf": 2, "hf": 0}
+        flavors = {"lf": 2, "c": 1, "hf": 0}
         binning = self.config_inst.get_aux("binning")
 
         with inp["sf"].load("r") as input_file:
@@ -94,7 +99,7 @@ class PlotFromCSV(PlotTask):
                     y_values = []
                     for csv_value in x_values:
                         sf = reader.eval_auto_bounds(
-                            'central',      # systematic (here also 'up'/'down' possible)
+                            sysType,      # systematic (here also 'up'/'down' possible)
                             flavorID,              # jet flavor
                             eta_val,            # absolute value of eta
                             pt_val,             # pt
@@ -112,7 +117,7 @@ class PlotFromCSV(PlotTask):
                     ax.plot(x_values, y_values, label="new")
 
                     ax.legend()
-                    fig.savefig(os.path.join(local_tmp.path, "SF_%s_Pt%sto%s_eta%.1fTo%.1f.pdf" % ((flavorName,) + pt_range + eta_range)))
+                    fig.savefig(os.path.join(local_tmp.path, "SF_%s_%s_Pt%sto%s_eta%.1fTo%.1f.pdf" % ((flavorName, self.shift) + pt_range + eta_range)))
 
         with outp.localize("w") as tmp:
             with tarfile.open(tmp.path, "w:gz") as tar:

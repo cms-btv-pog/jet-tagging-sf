@@ -206,7 +206,7 @@ class PlotVariable(PlotTask):
                     tar.add(os.path.join(local_tmp.path, plot_file), arcname=plot_file)
 
 
-class PlotScaleFactor(AnalysisTask):
+class PlotScaleFactor(PlotTask):
     hist_name = "sf"
 
     shifts = CSVParameter(default=["nominal"])

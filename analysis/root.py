@@ -44,8 +44,10 @@ class ROOTPad(object):
         self.legend.SetNColumns(2)
 
     def draw_text(self, text, xpos, ypos, size=0.04):
-        self.text.SetTextSize(size)
-        self.text.DrawLatexNDC(xpos, ypos, text)
+        root_text = ROOT.TLatex()
+        root_text.SetTextSize(size)
+        root_text.DrawLatexNDC(xpos, ypos, text)
+        self.objects.append(root_text)
 
     def add_object(self, obj):
         # separate objects from their root files so that the plot persists if the file is closed

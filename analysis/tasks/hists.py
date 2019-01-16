@@ -10,6 +10,7 @@ import law
 import luigi
 import six
 import numpy as np
+from law.parameter import CSVParameter
 from order.util import join_root_selection
 from collections import defaultdict
 
@@ -26,9 +27,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         "calculation, starting at zero, default: 0")
     final_it = luigi.BoolParameter(description="Flag for the final iteration of the scale factor "
         "calculation.")
-    variable_tag = luigi.Parameter(default=None, description="Only consider variables with the given "
+    variable_tag = luigi.Parameter(default="", description="Only consider variables with the given "
         "tag. Use all if empty.")
-    shifts = CSVParameter(default=[])
+    used_shifts = CSVParameter(default=[]) # needs to be named differently from the wrapper task parameter
 
     file_merging = "trees"
 
@@ -45,10 +46,12 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
             if self.iteration > 0:
                 shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
                     ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
-        if len(self.shifts) == 0:
+        if len(self.used_shifts) == 1 and self.used_shifts[0] is None:
             self.shifts = shifts
-        elif any([shift not in shifts for shift in self.shifts]):
-            raise ValueError("Unknown shift in {}".format(self.shifts))
+        elif any([shift not in shifts for shift in self.used_shifts]):
+            raise ValueError("Unknown shift in {}".format(self.used_shifts))
+        else:
+            self.shifts = self.used_shifts
 
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors
@@ -341,7 +344,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                     if region and variable.has_tag("skip_{}".format(region)):
                                         continue
                                     # if a vaiable tag is given, require it
-                                    if self.variable_tag is not None and not variable.has_tag(self.variable_tag):
+                                    if self.variable_tag and not variable.has_tag(self.variable_tag):
                                         continue
 
                                     hist = ROOT.TH1F("{}_{}".format(variable.name, shift),

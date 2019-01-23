@@ -179,13 +179,13 @@ def get_region_info(idx, channel, et_miss=30., z_window=10., add_btag_cut=True):
     btag_name = btagger["name"]
     btag_variable = cfg.get_variable("jet{}_{}".format(idx, btagger["variable"]))
 
-    csv_tight = cfg.get_aux("working_points")[btag_name]["tight"]
+    csv_medium = cfg.get_aux("working_points")[btag_name]["medium"]
     csv_loose = cfg.get_aux("working_points")[btag_name]["loose"]
 
     hf_cuts, lf_cuts = [], []
     if add_btag_cut:
         # jet tagging requirement
-        hf_cuts.append("({}) > {}".format(btag_variable.expression, csv_tight))
+        hf_cuts.append("({}) > {}".format(btag_variable.expression, csv_medium))
         lf_cuts.append("({}) < {}".format(btag_variable.expression, csv_loose))
 
     # the following cuts do not apply for emu
@@ -308,15 +308,15 @@ for jet_idx in xrange(1, 5):
     for region in [None, "hf", "lf"]:
         if not region:
             binning = (25, 0., 1.)
-            tags = {"skip_lf", "skip_hf"}
+            tags = {"skip_lf", "skip_hf", "basic"}
             postfix = ""
         elif region == "hf":
             binning = cfg.get_aux("binning")["hf"]["deepcsv"]["plotting"]
-            tags = {"skip_lf"}
+            tags = {"skip_lf", "basic"}
             postfix = "_HF"
         elif region == "lf":
             binning = cfg.get_aux("binning")["lf"]["deepcsv"]["plotting"]
-            tags = {"skip_hf"}
+            tags = {"skip_hf", "basic"}
             postfix = "_LF"
 
         if jet_idx <= 2:
@@ -384,6 +384,7 @@ for ch in [ch_ee, ch_emu, ch_mumu]:
         # TODO: Only for fast calculation now, remove later
         if ps_name == "closure":
             continue
+
         # loop over both jet1 jet2 permutations
         for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
             # region loop (hf, lf, ...)

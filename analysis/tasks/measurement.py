@@ -275,14 +275,15 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         itertools.product(["c_stats1", "c_stats2"], ["up", "down"])}
 
     def requires(self):
-        lf_shifts = {"{}_{}".format(shift, direction) for shift, direction in
+        skip_shifts = {"{}_{}".format(shift, direction) for shift, direction in
             itertools.product(["hf", "lf_stats1", "lf_stats2"], ["up", "down"])}
+        skip_shifts = skip_shifts | {"jesTotal_up", "jesTotal_down"}
 
         reqs = {}
         reqs["scale_factors"] = {
             shift: MeasureScaleFactors.req(self, shift=shift,
                 version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
-            for shift in MeasureScaleFactors.shifts if shift not in lf_shifts
+            for shift in MeasureScaleFactors.shifts if shift not in skip_shifts
         }
         reqs["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=False,
                 version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])

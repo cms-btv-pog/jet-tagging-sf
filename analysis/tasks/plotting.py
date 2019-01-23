@@ -26,12 +26,12 @@ from analysis.tasks.measurement import MeasureScaleFactors, FitScaleFactors
 
 
 class PlotTask(AnalysisTask):
-    def rebin_hist(self, hist, region):
+    def rebin_hist(self, hist, region, binning_type="plotting"):
         # truncate < 0 bin
         binning = self.config_inst.get_aux("binning")
         btagger_cfg = self.config_inst.get_aux("btagger")
 
-        bin_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
+        bin_edges = array.array("d", binning[region][btagger_cfg["name"]][binning_type])
 
         bin_edges[0] = -0.1
         n_bins = len(bin_edges) - 1
@@ -244,7 +244,7 @@ class PlotScaleFactor(PlotTask):
         plots = {}
 
         for iteration, inp_dict in inp.items():
-            for shift, inp_target in inp_dict.items():
+            for shift_idx, (shift, inp_target) in enumerate(inp_dict.items()):
                 with inp_target["fit"]["sf"].load("r") as fit_file, \
                     inp_target["hist"]["scale_factors"].load("r") as hist_file:
                     for category_key in fit_file.GetListOfKeys():
@@ -260,7 +260,7 @@ class PlotScaleFactor(PlotTask):
 
                         fit_hist = fit_category_dir.Get(self.hist_name)
                         hist = hist_category_dir.Get(self.hist_name)
-                        hist = self.rebin_hist(hist, region)
+                        hist = self.rebin_hist(hist, region, binning_type="measurement")
 
                         if category in plots:
                             plot = plots[category]
@@ -276,20 +276,23 @@ class PlotScaleFactor(PlotTask):
                         fit_hist.GetYaxis().SetTitle("SF")
                         fit_hist.GetYaxis().SetTitleSize(.045)
 
-                        line = ROOT.TLine(0., 0., 0., 2.)
-                        line.SetLineStyle(9)
-
-                        plot.draw({"sf": fit_hist})
-                        plot.draw({"hist": hist}, options="SAME")
-                        plot.draw({"line": line})
-                        # add category information to plot
-                        if not np.isinf(pt_range[1]):
-                            text = r"#splitline{%d < p_{T} < %d}{%.1f < |#eta| < %.1f}" % \
-                                (pt_range[0], pt_range[1], eta_range[0], eta_range[1])
+                        if shift_idx == 0:
+                            line = ROOT.TLine(0., 0., 0., 2.)
+                            line.SetLineStyle(9)
+                            plot.draw({"sf": fit_hist})
+                            plot.draw({"hist": hist}, options="SAME")
+                            plot.draw({"line": line})
+                            # add category information to plot
+                            if not np.isinf(pt_range[1]):
+                                text = r"#splitline{%d < p_{T} < %d}{%.1f < |#eta| < %.1f}" % \
+                                    (pt_range[0], pt_range[1], eta_range[0], eta_range[1])
+                            else:
+                                text = r"#splitline{p_{T} > %d}{%.1f < |#eta| < %.1f}" % \
+                                    (pt_range[0], eta_range[0], eta_range[1])
+                            plot.draw_text(text, .7, .8, size=0.04)
                         else:
-                            text = r"#splitline{p_{T} > %d}{%.1f < |#eta| < %.1f}" % \
-                                (pt_range[0], eta_range[0], eta_range[1])
-                        plot.draw_text(text, .7, .8, size=0.04)
+                            plot.draw({shift: fit_hist}, options="SAME",
+                                line_color=2*shift_idx)
         # save plots
         for category in plots:
             plot = plots[category]

@@ -37,6 +37,7 @@ class ROOTPad(object):
         self.pad.Draw()
 
         self.objects = []
+        self.missing_key = False # Contains plot object not found in tcolors dict
 
 
     def draw_base_legend(self):
@@ -55,7 +56,8 @@ class ROOTPad(object):
             obj.SetDirectory(0)
         self.objects.append(obj)
 
-    def draw(self, obj_dict, stacked=False, invis=False, options=[]):
+    def draw(self, obj_dict, stacked=False, invis=False, line_color=1, fill_color=1,
+        options=[]):
         if not isinstance(options, (list, tuple)):
             options = [options]
 
@@ -73,12 +75,15 @@ class ROOTPad(object):
         if stacked:
             stack = ROOT.THStack("stack", "")
             for key, obj in sorted(obj_dict.items()):
-                obj.SetFillColor(tcolors.get(key, 1))
-                obj.SetLineColor(tcolors.get(key, 1))
+                obj.SetFillColor(tcolors.get(key, fill_color))
+                obj.SetLineColor(tcolors.get(key, line_color))
                 obj.SetFillStyle(1001)
 
                 if key in tcolors:
                     self.legend.AddEntry(obj, key, "f")
+                elif not self.missing_key:
+                    self.missing_key = True
+                    self.legend.AddEntry(obj, "Other", "f")
 
                 stack.Add(obj)
                 self.add_object(obj)
@@ -88,7 +93,7 @@ class ROOTPad(object):
             for key, obj in sorted(obj_dict.items()):
                 if key in tcolors:
                     self.legend.AddEntry(obj, key, "l")
-                obj.SetLineColor(tcolors.get(key, 1))
+                obj.SetLineColor(tcolors.get(key, line_color))
             draw_objs = obj_dict.values()
 
         for obj in draw_objs:

@@ -191,7 +191,7 @@ def get_region_info(idx, channel, et_miss=30., z_window=10., add_btag_cut=True):
     # the following cuts do not apply for emu
     if channel != "emu":
         # ET-miss requirement
-        et_miss_expr = "(met_px**2 + met_py**2)**0.5"
+        et_miss_expr = "(met_px{jec_identifier}**2 + met_py{jec_identifier}**2)**0.5"
         hf_cuts.append("{} > {}".format(et_miss_expr, et_miss))
         lf_cuts.append("{} < {}".format(et_miss_expr, et_miss))
 
@@ -323,17 +323,17 @@ for jet_idx in xrange(1, 5):
             tags = tags | {"measurement"}
         cfg.add_variable(
             name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
-            expression="jet{}_deepcsv_b".format(jet_idx),
+            expression="jet{}_deepcsv_b{{jec_identifier}}".format(jet_idx),
             binning=binning,
             x_title="Jet_{} prob_{{b}}".format(jet_idx),
-            tags=tags,
+#            tags=tags,
         )
         cfg.add_variable(
             name="jet{}_deepcsv_bb{}".format(jet_idx, postfix),
-            expression="jet{}_deepcsv_bb".format(jet_idx),
+            expression="jet{}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
             binning=binning,
             x_title="Jet_{} prob_{{bb}}".format(jet_idx),
-            tags=tags,
+#            tags=tags,
         )
         cfg.add_variable(
             name="jet{}_deepcsv_bcomb{}".format(jet_idx, postfix),

@@ -621,17 +621,18 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     std::vector<pat::MET> mets;
     std::vector<bool> passJetMETSelection;
     bool passOneJetMETSelection = false;
+    size_t rndSeed = rnd_->GetSeed();
     for (size_t i = 0; i < (isData_ ? 1 : jetVariations_.size()); i++)
     {
         string variation = jetVariations_[i].first;
         string direction = jetVariations_[i].second;
-
         std::vector<pat::Jet> jets2;
         pat::MET met(metOrig);
 
+        rnd_->SetSeed(rndSeed);
+
         bool pass = jetMETSelection(
             event, rho, lep1, lep2, metOrig, variation, direction, jets2, met, is_sl);
-
         jets.push_back(jets2);
         mets.push_back(met);
         passJetMETSelection.push_back(pass);
@@ -1421,11 +1422,15 @@ void TreeMaker::applyJER(pat::Jet& jet, const std::vector<reco::GenJet>* genJets
     if (matchedGenJet)
     {
         jerFactor = 1 + (sf - 1) * (jet.pt() - matchedGenJet->pt()) / jet.pt();
+        rnd_->Gaus(0.0, 1.);
     }
     else if (sf > 1)
     {
         double width = res * std::sqrt(sf * sf - 1);
         jerFactor = 1 + rnd_->Gaus(0.0, width);
+    }
+    else {
+        rnd_->Gaus(0.0, 1.);
     }
 
     // truncate the jer factor when the energy is too small

@@ -136,7 +136,7 @@ dataset_tt_dl = od.Dataset(
     campaign=campaign,
     n_files=968,
     keys=[
-         "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM"
+         "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
 )
 
@@ -145,7 +145,7 @@ dataset_tt_sl = od.Dataset(
     campaign=campaign,
     n_files=1523,
     keys=[
-        "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM"
+        "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
 )
 
@@ -156,7 +156,7 @@ dataset_dy_lep_10To50 = od.Dataset(
     campaign=campaign,
     n_files=569,
     keys=[
-        "/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM"
+        "/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
     ],
 )
 
@@ -165,7 +165,7 @@ dataset_dy_lep_50ToInf = od.Dataset(
     campaign=campaign,
     n_files=1254,
     keys=[
-        "/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM"
+        "/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
 )
 
@@ -205,7 +205,7 @@ dataset_st_tW_t = od.Dataset(
     campaign=campaign,
     n_files=173,
     keys=[
-         "/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v1/MINIAODSIM"
+         "/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v1/MINIAODSIM",
     ],
 )
 
@@ -214,7 +214,7 @@ dataset_st_tW_tbar = od.Dataset(
     campaign=campaign,
     n_files=160,
     keys=[
-         "/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v1/MINIAODSIM"
+         "/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v1/MINIAODSIM",
     ],
 )
 
@@ -225,7 +225,7 @@ dataset_WW = od.Dataset(
     campaign=campaign,
     n_files=153,
     keys=[
-        "/WW_TuneCP5_13TeV-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM"
+        "/WW_TuneCP5_13TeV-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
     ],
 )
 
@@ -234,7 +234,7 @@ dataset_WZ = od.Dataset(
     campaign=campaign,
     n_files=72,
     keys=[
-        "/WZ_TuneCP5_13TeV-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3/MINIAODSIM"
+        "/WZ_TuneCP5_13TeV-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3/MINIAODSIM",
     ],
 )
 
@@ -243,7 +243,40 @@ dataset_ZZ = od.Dataset(
     campaign=campaign,
     n_files=53,
     keys=[
-        "/ZZ_TuneCP5_13TeV-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM"
+        "/ZZ_TuneCP5_13TeV-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
+    ],
+)
+
+# W + jets
+
+dataset_W_lep = od.Dataset( # TODO: v15/autumn dataset
+    "W_lep", 500,
+    campaign=campaign,
+    n_files=841,
+    keys=[
+        "/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall18MiniAOD-102X_upgrade2018_realistic_v12-v1/MINIAODSIM",
+    ],
+)
+
+# tt+X
+
+# TODO: ttH bb+nonbb
+
+dataset_ttWJets = od.Dataset(
+    "ttWJets", 700,
+    campaign=campaign,
+    n_files=374,
+    keys=[
+        "/ttWJets_TuneCP5_13TeV_madgraphMLM_pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2/MINIAODSIM",
+    ],
+)
+
+dataset_ttZJets = od.Dataset(
+    "ttZJets", 710,
+    campaign=campaign,
+    n_files=632,
+    keys=[
+        "/ttZJets_TuneCP5_13TeV_madgraphMLM_pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2/MINIAODSIM",
     ],
 )
 
@@ -268,3 +301,6 @@ dataset_st_tW_tbar.add_process(process_st_tW_tbar)
 dataset_WW.add_process(process_WW)
 dataset_WZ.add_process(process_WZ)
 dataset_ZZ.add_process(process_ZZ)
+dataset_W_lep.add_process(process_W_lep)
+dataset_ttWJets.add_process(process_ttWJets)
+dataset_ttZJets.add_process(process_ttZJets)

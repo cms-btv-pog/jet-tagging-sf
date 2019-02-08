@@ -8,7 +8,7 @@
 JTSF_CMSSW_SETUP=ICHEP18 scram_cores=4 source setup.sh
 
 # create the law task index file
-law db
+law index
 
 # install CMSSW module(s)
 law run InstallCMSSWCode

@@ -46,7 +46,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
             if self.iteration > 0:
                 shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
                     ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
-        if len(self.used_shifts) == 1 and self.used_shifts[0] is None:
+        if len(self.used_shifts) == 0:
             self.shifts = shifts
         elif any([shift not in shifts for shift in self.used_shifts]):
             raise ValueError("Unknown shift in {}".format(self.used_shifts))

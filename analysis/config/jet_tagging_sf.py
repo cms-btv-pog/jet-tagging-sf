@@ -63,6 +63,12 @@ jes_sources = [
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
 ]
 
+# add auxiliary info to base config
+cfg.set_aux("jes_levels", {
+    "data": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
+    "mc": ["L1FastJet", "L2Relative", "L3Absolute"],
+})
+
 cfg.set_aux("btagger", {
     "name": "deepcsv",
     "variable": "deepcsv_bcomb",
@@ -282,6 +288,7 @@ def add_btag_variables(cfg):
                 binning=binning,
                 x_title="Jet_{} prob_{{b}}".format(jet_idx),
                 #tags=tags,
+                context=cfg.name,
             )
             cfg.add_variable(
                 name="jet{}_deepcsv_bb{}".format(jet_idx, postfix),
@@ -289,6 +296,7 @@ def add_btag_variables(cfg):
                 binning=binning,
                 x_title="Jet_{} prob_{{bb}}".format(jet_idx),
                 #tags=tags,
+                context=cfg.name,
             )
             cfg.add_variable(
                 name="jet{}_deepcsv_bcomb{}".format(jet_idx, postfix),
@@ -296,6 +304,7 @@ def add_btag_variables(cfg):
                 binning=binning,
                 x_title="Jet_{} prob_{{b+bb}}".format(jet_idx),
                 tags=tags,
+                context=cfg.name,
             )
 
 def add_categories(cfg):
@@ -319,7 +328,8 @@ def add_categories(cfg):
                         "channel": ch,
                         "phase_space": ps_name,
                         "region": rg_name,
-                    }
+                    },
+                    context=cfg.name,
                 )
                 # combine region categories to create inclusive control regions for plotting
                 rg_merged_name = "{}__{}".format(ps_name, rg_name)
@@ -331,7 +341,8 @@ def add_categories(cfg):
                         aux={
                             "phase_space": ps_name,
                             "region": rg_name,
-                        }
+                        },
+                        context=cfg.name,
                     )
                 else:
                     rg_merged_cat = cfg.get_category(rg_merged_name)
@@ -352,6 +363,7 @@ def add_categories(cfg):
                         name="{}__{}__{}__j{}".format(ch.name, ps_name, rg_name, i_tag_jet),
                         label="{}, {}, {} region (j{} tagged)".format(ch.name, ps_name, rg_name, i_tag_jet),
                         selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
+                        context=cfg.name,
                     )
 
                     # flavor loop (b, c, udsg, ...)
@@ -360,6 +372,7 @@ def add_categories(cfg):
                             name="{}__f{}".format(rg_cat.name, fl_name),
                             label="{}, {} flavor".format(rg_cat.label, fl_name),
                             selection=join_root_selection(rg_cat.selection, fl_sel),
+                            context=cfg.name,
                         )
 
                         # pt loop
@@ -368,6 +381,7 @@ def add_categories(cfg):
                                 name="{}__pt{}".format(fl_cat.name, pt_name),
                                 label="{}, pt {}".format(fl_cat.label, pt_name),
                                 selection=join_root_selection(fl_cat.selection, pt_sel),
+                                context=cfg.name,
                             )
 
                             # eta loop
@@ -383,6 +397,7 @@ def add_categories(cfg):
                                         "region": rg_name,
                                         "flavor": fl_name,
                                     },
+                                    context=cfg.name,
                                 )
 
                                 # merged category for both jets and all flavors
@@ -399,7 +414,8 @@ def add_categories(cfg):
                                             "region": rg_name,
                                             "eta": eta_range,
                                             "pt": pt_range,
-                                        }
+                                        },
+                                        context=cfg.name,
                                     )
                                     if rg_name == "hf":
                                         # add c categories (not written to histograms)
@@ -415,7 +431,8 @@ def add_categories(cfg):
                                                 "region": "c",
                                                 "eta": eta_range,
                                                 "pt": pt_range,
-                                            }
+                                            },
+                                            context=cfg.name,
                                         )
                                 else:
                                     merged_cat = cfg.get_category(merged_name)
@@ -432,3 +449,13 @@ from analysis.config.config_ICHEP18 import create_config as create_config_ICHEP1
 config_ICHEP18 = create_config_ICHEP18(cfg)
 add_btag_variables(config_ICHEP18)
 add_categories(config_ICHEP18)
+
+from analysis.config.config_Moriond19 import create_config as create_config_Moriond19
+config_Moriond19 = create_config_Moriond19(cfg)
+add_btag_variables(config_Moriond19)
+add_categories(config_Moriond19)
+
+from analysis.config.config_Moriond19_legacy import create_config as create_config_Moriond19_legacy
+config_Moriond19_legacy = create_config_Moriond19_legacy(cfg)
+add_btag_variables(config_Moriond19_legacy)
+add_categories(config_Moriond19_legacy)

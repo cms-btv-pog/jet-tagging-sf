@@ -81,7 +81,8 @@ def create_config(base_cfg):
     # lumi, normtag and pileup file
     cfg.set_aux("lumi_file", "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/"
         "ReReco/Cert_294927-306462_13TeV_EOY2017ReReco_Collisions17_JSON.txt")
-    cfg.set_aux("normtag_file", "https://www.dropbox.com/s/luj5m5rhb25auhh/normtag_PHYSICS.json")
+    # https://twiki.cern.ch/twiki/bin/view/CMS/TWikiLUM
+    cfg.set_aux("normtag_file", "/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_PHYSICS.json")
     cfg.set_aux("pileup_file", "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions17/13TeV/"
         "PileUp/pileup_latest.txt")
 
@@ -164,11 +165,6 @@ def create_config(base_cfg):
         ],
     })
 
-    cfg.set_aux("jes_levels", {
-        "data": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
-        "mc": ["L1FastJet", "L2Relative", "L3Absolute"],
-    })
-
     cfg.set_aux("pileup_mc", [
         3.39597497605e-05, 6.63688402133e-06, 1.39533611284e-05, 3.64963078209e-05, 6.00872171664e-05,
         9.33932578027e-05, 0.000120591524486, 0.000128694546198, 0.000361697233219, 0.000361796847553,
@@ -192,6 +188,7 @@ def create_config(base_cfg):
         4.6060444984e-08, 2.81008884326e-08, 1.70121486128e-08, 1.02159894812e-08,
     ])
 
+    # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PileupJSONFileforData#Pileup_JSON_Files_For_Run_II
     cfg.set_aux("min_bias_xs", sn.Number(69.2, (sn.Number.REL, 0.046)))  # mb
 
     # file merging information (stage -> dataset -> files after merging)

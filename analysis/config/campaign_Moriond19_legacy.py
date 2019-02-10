@@ -13,7 +13,7 @@ from analysis.config.processes import *
 
 # campaign
 campaign = od.Campaign(
-    "2018_Run2_pp_13TeV_MORIOND19", 1,
+    "2018_Run2_pp_13TeV_MORIOND19legacy", 1,
     ecm=13,
     bx=25,
 )

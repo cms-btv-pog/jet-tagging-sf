@@ -89,6 +89,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
             args = [
                 ("inputFiles", input_file),
                 ("outputFile", tmp_tree.path),
+                ("campaign", self.config_inst.campaign.name),
                 ("metaDataFile", tmp_meta.path),
                 ("isData", self.dataset_inst.is_data),
                 ("globalTag", self.config_inst.get_aux("global_tag")[data_src]),

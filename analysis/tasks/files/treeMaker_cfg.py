@@ -23,6 +23,13 @@ try:
 
     # add custom options
     options.register(
+        "campaign",
+        "",
+        VarParsing.multiplicity.singleton,
+        VarParsing.varType.string,
+        "campaign which the dataset to process belongs to",
+    )
+    options.register(
         "metaDataFile",
         "",
         VarParsing.multiplicity.singleton,
@@ -191,7 +198,7 @@ try:
         lumiList = LumiList(filename=options.lumiFile)
         process.source.lumisToProcess = lumiList.getVLuminosityBlockRange()
 
-    # standard seuquences with global tag
+    # standard sequences with global tag
     if options.globalTag:
         process.load("Configuration.StandardSequences.FrontierConditions_GlobalTag_cff")
         process.GlobalTag.globaltag = options.globalTag
@@ -205,13 +212,24 @@ try:
     # electron ID on uncorrected electrons
     # no option to configure the electron collection available here
     from RecoEgamma.EgammaTools.EgammaPostRecoTools import setupEgammaPostRecoSeq
-    setupEgammaPostRecoSeq(
-        process,
-        isMiniAOD=True,
-        applyEnergyCorrections=False,
-        applyVIDOnCorrectedEgamma=False,
-        era="2017-Nov17ReReco",
-    )
+    if options.campaign == "2018_Run2_pp_13TeV_MORIOND19":
+        setupEgammaPostRecoSeq(
+            process,
+            isMiniAOD=True,
+            runEnergyCorrections=False,
+            applyEnergyCorrections=False,
+            applyVIDOnCorrectedEgamma=False,
+            era="2018-Prompt",
+        )
+    else:
+        setupEgammaPostRecoSeq(
+            process,
+            isMiniAOD=True,
+            applyEnergyCorrections=False,
+            applyVIDOnCorrectedEgamma=False,
+            era="2017-Nov17ReReco",
+        )
+
     seq += process.egammaScaleSmearSeq
     seq += process.egammaPostRecoSeq
     electronCollection = cms.InputTag("slimmedElectrons", "", process.name_())
@@ -237,6 +255,27 @@ try:
     seq += process.fullPatMetSequence
     metCollection = cms.InputTag("slimmedMETs", "", process.name_())
 
+    # add DeepJet discriminators
+    from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
+
+    if options.campaign != "2018_Run2_pp_13TeV_MORIOND19":
+        updateJetCollection(
+           process,
+           jetSource = jetCollection,
+           pvSource = cms.InputTag('offlineSlimmedPrimaryVertices'),
+           svSource = cms.InputTag('slimmedSecondaryVertices'),
+           jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute']), 'None'),
+           btagDiscriminators = [
+              'pfDeepFlavourJetTags:probb',
+              'pfDeepFlavourJetTags:probbb',
+              'pfDeepFlavourJetTags:problepb',
+              'pfDeepFlavourJetTags:probc',
+              'pfDeepFlavourJetTags:probuds',
+              'pfDeepFlavourJetTags:probg'
+              ],
+           postfix='NewDFTraining'
+        )
+        jetCollection = cms.InputTag("updatedPatJetsTransientCorrectedNewDFTraining", "", process.name_())
 
     # load and configure the tree maker
     process.load("JetTaggingSF.JetTaggingSF.treeMaker_cfi")

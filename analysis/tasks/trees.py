@@ -123,7 +123,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 args.append(("maxEvents", self.max_events))
 
             # build the cmsRun command
-            cfg_file = "treeMaker_{}_cfg.py".format(os.getenv("JTSF_CMSSW_SETUP"))
+            cfg_file = "treeMaker_cfg.py"
             cmd = "cmsRun " + law.util.rel_path(__file__, "files", cfg_file)
             cmd += " " + " ".join(cmsRunArg(*tpl) for tpl in args)
 

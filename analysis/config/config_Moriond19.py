@@ -134,13 +134,13 @@ def create_config(base_cfg):
     # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC
     cfg.set_aux("jes_version", {
         "data": [
-            rr["A"] + ("Fall17_17Nov2017_V32_102X_DATA",),
-            rr["B"] + ("Fall17_17Nov2017_V32_102X_DATA",),
-            rr["C"] + ("Fall17_17Nov2017_V32_102X_DATA",),
-            rr["D"] + ("Fall17_17Nov2017_V32_102X_DATA",),
+            rr["A"] + ("Fall17_17Nov2017_V32_DATA",),
+            rr["B"] + ("Fall17_17Nov2017_V32_DATA",),
+            rr["C"] + ("Fall17_17Nov2017_V32_DATA",),
+            rr["D"] + ("Fall17_17Nov2017_V32_DATA",),
         ],
         "mc": [
-            (1, int(1e9), "Fall17_17Nov2017_V32_102X_MC"),
+            (1, int(1e9), "Fall17_17Nov2017_V32_MC"),
         ],
     })
 

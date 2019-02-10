@@ -453,6 +453,12 @@ void TreeMaker::setupVariables()
             varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix);
             varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix);
             varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_b" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_bb" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_lepb" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_c" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_uds" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_udsg" + postfix);
         }
     }
 }
@@ -766,6 +772,18 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
                 jet->bDiscriminator("pfDeepCSVJetTags:probc"));
             varMap_.setDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix,
                 jet->bDiscriminator("pfDeepCSVJetTags:probudsg"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_b" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probb"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_bb" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probbb"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_lepb" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:problepb"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_c" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probc"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_uds" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probuds"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_udsg" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probg"));
         }
     }
 

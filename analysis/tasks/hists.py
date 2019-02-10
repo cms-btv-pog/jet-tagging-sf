@@ -172,7 +172,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 # find category in which the scale factor of the jet was computed to get correct histogram
                 # TODO: Handle c-jets
                 region = "hf" if abs(jet_flavor) in (4, 5) else "lf"
-                category = get_category(jet_pt, abs(jet_eta), region, phase_space="measure")
+                category = get_category(self.config_inst, jet_pt, abs(jet_eta),
+                    region, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]
@@ -407,7 +408,8 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
         slices = []
         for dataset in self.config_inst.datasets:
             file_merging = WriteHistograms.file_merging
-            n_files = self.config_inst.get_aux("get_file_merging")(file_merging, dataset)
+            n_files = self.config_inst.get_aux("get_file_merging")(self.config_inst,
+                file_merging, dataset)
             slices.extend([(dataset, i) for i in range(n_files)])
 
         target_slices = slices[start_leaf:end_leaf]
@@ -570,7 +572,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 elif region != "c" and self.normalize_cerrs:
                     continue
 
-                category = get_category(jet_pt, abs(jet_eta), region, phase_space="measure")
+                category = get_category(self.config_inst,jet_pt, abs(jet_eta),
+                    region, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]

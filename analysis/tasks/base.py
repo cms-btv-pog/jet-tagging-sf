@@ -30,7 +30,7 @@ class AnalysisTask(law.Task):
 
     outputs_siblings = True
 
-    campaign = luigi.Parameter(default="2017_Run2_pp_13TeV_ICHEP18")
+    config = luigi.Parameter(default="2017_Run2_pp_13TeV_ICHEP18")
 
     accepts_messages = True
     message_cache_size = 20
@@ -41,7 +41,7 @@ class AnalysisTask(law.Task):
         super(AnalysisTask, self).__init__(*args, **kwargs)
 
         self.analysis_inst = analysis
-        self.config_inst = self.analysis_inst.get_config(self.campaign)
+        self.config_inst = self.analysis_inst.get_config(self.config)
 
     def get_version(self, task_cls):
         family = task_cls if isinstance(task_cls, six.string_types) else task_cls.get_task_family()

@@ -104,16 +104,13 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         else:
             return ""
 
-    def get_pileup_weighter(self, inp, meta):
-        with inp.load() as pu_file: # TODO: Generalize, use either mc pileup or calculate
-            pu_hist = pu_file.Get("pileup_data")
-            pu_values_data = [
+    def get_pileup_weighter(self, inp):
+        with inp.load() as pu_file:
+            pu_hist = pu_file.Get("pileup_weights")
+            pu_values = [
                 pu_hist.GetBinContent(i)
                 for i in range(1, pu_hist.GetNbinsX() + 1)
             ]
-        pu_values_mc = meta.load()["pileup"]
-        pu_values_mc = [count / sum(pu_values_mc) for count in pu_values_mc]
-        pu_values = [ pu_frac_data / pu_frac_mc if pu_frac_mc > 0 else 0. for pu_frac_mc, pu_frac_data in zip(pu_values_mc, pu_values_data)]
 
         def add_branch(extender):
             extender.add_branch("pu_weight", unpack="pu")
@@ -172,7 +169,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 # find category in which the scale factor of the jet was computed to get correct histogram
                 # TODO: Handle c-jets
                 region = "hf" if abs(jet_flavor) in (4, 5) else "lf"
-                category = get_category(jet_pt, abs(jet_eta), region, phase_space="measure")
+                category = get_category(self.config_inst, jet_pt, abs(jet_eta),
+                    region, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]
@@ -264,7 +262,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             weighters = []
 
                             # pileup weight
-                            weighters.append(self.get_pileup_weighter(inp["pu"], inp["meta"]))
+                            weighters.append(self.get_pileup_weighter(inp["pu"]))
 
                             # weights from previous iterations
                             if self.iteration > 0:
@@ -407,7 +405,8 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
         slices = []
         for dataset in self.config_inst.datasets:
             file_merging = WriteHistograms.file_merging
-            n_files = self.config_inst.get_aux("get_file_merging")(file_merging, dataset)
+            n_files = self.config_inst.get_aux("get_file_merging")(self.config_inst,
+                file_merging, dataset)
             slices.extend([(dataset, i) for i in range(n_files)])
 
         target_slices = slices[start_leaf:end_leaf]
@@ -570,7 +569,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 elif region != "c" and self.normalize_cerrs:
                     continue
 
-                category = get_category(jet_pt, abs(jet_eta), region, phase_space="measure")
+                category = get_category(self.config_inst,jet_pt, abs(jet_eta),
+                    region, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]

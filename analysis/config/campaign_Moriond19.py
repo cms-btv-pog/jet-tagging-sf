@@ -2,7 +2,7 @@
 # flake8: noqa
 
 """
-Defintion of the campaign and datasets for 2017 data for ICHEP 2018.
+Defintion of the campaign and datasets for 2018 data for Moriond 2019.
 """
 
 
@@ -12,8 +12,9 @@ from analysis.config.processes import *
 
 
 # campaign
+campaign_name = "2018_Run2_pp_13TeV_MORIOND19"
 campaign = od.Campaign(
-    "2018_Run2_pp_13TeV_MORIOND19", 1,
+    campaign_name, 3,
     ecm=13,
     bx=25,
 )
@@ -25,6 +26,7 @@ dataset_data_A_ee = od.Dataset(
     is_data=True,
     n_files=4791,
     keys=["/EGamma/Run2018A-17Sep2018-v2/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_B_ee = od.Dataset(
@@ -33,6 +35,7 @@ dataset_data_B_ee = od.Dataset(
     is_data=True,
     n_files=1941,
     keys=["/EGamma/Run2018B-17Sep2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_C_ee = od.Dataset(
@@ -41,6 +44,7 @@ dataset_data_C_ee = od.Dataset(
     is_data=True,
     n_files=2179,
     keys=["/EGamma/Run2018C-17Sep2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_D_ee = od.Dataset(
@@ -49,6 +53,7 @@ dataset_data_D_ee = od.Dataset(
     is_data=True,
     n_files=8663,
     keys=["/EGamma/Run2018D-PromptReco-v2/MINIAOD"],
+    context=campaign_name,
 )
 
 datasets_data_ee = [
@@ -61,6 +66,7 @@ dataset_data_A_emu = od.Dataset(
     is_data=True,
     n_files=541,
     keys=["/MuonEG/Run2018A-17Sep2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_B_emu = od.Dataset(
@@ -69,6 +75,7 @@ dataset_data_B_emu = od.Dataset(
     is_data=True,
     n_files=333,
     keys=["/MuonEG/Run2018B-17Sep2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_C_emu = od.Dataset(
@@ -77,6 +84,7 @@ dataset_data_C_emu = od.Dataset(
     is_data=True,
     n_files=292,
     keys=["/MuonEG/Run2018C-17Sep2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_D_emu = od.Dataset(
@@ -85,6 +93,7 @@ dataset_data_D_emu = od.Dataset(
     is_data=True,
     n_files=1373,
     keys=["/MuonEG/Run2018D-PromptReco-v2/MINIAOD"],
+    context=campaign_name,
 )
 
 datasets_data_emu = [
@@ -97,6 +106,7 @@ dataset_data_A_mumu = od.Dataset(
     is_data=True,
     n_files=1260,
     keys=["/DoubleMuon/Run2018A-17Sep2018-v2/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_B_mumu = od.Dataset(
@@ -105,6 +115,7 @@ dataset_data_B_mumu = od.Dataset(
     is_data=True,
     n_files=614,
     keys=["/DoubleMuon/Run2018B-17Sep2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_C_mumu = od.Dataset(
@@ -113,6 +124,7 @@ dataset_data_C_mumu = od.Dataset(
     is_data=True,
     n_files=526,
     keys=["/DoubleMuon/Run2018C-17Sep2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_D_mumu = od.Dataset(
@@ -121,6 +133,7 @@ dataset_data_D_mumu = od.Dataset(
     is_data=True,
     n_files=2353,
     keys=["/DoubleMuon/Run2018D-PromptReco-v2/MINIAOD"],
+    context=campaign_name,
 )
 
 datasets_data_mumu = [
@@ -138,6 +151,7 @@ dataset_tt_dl = od.Dataset(
     keys=[
          "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_tt_sl = od.Dataset(
@@ -147,6 +161,7 @@ dataset_tt_sl = od.Dataset(
     keys=[
         "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # Drell-Yan
@@ -158,6 +173,7 @@ dataset_dy_lep_10To50 = od.Dataset(
     keys=[
         "/DYJetsToLL_M-10to50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_dy_lep_50ToInf = od.Dataset(
@@ -167,6 +183,7 @@ dataset_dy_lep_50ToInf = od.Dataset(
     keys=[
         "/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # single top
@@ -207,6 +224,7 @@ dataset_st_tW_t = od.Dataset(
     keys=[
          "/ST_tW_top_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_st_tW_tbar = od.Dataset(
@@ -216,6 +234,7 @@ dataset_st_tW_tbar = od.Dataset(
     keys=[
          "/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # diboson
@@ -227,6 +246,7 @@ dataset_WW = od.Dataset(
     keys=[
         "/WW_TuneCP5_13TeV-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_WZ = od.Dataset(
@@ -236,6 +256,7 @@ dataset_WZ = od.Dataset(
     keys=[
         "/WZ_TuneCP5_13TeV-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v3/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_ZZ = od.Dataset(
@@ -245,6 +266,7 @@ dataset_ZZ = od.Dataset(
     keys=[
         "/ZZ_TuneCP5_13TeV-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # W + jets
@@ -256,6 +278,7 @@ dataset_W_lep = od.Dataset( # TODO: v15/autumn dataset
     keys=[
         "/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall18MiniAOD-102X_upgrade2018_realistic_v12-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # tt+X
@@ -269,6 +292,7 @@ dataset_ttWJets = od.Dataset(
     keys=[
         "/ttWJets_TuneCP5_13TeV_madgraphMLM_pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_ttZJets = od.Dataset(
@@ -278,6 +302,7 @@ dataset_ttZJets = od.Dataset(
     keys=[
         "/ttZJets_TuneCP5_13TeV_madgraphMLM_pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # link processes to datasets

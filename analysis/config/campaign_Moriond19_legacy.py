@@ -2,7 +2,7 @@
 # flake8: noqa
 
 """
-Defintion of the campaign and datasets for 2017 data for ICHEP 2018.
+Defintion of the campaign and datasets for 2016 legacy rereco data for Moriond 2019.
 """
 
 
@@ -12,8 +12,9 @@ from analysis.config.processes import *
 
 
 # campaign
+campaign_name = "2018_Run2_pp_13TeV_MORIOND19legacy"
 campaign = od.Campaign(
-    "2018_Run2_pp_13TeV_MORIOND19", 1,
+    campaign_name, 2,
     ecm=13,
     bx=25,
 )
@@ -26,6 +27,7 @@ dataset_data_B_ee = od.Dataset(
     is_data=True,
     n_files=922,
     keys=["/DoubleEG/Run2016B-17Jul2018_ver2-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_C_ee = od.Dataset(
@@ -34,6 +36,7 @@ dataset_data_C_ee = od.Dataset(
     is_data=True,
     n_files=427,
     keys=["/DoubleEG/Run2016C-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_D_ee = od.Dataset(
@@ -42,6 +45,7 @@ dataset_data_D_ee = od.Dataset(
     is_data=True,
     n_files=471,
     keys=["/DoubleEG/Run2016D-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_E_ee = od.Dataset(
@@ -50,6 +54,7 @@ dataset_data_E_ee = od.Dataset(
     is_data=True,
     n_files=375,
     keys=["/DoubleEG/Run2016E-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_F_ee = od.Dataset(
@@ -58,6 +63,7 @@ dataset_data_F_ee = od.Dataset(
     is_data=True,
     n_files=309,
     keys=["/DoubleEG/Run2016F-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_G_ee = od.Dataset(
@@ -66,6 +72,7 @@ dataset_data_G_ee = od.Dataset(
     is_data=True,
     n_files=715,
     keys=["/DoubleEG/Run2016G-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_H_ee = od.Dataset(
@@ -74,6 +81,7 @@ dataset_data_H_ee = od.Dataset(
     is_data=True,
     n_files=736,
     keys=["/DoubleEG/Run2016H-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 datasets_data_ee = [
@@ -87,6 +95,7 @@ dataset_data_B_emu = od.Dataset(
     is_data=True,
     n_files=249,
     keys=["/MuonEG/Run2016B-17Jul2018_ver2-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_C_emu = od.Dataset(
@@ -95,6 +104,7 @@ dataset_data_C_emu = od.Dataset(
     is_data=True,
     n_files=112,
     keys=["/MuonEG/Run2016C-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_D_emu = od.Dataset(
@@ -103,6 +113,7 @@ dataset_data_D_emu = od.Dataset(
     is_data=True,
     n_files=192,
     keys=["/MuonEG/Run2016D-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_E_emu = od.Dataset(
@@ -111,6 +122,7 @@ dataset_data_E_emu = od.Dataset(
     is_data=True,
     n_files=209,
     keys=["/MuonEG/Run2016E-17Jul2018-v2/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_F_emu = od.Dataset(
@@ -119,6 +131,7 @@ dataset_data_F_emu = od.Dataset(
     is_data=True,
     n_files=159,
     keys=["/MuonEG/Run2016F-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_G_emu = od.Dataset(
@@ -127,6 +140,7 @@ dataset_data_G_emu = od.Dataset(
     is_data=True,
     n_files=302,
     keys=["/MuonEG/Run2016G-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_H_emu = od.Dataset(
@@ -135,6 +149,7 @@ dataset_data_H_emu = od.Dataset(
     is_data=True,
     n_files=267,
     keys=["/MuonEG/Run2016H-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 datasets_data_emu = [
@@ -148,6 +163,7 @@ dataset_data_B_mumu = od.Dataset(
     is_data=True,
     n_files=451,
     keys=["/DoubleMuon/Run2016B-17Jul2018_ver2-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_C_mumu = od.Dataset(
@@ -156,6 +172,7 @@ dataset_data_C_mumu = od.Dataset(
     is_data=True,
     n_files=203,
     keys=["/DoubleMuon/Run2016C-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_D_mumu = od.Dataset(
@@ -164,6 +181,7 @@ dataset_data_D_mumu = od.Dataset(
     is_data=True,
     n_files=215,
     keys=["/DoubleMuon/Run2016D-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_E_mumu = od.Dataset(
@@ -172,6 +190,7 @@ dataset_data_E_mumu = od.Dataset(
     is_data=True,
     n_files=186,
     keys=["/DoubleMuon/Run2016E-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_F_mumu = od.Dataset(
@@ -180,6 +199,7 @@ dataset_data_F_mumu = od.Dataset(
     is_data=True,
     n_files=155,
     keys=["/DoubleMuon/Run2016F-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_G_mumu = od.Dataset(
@@ -188,6 +208,7 @@ dataset_data_G_mumu = od.Dataset(
     is_data=True,
     n_files=346,
     keys=["/DoubleMuon/Run2016G-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 dataset_data_H_mumu = od.Dataset(
@@ -196,6 +217,7 @@ dataset_data_H_mumu = od.Dataset(
     is_data=True,
     n_files=378,
     keys=["/DoubleMuon/Run2016H-17Jul2018-v1/MINIAOD"],
+    context=campaign_name,
 )
 
 datasets_data_mumu = [
@@ -214,6 +236,7 @@ dataset_tt_dl = od.Dataset(
     keys=[
         "/TTTo2L2Nu_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_tt_sl = od.Dataset(
@@ -223,6 +246,7 @@ dataset_tt_sl = od.Dataset(
     keys=[
         "/TTToSemilepton_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # Drell-Yan
@@ -234,6 +258,7 @@ dataset_dy_lep_10To50 = od.Dataset(
     keys=[
         "/DYJetsToLL_M-10to50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_dy_lep_50ToInf = od.Dataset(
@@ -244,6 +269,7 @@ dataset_dy_lep_50ToInf = od.Dataset(
         "/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v2/MINIAODSIM",
         "/DYJetsToLL_M-50_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext2-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # single top
@@ -255,7 +281,8 @@ dataset_st_s_lep = od.Dataset(
     n_files=8,
     keys=[
         "/ST_s-channel_4f_leptonDecays_13TeV-amcatnlo-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
-    ]
+    ],
+    context=campaign_name,
 )
 
 # t-channel
@@ -266,6 +293,7 @@ dataset_st_t_t = od.Dataset(
     keys= [
         "/ST_t-channel_top_4f_inclusiveDecays_13TeV-powhegV2-madspin-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_st_t_tbar = od.Dataset(
@@ -275,6 +303,7 @@ dataset_st_t_tbar = od.Dataset(
     keys= [
         "/ST_t-channel_antitop_4f_inclusiveDecays_13TeV-powhegV2-madspin-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 
@@ -286,6 +315,7 @@ dataset_st_tW_t = od.Dataset(
     keys=[
         "/ST_tW_top_5f_inclusiveDecays_13TeV-powheg-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_st_tW_tbar = od.Dataset(
@@ -295,6 +325,7 @@ dataset_st_tW_tbar = od.Dataset(
     keys=[
         "/ST_tW_antitop_5f_inclusiveDecays_13TeV-powheg-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # diboson
@@ -307,6 +338,7 @@ dataset_WW = od.Dataset(
         "/WW_TuneCUETP8M1_13TeV-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
         "/WW_TuneCUETP8M1_13TeV-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_WZ = od.Dataset(
@@ -317,6 +349,7 @@ dataset_WZ = od.Dataset(
         "/WZ_TuneCUETP8M1_13TeV-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
         "/WZ_TuneCUETP8M1_13TeV-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_ZZ = od.Dataset(
@@ -326,6 +359,7 @@ dataset_ZZ = od.Dataset(
     keys=[
         "/ZZ_TuneCUETP8M1_13TeV-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # W + jets
@@ -338,6 +372,7 @@ dataset_W_lep = od.Dataset(
         "/WJetsToLNu_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
         "/WJetsToLNu_TuneCUETP8M1_13TeV-madgraphMLM-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext2-v2/MINIAODSIM"
     ],
+    context=campaign_name,
 )
 
 # tt+X
@@ -351,6 +386,7 @@ dataset_ttWJets_lep = od.Dataset(
     keys=[
         "/TTWJetsToLNu_TuneCUETP8M1_13TeV-amcatnloFXFX-madspin-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext2-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_ttWJets_had = od.Dataset(
@@ -360,6 +396,7 @@ dataset_ttWJets_had = od.Dataset(
     keys=[
         "/TTWJetsToQQ_TuneCUETP8M1_13TeV-amcatnloFXFX-madspin-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_ttZJets_lep = od.Dataset(
@@ -370,6 +407,7 @@ dataset_ttZJets_lep = od.Dataset(
         "/TTZToLLNuNu_M-10_TuneCUETP8M1_13TeV-amcatnlo-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext2-v1/MINIAODSIM",
         "/TTZToLLNuNu_M-10_TuneCUETP8M1_13TeV-amcatnlo-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext3-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_ttZJets_had = od.Dataset(
@@ -379,6 +417,7 @@ dataset_ttZJets_had = od.Dataset(
     keys=[
         "/TTZToQQ_TuneCUETP8M1_13TeV-amcatnlo-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 # link processes to datasets

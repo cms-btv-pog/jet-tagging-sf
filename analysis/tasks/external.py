@@ -88,7 +88,6 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
 
         return {
             "lumi_file": self.config_inst.get_aux("lumi_file"),
-            "normtag_file": self.config_inst.get_aux("normtag_file"),
             "pileup_file": self.config_inst.get_aux("pileup_file"),
             "jes_files": jes_files,
             "jes_unc_src_file": jes_unc_src_file,
@@ -264,7 +263,7 @@ class CalculateLumi(AnalysisTask):
                 echo "{uid}"
                 >&2 echo "done"
             done
-        """.format(lumi_file=setup_files["lumi_file"], normtag_file=setup_files["normtag_file"],
+        """.format(lumi_file=setup_files["lumi_file"], normtag_file=self.config_inst.get_aux("normtag_file"),
                 triggers=triggers_str, begin_end=begin_end, uid=uid)
 
         # run the command

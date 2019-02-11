@@ -1048,7 +1048,6 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
         // make sure that jetID is applied at correct point because functionality has changed in the past
         double totalEnergyFraction = jet.neutralHadronEnergyFraction() + jet.neutralEmEnergyFraction()
             + jet.chargedHadronEnergyFraction() + jet.chargedEmEnergyFraction() + jet.muonEnergyFraction();
-        std::cout << totalEnergyFraction << std::endl;
         if (std::fabs(totalEnergyFraction - 1. > 0.0001))
         {
             throw std::runtime_error("Jet energy fractions do not add up to 1.");

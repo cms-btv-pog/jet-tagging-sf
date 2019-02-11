@@ -27,6 +27,8 @@ action() {
         git cms-addpkg RecoBTag/TensorFlow
         git cherry-pick 94ceae257f846998c357fcad408986cc8a039152
 
+        git cms-addpkg RecoMET/METFilters
+
         scram b -j "$scram_cores"
 
     else

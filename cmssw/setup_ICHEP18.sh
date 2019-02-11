@@ -28,6 +28,10 @@ action() {
         # https://twiki.cern.ch/twiki/bin/viewauth/CMS/Egamma2017DataRecommendations
         git cms-merge-topic cms-egamma:EgammaPostRecoTools_940
 
+        # Updated MET filter
+        # https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2#Moriond%202018
+        git cms-addpkg RecoMET/METFilters
+
         scram b -j "$scram_cores"
 
     else

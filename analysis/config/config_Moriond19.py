@@ -146,7 +146,6 @@ def create_config(base_cfg):
     })
 
     # https://github.com/cms-sw/cmssw/blob/master/SimGeneral/MixingModule/python/mix_2018_25ns_JuneProjectionFull18_PoissonOOTPU_cfi.py
-    # TODO: Correct file?
     cfg.set_aux("pileup_mc", [
         4.695341e-10, 1.206213e-06, 1.162593e-06, 6.118058e-06, 1.626767e-05,
         3.508135e-05, 7.12608e-05, 0.0001400641, 0.0002663403, 0.0004867473,

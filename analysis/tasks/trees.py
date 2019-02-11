@@ -41,8 +41,8 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def output(self):
         return {
-            "tree": self.wlcg_target("tree_{}.root".format(self.branch), fs="wlcg_fs_rwth"),
-            "meta": self.wlcg_target("meta_{}.root".format(self.branch), fs="wlcg_fs_rwth"),
+            "tree": self.wlcg_target("tree_{}.root".format(self.branch)),
+            "meta": self.wlcg_target("meta_{}.root".format(self.branch)),
         }
 
     def run(self):
@@ -174,7 +174,7 @@ class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
         n_trees = self.config_inst.get_aux("get_file_merging")(self.config_inst,
             "trees", self.dataset)
         return law.SiblingFileCollection([
-            self.wlcg_target("tree_{}.root".format(i), fs="wlcg_fs_rwth") for i in range(n_trees)
+            self.wlcg_target("tree_{}.root".format(i)) for i in range(n_trees)
         ])
 
     def merge(self, inputs, output):

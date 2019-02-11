@@ -14,6 +14,7 @@ import FWCore.ParameterSet.Config as cms
 treeMaker = cms.EDAnalyzer("TreeMaker",
     verbose=cms.untracked.bool(False),
     outputFile=cms.string("output.root"),
+    campaign=cms.string(""),
     metaDataFile=cms.string("meta.root"),
     isData=cms.bool(False),
     leptonChannel=cms.string(""),

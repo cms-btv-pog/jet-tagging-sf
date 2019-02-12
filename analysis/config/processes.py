@@ -12,7 +12,7 @@ Values taken from:
 import order as od
 import scinum as sn
 
-from analysis.config.constants import N_LEPS, BR_W_LEP, BR_Z_CLEP, BR_WW_DL, BR_WW_SL
+from analysis.config.constants import N_LEPS, BR_W_LEP, BR_Z_CLEP, BR_WW_DL, BR_WW_SL, BR_H_BB
 
 
 process_data_ee = od.Process(
@@ -397,6 +397,19 @@ process_ttH = od.Process(
     }
 )
 
+process_ttH_bb = od.Process(
+    "ttH_bb", 61,
+    xsecs={
+        13: process_ttH.get_xsec(13) * BR_H_BB,
+    }
+)
+
+process_ttH_nonbb = od.Process(
+    "ttH_nonbb", 62,
+    xsecs={
+        13: process_ttH.get_xsec(13) * (1 - BR_H_BB),
+    }
+)
 
 process_ttVJets = od.Process(
     "ttVJets", 70,

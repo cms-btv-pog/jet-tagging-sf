@@ -312,10 +312,15 @@ class MeasureTreeSizes(AnalysisTask):
             # calculate the number of files after merging
             n = len(sizes)
             sum_sizes = sum(sizes)
-            mean_size = sum_sizes / float(n)
-            target_size = self.merged_size * 1024.**3
-            merge_factor = n if mean_size == 0 else min(n, int(round(target_size / mean_size)))
-            merged_files[dataset.name] = int(math.ceil(n / float(merge_factor)))
+            if sum_sizes == 0:
+                mean_size = -1
+                merge_factor = -1
+                merged_files[dataset.name] = -1
+            else:
+                mean_size = sum_sizes / float(n)
+                target_size = self.merged_size * 1024.**3
+                merge_factor = n if mean_size == 0 else min(n, int(round(target_size / mean_size)))
+                merged_files[dataset.name] = int(math.ceil(n / float(merge_factor)))
 
             total_files += n
             total_size += sum_sizes

@@ -24,7 +24,7 @@ dataset_data_A_ee = od.Dataset(
     "data_A_ee", 0,
     campaign=campaign,
     is_data=True,
-    n_files=4791,
+    n_files=4790,
     keys=["/EGamma/Run2018A-17Sep2018-v2/MINIAOD"],
     context=campaign_name,
 )

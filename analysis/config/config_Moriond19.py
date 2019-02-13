@@ -54,9 +54,9 @@ def create_config(base_cfg):
 
     # luminosities per channel in /pb
     cfg.set_aux("lumi", {
-        ch_ee: 59970.0, #59966.1613198,
-        ch_emu: 59970.0, #59966.1613198,
-        ch_mumu: 59970.0, #59966.1613198,
+        ch_ee: 59966.1613198,
+        ch_emu: 59966.1613198,
+        ch_mumu: 59966.1613198,
         #ch_e: 59966.1613198,
         #ch_mu: 59966.1613198,
     })

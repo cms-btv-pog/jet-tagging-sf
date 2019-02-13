@@ -212,6 +212,7 @@ class PlotScaleFactor(PlotTask):
     shifts = CSVParameter(default=["nominal"])
     iterations = CSVParameter(default=[0])
     fix_normalization = FitScaleFactors.fix_normalization
+    norm_to_nominal = luigi.BoolParameter()
 
     def requires(self):
         reqs = OrderedDict()
@@ -242,8 +243,12 @@ class PlotScaleFactor(PlotTask):
         local_tmp.touch()
 
         plots = {}
+        nominal_hists = {}
+        nominal_fit_hists = {}
 
         for iteration, inp_dict in inp.items():
+            if self.norm_to_nominal and inp_dict.keys()[0] != "nominal":
+                raise KeyError("When 'norm_to_nominal' is set to true, the first shift has to be 'nominal'.")
             for shift_idx, (shift, inp_target) in enumerate(inp_dict.items()):
                 with inp_target["fit"]["sf"].load("r") as fit_file, \
                     inp_target["hist"]["scale_factors"].load("r") as hist_file:
@@ -262,6 +267,17 @@ class PlotScaleFactor(PlotTask):
                         hist = hist_category_dir.Get(self.hist_name)
                         hist = self.rebin_hist(hist, region, binning_type="measurement")
 
+                        if self.norm_to_nominal:
+                            if shift == "nominal":
+                                # make sure histograms are not cleaned up when the file is closed
+                                nominal_hists[category] = hist.Clone()
+                                nominal_hists[category].SetDirectory(0)
+                                nominal_fit_hists[category] = fit_hist.Clone()
+                                nominal_fit_hists[category].SetDirectory(0)
+                            hist.Divide(nominal_hists[category])
+                            fit_hist.Divide(nominal_fit_hists[category])
+
+
                         if category in plots:
                             plot = plots[category]
                         else:
@@ -270,7 +286,9 @@ class PlotScaleFactor(PlotTask):
                             plots[category] = plot
                         plot.cd(0, 0)
                         fit_hist.GetXaxis().SetRangeUser(-.1, 1.0)
-                        fit_hist.GetYaxis().SetRangeUser(0., 2.0)
+                        y_min = 0.95 if self.norm_to_nominal else 0.
+                        y_max = 1.05 if self.norm_to_nominal else 2.
+                        fit_hist.GetYaxis().SetRangeUser(y_min, y_max)
                         fit_hist.GetXaxis().SetTitle("DeepCSV")
                         fit_hist.GetXaxis().SetTitleSize(.045)
                         fit_hist.GetYaxis().SetTitle("SF")
@@ -280,7 +298,8 @@ class PlotScaleFactor(PlotTask):
                             line = ROOT.TLine(0., 0., 0., 2.)
                             line.SetLineStyle(9)
                             plot.draw({"sf": fit_hist})
-                            plot.draw({"hist": hist}, options="SAME")
+                            if not self.norm_to_nominal:
+                                plot.draw({"hist": hist}, options="SAME")
                             plot.draw({"line": line})
                             # add category information to plot
                             if not np.isinf(pt_range[1]):

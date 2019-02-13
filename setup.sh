@@ -70,13 +70,8 @@ action() {
 
     if [ "$JTSF_CMSSW_SETUP" = "NONE" ]; then
         echo "NOTE: skipping CMSSW setup"
-    elif [ "$JTSF_CMSSW_SETUP" = "ICHEP18" ]; then
-        source "$JTSF_BASE/cmssw/setup_ICHEP18.sh" || return "$?"
-    elif [ "$JTSF_CMSSW_SETUP" = "Moriond19" ]; then
-        source "$JTSF_BASE/cmssw/setup_Moriond19.sh" || return "$?"
     else
-        2>&1 echo "unknown JTSF_CMSSW_SETUP '$JTSF_CMSSW_SETUP'"
-        return "1"
+        source "$JTSF_BASE/cmssw/setup_$JTSF_CMSSW_SETUP.sh" || return "$?"
     fi
 
 

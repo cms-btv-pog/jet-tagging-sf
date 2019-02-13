@@ -94,7 +94,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 ("campaign", self.config_inst.campaign.name),
                 ("metaDataFile", tmp_meta.path),
                 ("isData", self.dataset_inst.is_data),
-                ("globalTag", global_tag,
+                ("globalTag", global_tag),
                 ("lumiFile", setup_files["lumi_file"]),
                 ("metFilters", self.config_inst.get_aux("metFilters")[data_src]),
                 ("jesFiles", jes_files),

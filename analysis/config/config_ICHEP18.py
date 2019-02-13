@@ -45,7 +45,7 @@ def create_config(base_cfg):
         if dataset.is_data
     })
 
-    # store DeepCSV working points
+    # store b-tagger working points
     cfg.set_aux("working_points", {
         "deepcsv": {
             "loose": 0.1522,
@@ -139,12 +139,12 @@ def create_config(base_cfg):
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
             "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_eeBadScFilter",
-            "Flag_ecalBadCalibFilter",
+            "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
         "mc": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
-            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_ecalBadCalibFilter",
+            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
     })
 

@@ -17,6 +17,7 @@ from analysis.tasks.hists import MergeHistograms, GetScaleFactorWeights, MergeSc
 class MeasureScaleFactors(ShiftTask):
 
     iteration = MergeHistograms.iteration
+    b_tagger = MergeHistograms.b_tagger
 
     shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
                 jes_sources, ["up", "down"])} | {"{}_{}".format(shift, direction) for shift, direction in
@@ -33,7 +34,7 @@ class MeasureScaleFactors(ShiftTask):
         return reqs
 
     def store_parts(self):
-        return super(MeasureScaleFactors, self).store_parts() + (self.iteration,)
+        return super(MeasureScaleFactors, self).store_parts() + (self.b_tagger,) + (self.iteration,)
 
     def output(self):
         outputs = {"scale_factors": self.wlcg_target("scale_factors.root")}
@@ -66,7 +67,7 @@ class MeasureScaleFactors(ShiftTask):
         # these are stored in the config itself as we measure them inclusively over channels
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
-            if category.has_tag("merged") and category.get_aux("phase_space") == "measure":
+            if category.has_tag(("merged", self.b_tagger), mode="all") and category.get_aux("phase_space") == "measure":
                 categories.append(category)
 
         # get categories from which to determine the rate scaling of MC to data
@@ -76,11 +77,11 @@ class MeasureScaleFactors(ShiftTask):
             for channel in self.config_inst.channels:
                 scale_categories[channel] = {}
                 for category, _, children in channel.walk_categories():
-                    if category.has_tag("scales") and category.get_aux("phase_space") == "closure":
+                    if category.has_tag(("scales", self.b_tagger), mode="all") and category.get_aux("phase_space") == "closure":
                         region = category.get_aux("region")
                         scale_categories[channel][region] = category
 
-        btagger_cfg = self.config_inst.get_aux("btagger")
+        btagger_cfg = self.config_inst.get_aux("btaggers")[self.b_tagger]
 
         # category -> component (heavy/light) -> histogram
         hist_dict = {}
@@ -93,7 +94,7 @@ class MeasureScaleFactors(ShiftTask):
         for region in ["lf", "hf"]:
             eta_edges = array.array("d", binning[region]["abs(eta)"])
             pt_edges = array.array("d", binning[region]["pt"])
-            btag_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
+            btag_edges = array.array("d", binning[region][self.b_tagger]["measurement"])
             sf_hist = ROOT.TH3F(
                 "scale_factors_{}".format(region), "Scale factors {}".format(region),
                 len(eta_edges) - 1, eta_edges,
@@ -170,7 +171,7 @@ class MeasureScaleFactors(ShiftTask):
                         hist = process_dir.Get(variable_name)
 
                         # rebin
-                        btag_edges = array.array("d", binning[region][btagger_cfg["name"]]["measurement"])
+                        btag_edges = array.array("d", binning[region][self.b_tagger]["measurement"])
                         n_bins = len(btag_edges) - 1
                         hist_rebinned = hist.Rebin(n_bins, "rebinned_{}".format(category.name), btag_edges)
 
@@ -302,13 +303,13 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         # these are stored in the config itself as we measure them inclusively over channels
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
-            if category.has_tag("c"):
+            if category.has_tag(("c", self.b_tagger), mode="all"):
                 categories.append(category)
 
         # create histogram for c flavour nominal, and up and down shifts
-        btagger_cfg = self.config_inst.get_aux("btagger")
+        btagger_cfg = self.config_inst.get_aux("btaggers")[self.b_tagger]
         binning = self.config_inst.get_aux("binning")
-        btag_edges = array.array("d", binning["hf"][btagger_cfg["name"]]["measurement"])
+        btag_edges = array.array("d", binning["hf"][self.b_tagger]["measurement"])
         n_bins = len(btag_edges) - 1
 
         sf_dict = {}
@@ -491,9 +492,10 @@ class FitScaleFactors(MeasureScaleFactors):
         for category, _, _ in self.config_inst.walk_categories():
             if self.has_c_shift:
                 if category.get_aux("region") == "c":
-                    categories.append(category)
+                    if category.has_tag(self.b_tagger):
+                        categories.append(category)
             else:
-                if category.has_tag("merged") and category.get_aux("phase_space") == "measure":
+                if category.has_tag(("merged", self.b_tagger), mode="all") and category.get_aux("phase_space") == "measure":
                     categories.append(category)
 
         # get scaling factors for normalization
@@ -631,6 +633,7 @@ class FitScaleFactorsWrapper(WrapperTask):
 class CreateScaleFactorResults(AnalysisTask):
 
     iteration = MeasureScaleFactors.iteration
+    b_tagger = MeasureScaleFactors.b_tagger
 
     def requires(self):
         reqs = {shift: FitScaleFactors.req(self, shift=shift, fix_normalization=True,
@@ -639,7 +642,7 @@ class CreateScaleFactorResults(AnalysisTask):
         return reqs
 
     def store_parts(self):
-        return super(CreateScaleFactorResults, self).store_parts() + (self.iteration,)
+        return super(CreateScaleFactorResults, self).store_parts() + (self.b_tagger,) + (self.iteration,)
 
     def output(self):
         outp = {}

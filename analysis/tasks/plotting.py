@@ -26,12 +26,14 @@ from analysis.tasks.measurement import MeasureScaleFactors, FitScaleFactors
 
 
 class PlotTask(AnalysisTask):
+    b_tagger = MergeHistograms.b_tagger
+
     def rebin_hist(self, hist, region, binning_type="plotting"):
         # truncate < 0 bin
         binning = self.config_inst.get_aux("binning")
-        btagger_cfg = self.config_inst.get_aux("btagger")
+        btagger_cfg = self.config_inst.get_aux("btaggers")[self.b_tagger]
 
-        bin_edges = array.array("d", binning[region][btagger_cfg["name"]][binning_type])
+        bin_edges = array.array("d", binning[region][self.b_tagger][binning_type])
 
         bin_edges[0] = -0.1
         n_bins = len(bin_edges) - 1
@@ -104,7 +106,7 @@ class PlotVariable(PlotTask):
 
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
-            if category.has_tag(self.category_tag):
+            if category.has_tag((self.category_tag, self.b_tagger), mode="all"):
                 categories.append(category)
 
         # create plot objects
@@ -153,7 +155,7 @@ class PlotVariable(PlotTask):
                                 if process.is_data:
                                     data_hist = add_hist(data_hist, hist)
                                 else:
-                                    if self.normalize:  # apply "trigger" sfs as aprt of the normalization
+                                    if self.normalize:  # apply "trigger" sfs as part of the normalization
                                         hist.Scale(scales[channel.name][region])
 
                                     key = process.name if self.mc_split == "process" else flavor

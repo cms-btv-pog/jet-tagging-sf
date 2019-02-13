@@ -31,6 +31,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         "tag. Use all if empty.")
     used_shifts = CSVParameter(default=[]) # needs to be named differently from the wrapper task parameter
 
+    b_tagger = luigi.Parameter(default="deepcsv", description="Name of the b-tagger to use.")
+
     file_merging = "trees"
 
     workflow_run_decorators = [law.decorator.notify]
@@ -93,7 +95,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         return reqs
 
     def store_parts(self):
-        return super(WriteHistograms, self).store_parts() + (self.iteration,)
+        return super(WriteHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,)
 
     def output(self):
         return self.wlcg_target("hists_{}.root".format(self.branch))
@@ -138,7 +140,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                 sf_hists[category.GetName()] = hist
 
-        btag_var = self.config_inst.get_aux("btagger")["variable"]
+        btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
         identifier = self.get_jec_identifier(shift)
 
         def add_branch(extender):
@@ -170,7 +172,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 # TODO: Handle c-jets
                 region = "hf" if abs(jet_flavor) in (4, 5) else "lf"
                 category = get_category(self.config_inst, jet_pt, abs(jet_eta),
-                    region, phase_space="measure")
+                    region, self.b_tagger, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]
@@ -205,7 +207,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         for channel in channels:
             for category, _, children in channel.walk_categories():
                 if not children:
-                    categories.append((channel, category))
+                    # only use categories for the chosen b-tag algorithm
+                    if category.has_tag(self.b_tagger):
+                        categories.append((channel, category))
         categories = list(set(categories))
 
         # get processes
@@ -246,7 +250,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             tree.SetAlias("{0}_pt{1}".format(obj, jec_identifier),
                                 "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, jec_identifier))
                         # b-tagging alias
-                        btag_var = self.config_inst.get_aux("btagger")["variable"]
+                        btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
                         for obj in ["jet1", "jet2", "jet3", "jet4"]:
                             variable = self.config_inst.get_variable("{0}_{1}".format(obj, btag_var))
                             tree.SetAlias(variable.name + jec_identifier, variable.expression.format(
@@ -279,6 +283,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                     for _, add_value in weighters:
                                         add_value(entry)
 
+                        # read in total number of events
+                        sum_weights = inp["meta"].load()["event_weights"]["sum"]
+
                     for i, (channel, category) in enumerate(categories):
                         self.publish_message("writing histograms in category {} ({}/{})".format(
                             category.name, i + 1, len(categories)))
@@ -290,12 +297,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                         # set weights that are common for all shifts
                         base_weights = []
-                        if self.dataset_inst.is_mc: # TODO: Should be done separately for each process
+                        if self.dataset_inst.is_mc:
                             base_weights.append("gen_weight")
                             # lumi weight
                             lumi = self.config_inst.get_aux("lumi")[channel]
                             x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal
-                            sum_weights = inp["meta"].load()["event_weights"]["sum"]
                             lumi_weight = lumi * x_sec / sum_weights
                             base_weights.append(str(lumi_weight))
 
@@ -381,6 +387,8 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
     iteration = WriteHistograms.iteration
     final_it = WriteHistograms.final_it
 
+    b_tagger = WriteHistograms.b_tagger
+
     merge_factor = 12
 
     def create_branch_map(self):
@@ -417,7 +425,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
         ]
 
     def store_parts(self):
-        return super(MergeHistograms, self).store_parts() + (self.iteration,)
+        return super(MergeHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,)
 
     def cascade_output(self):
         return self.wlcg_target("hists.root")
@@ -466,6 +474,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     iteration = WriteHistograms.iteration
     file_merging = WriteHistograms.file_merging
+
+    b_tagger = WriteHistograms.b_tagger
 
     normalize_cerrs = luigi.BoolParameter()
 
@@ -519,7 +529,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
-        return super(GetScaleFactorWeights, self).store_parts() + (self.iteration,) + (c_err_part,)
+        return super(GetScaleFactorWeights, self).store_parts() + (self.b_tagger,) + (self.iteration,) + (c_err_part,)
 
     def output(self):
         return self.wlcg_target("stats_{}.json".format(self.branch))
@@ -541,7 +551,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                 sf_hists[category.GetName()] = hist
 
-        btag_var = self.config_inst.get_aux("btagger")["variable"]
+        btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
         identifier = self.get_jec_identifier(shift)
 
         def get_value(entry):
@@ -570,7 +580,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     continue
 
                 category = get_category(self.config_inst,jet_pt, abs(jet_eta),
-                    region, phase_space="measure")
+                    region, self.b_tagger, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]
@@ -626,7 +636,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     tree.SetAlias("{0}_pt{1}".format(obj, jec_identifier),
                         "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, jec_identifier))
                 # b-tagging alias
-                btag_var = self.config_inst.get_aux("btagger")["variable"]
+                btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
                 for obj in ["jet1", "jet2", "jet3", "jet4"]:
                     variable = self.config_inst.get_variable("{0}_{1}".format(obj, btag_var))
                     tree.SetAlias(variable.name + jec_identifier, variable.expression.format(
@@ -685,6 +695,8 @@ class MergeScaleFactorWeights(AnalysisTask):
     iteration = GetScaleFactorWeights.iteration
     normalize_cerrs = GetScaleFactorWeights.normalize_cerrs
 
+    b_tagger = GetScaleFactorWeights.b_tagger
+
     def requires(self):
         return {dataset.name: GetScaleFactorWeights.req(self, dataset=dataset.name,
             version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
@@ -695,7 +707,7 @@ class MergeScaleFactorWeights(AnalysisTask):
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
-        return super(MergeScaleFactorWeights, self).store_parts() + (self.iteration,) + (c_err_part,)
+        return super(MergeScaleFactorWeights, self).store_parts() + (self.b_tagger) + (self.iteration,) + (c_err_part,)
 
     @law.decorator.notify
     def run(self):

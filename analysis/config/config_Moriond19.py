@@ -45,7 +45,7 @@ def create_config(base_cfg):
             "medium": 0.4184,
             "tight": 0.7527,
         },
-        "deepflavor": {
+        "deepjet": {
             "loose": 0.0494,
             "medium": 0.2770,
             "tight": 0.7264,
@@ -191,8 +191,8 @@ def create_config(base_cfg):
         "WriteTrees": "prod2",
         "MergeTrees": "prod2",
         "MergeMetaData": "prod1",
-        "WriteHistograms": "test1",
-        "MergeHistograms": "test1",
+        "WriteHistograms": "test2",
+        "MergeHistograms": "test2",
         "MeasureCScaleFactors": "test1",
         "MeasureScaleFactors": "test1",
         "FitScaleFactors": "test1",

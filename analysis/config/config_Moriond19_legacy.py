@@ -45,7 +45,7 @@ def create_config(base_cfg):
             "medium": 0.6321,
             "tight": 0.8953,
         },
-        "deepflavor": {
+        "deepjet": {
             "loose": 0.0614,
             "medium": 0.3093,
             "tight": 0.7221,

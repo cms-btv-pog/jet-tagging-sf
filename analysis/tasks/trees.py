@@ -270,7 +270,7 @@ class MergeMetaDataWrapper(WrapperTask):
 
 class MeasureTreeSizes(AnalysisTask):
 
-    merged_size = luigi.FloatParameter(default=2.0, description="target size of merged tree files "
+    merged_size = luigi.FloatParameter(default=1.0, description="target size of merged tree files "
         "in GB")
 
     def __init__(self, *args, **kwargs):

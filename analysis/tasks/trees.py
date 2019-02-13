@@ -41,8 +41,8 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def output(self):
         return {
-            "tree": self.wlcg_target("tree_{}.root".format(self.branch), fs="wlcg_fs_rwth"),
-            "meta": self.wlcg_target("meta_{}.root".format(self.branch), fs="wlcg_fs_rwth"),
+            "tree": self.wlcg_target("tree_{}.root".format(self.branch)),
+            "meta": self.wlcg_target("meta_{}.root".format(self.branch)),
         }
 
     def run(self):
@@ -85,13 +85,16 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
             return " ".join("{}={}".format(key, v) for v in law.util.make_list(value))
 
         output = self.output()
+        # get global tag from dataset if defined, otherwise take default from config
+        global_tag = self.dataset_inst.get_aux("global_tag", self.config_inst.get_aux("global_tag")[data_src])
         with output["tree"].localize("w") as tmp_tree, output["meta"].localize("w") as tmp_meta:
             args = [
                 ("inputFiles", input_file),
                 ("outputFile", tmp_tree.path),
+                ("campaign", self.config_inst.campaign.name),
                 ("metaDataFile", tmp_meta.path),
                 ("isData", self.dataset_inst.is_data),
-                ("globalTag", self.config_inst.get_aux("global_tag")[data_src]),
+                ("globalTag", global_tag),
                 ("lumiFile", setup_files["lumi_file"]),
                 ("metFilters", self.config_inst.get_aux("metFilters")[data_src]),
                 ("jesFiles", jes_files),
@@ -123,7 +126,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 args.append(("maxEvents", self.max_events))
 
             # build the cmsRun command
-            cfg_file = "treeMaker_{}_cfg.py".format(os.getenv("JTSF_CMSSW_SETUP"))
+            cfg_file = "treeMaker_cfg.py"
             cmd = "cmsRun " + law.util.rel_path(__file__, "files", cfg_file)
             cmd += " " + " ".join(cmsRunArg(*tpl) for tpl in args)
 
@@ -173,7 +176,7 @@ class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
         n_trees = self.config_inst.get_aux("get_file_merging")(self.config_inst,
             "trees", self.dataset)
         return law.SiblingFileCollection([
-            self.wlcg_target("tree_{}.root".format(i), fs="wlcg_fs_rwth") for i in range(n_trees)
+            self.wlcg_target("tree_{}.root".format(i)) for i in range(n_trees)
         ])
 
     def merge(self, inputs, output):
@@ -311,10 +314,15 @@ class MeasureTreeSizes(AnalysisTask):
             # calculate the number of files after merging
             n = len(sizes)
             sum_sizes = sum(sizes)
-            mean_size = sum_sizes / float(n)
-            target_size = self.merged_size * 1024.**3
-            merge_factor = n if mean_size == 0 else min(n, int(round(target_size / mean_size)))
-            merged_files[dataset.name] = int(math.ceil(n / float(merge_factor)))
+            if sum_sizes == 0:
+                mean_size = -1
+                merge_factor = -1
+                merged_files[dataset.name] = -1
+            else:
+                mean_size = sum_sizes / float(n)
+                target_size = self.merged_size * 1024.**3
+                merge_factor = n if mean_size == 0 else min(n, int(round(target_size / mean_size)))
+                merged_files[dataset.name] = int(math.ceil(n / float(merge_factor)))
 
             total_files += n
             total_size += sum_sizes

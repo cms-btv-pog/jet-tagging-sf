@@ -255,13 +255,16 @@ for lep_idx in xrange(1, 3):
     )
 
 for jet_idx in xrange(1, 5):
+    tags = {"basic"}
+    if jet_idx <= 2:
+        tags = tags | {"main"}
     cfg.add_variable(
         name="jet{}_pt".format(jet_idx),
         expression="jet{}_pt".format(jet_idx),
         binning=(25, 0., 500.,),
         unit="GeV",
         x_title="Jet_{} p_{{T}}".format(jet_idx),
-        tags={"basic"}
+        tags=tags
     )
 
 def add_btag_variables(cfg):
@@ -281,7 +284,7 @@ def add_btag_variables(cfg):
                 postfix = "_LF"
 
             if jet_idx <= 2:
-                tags = tags | {"measurement"}
+                tags = tags | {"measurement", "main"}
             cfg.add_variable(
                 name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
                 expression="jet{}_deepcsv_b{{jec_identifier}}".format(jet_idx),

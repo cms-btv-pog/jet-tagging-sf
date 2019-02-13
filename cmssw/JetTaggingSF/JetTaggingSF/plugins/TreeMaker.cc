@@ -4,6 +4,7 @@
  *
  * Authors:
  *   - Marcel Rieger
+ *   - Yannik Rath
  */
 
 #include <memory>
@@ -180,7 +181,10 @@ private:
     VertexID vertexID(reco::Vertex&);
     ElectronID electronID(pat::Electron&, reco::Vertex&, double);
     MuonID muonID(pat::Muon&, reco::Vertex&);
-    JetID jetID(pat::Jet&, reco::RecoCandidate*, reco::RecoCandidate*, bool);
+    JetID jetID(pat::Jet&, reco::RecoCandidate*, reco::RecoCandidate*, bool, bool);
+    bool tightJetID_2016(pat::Jet&);
+    bool tightJetID_2017(pat::Jet&);
+    bool tightJetID_2018(pat::Jet&);
 
     // random helpers
     double readGenWeight(const edm::Event&);
@@ -193,6 +197,7 @@ private:
     // options
     bool verbose_;
     string outputFile_;
+    string campaign_;
     string metaDataFile_;
     bool isData_;
     string leptonChannel_;
@@ -209,6 +214,7 @@ private:
     vstring jesUncSources_;
     string jerPtResolutionFile_;
     string jerScaleFactorFile_;
+    bool (TreeMaker::*tightJetID_)(pat::Jet&);
 
     // tokens
     edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
@@ -249,6 +255,7 @@ private:
 TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     : verbose_(iConfig.getUntrackedParameter<bool>("verbose"))
     , outputFile_(iConfig.getParameter<string>("outputFile"))
+    , campaign_(iConfig.getParameter<string>("campaign"))
     , metaDataFile_(iConfig.getParameter<string>("metaDataFile"))
     , isData_(iConfig.getParameter<bool>("isData"))
     , leptonChannel_(iConfig.getParameter<string>("leptonChannel"))
@@ -453,6 +460,12 @@ void TreeMaker::setupVariables()
             varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_bb" + postfix);
             varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_c" + postfix);
             varMap_.addDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_b" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_bb" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_lepb" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_c" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_uds" + postfix);
+            varMap_.addDouble("jet" + std::to_string(j) + "_deepjet_udsg" + postfix);
         }
     }
 }
@@ -504,6 +517,24 @@ void TreeMaker::beginJob()
         }
     }
     std::cout << "total variables: " << varMap_.size() << std::endl;
+
+    // set campaign specific information
+    if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19legacy")
+    {
+        tightJetID_ = &TreeMaker::tightJetID_2016;
+    }
+    else if (campaign_ == "2017_Run2_pp_13TeV_ICHEP18")
+    {
+        tightJetID_ = &TreeMaker::tightJetID_2017;
+    }
+    else if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19")
+    {
+        tightJetID_ = &TreeMaker::tightJetID_2018;
+    }
+    else
+    {
+        throw std::runtime_error("Unknown campaign " + campaign_);
+    }
 }
 
 void TreeMaker::endJob()
@@ -766,6 +797,18 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
                 jet->bDiscriminator("pfDeepCSVJetTags:probc"));
             varMap_.setDouble("jet" + std::to_string(j) + "_deepcsv_udsg" + postfix,
                 jet->bDiscriminator("pfDeepCSVJetTags:probudsg"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_b" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probb"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_bb" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probbb"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_lepb" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:problepb"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_c" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probc"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_uds" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probuds"));
+            varMap_.setDouble("jet" + std::to_string(j) + "_deepjet_udsg" + postfix,
+                jet->bDiscriminator("pfDeepFlavourJetTags:probg"));
         }
     }
 
@@ -1002,6 +1045,17 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
     {
         pat::Jet jet(jetOrig);
 
+        // make sure that jetID is applied at correct point because functionality has changed in the past
+        double totalEnergyFraction = jet.neutralHadronEnergyFraction() + jet.neutralEmEnergyFraction()
+            + jet.chargedHadronEnergyFraction() + jet.chargedEmEnergyFraction() + jet.muonEnergyFraction();
+        if (std::fabs(totalEnergyFraction - 1. > 0.0001))
+        {
+            throw std::runtime_error("Jet energy fractions do not add up to 1.");
+        }
+
+        bool passPOGID;
+        passPOGID = (this->*tightJetID_)(jet);
+
         // when variation is empty, apply nominal JES and JER,
         // when variation is JER, apply nominal JES and JER variation,
         // otherwise, apply JES variation and nominal JER
@@ -1021,7 +1075,7 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
             applyJER(jet, genJets, "", "", rho);
         }
 
-        JetID type = jetID(jet, lep1, lep2, is_sl);
+        JetID type = jetID(jet, lep1, lep2, is_sl, passPOGID);
         if (type == J_VALID)
         {
             jets.push_back(jet);
@@ -1095,7 +1149,7 @@ ElectronID TreeMaker::electronID(pat::Electron& electron, reco::Vertex& vertex, 
     }
 
     // electron VID
-    if (electron.electronID("cutBasedElectronID-Fall17-94X-V1-tight") != 1.)
+    if (electron.electronID("cutBasedElectronID-Fall17-94X-V2-tight") != 1.)
     {
         return E_INVALID;
     }
@@ -1167,7 +1221,8 @@ MuonID TreeMaker::muonID(pat::Muon& muon, reco::Vertex& vertex)
     return isTight ? M_TIGHT : M_LOOSE;
 }
 
-JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2, bool is_sl)
+JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandidate* lep2,
+    bool is_sl, bool passPOGID)
 {
     // pt cut
     if (jet.pt() <= 20.)
@@ -1196,66 +1251,6 @@ JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandi
     if (!is_sl && (deltaR(jet.p4(), lep2->p4()) < 0.4))
     {
         return J_INVALID;
-    }
-
-    bool passPOGID;
-
-    // Note: we can require the tight jet ID in 2017, the loose ID is commented out in case we want
-    //       to provide SFs for loose jets
-    // // loose ID criteria from jetmet POG
-    // if (absEta <= 2.4)
-    // {
-    //     passPOGID = jet.neutralHadronEnergyFraction() < 0.99 &&
-    //         jet.neutralEmEnergyFraction() < 0.99 &&
-    //         jet.nConstituents() > 1 &&
-    //         jet.chargedHadronEnergyFraction() > 0. &&
-    //         jet.chargedMultiplicity() > 0 &&
-    //         jet.chargedEmEnergyFraction() < 0.99;
-    // }
-    // else if (absEta <= 2.7)
-    // {
-    //     passPOGID = jet.neutralHadronEnergyFraction() < 0.99 &&
-    //         jet.neutralEmEnergyFraction() < 0.99 &&
-    //         jet.nConstituents() > 1;
-    // }
-    // else if (absEta <= 3.)
-    // {
-    //     passPOGID = jet.neutralEmEnergyFraction() > 0.01 &&
-    //         jet.neutralHadronEnergyFraction() < 0.98 &&
-    //         jet.neutralMultiplicity() > 2;
-    // }
-    // else
-    // {
-    //     passPOGID = jet.neutralEmEnergyFraction() < 0.9 &&
-    //         jet.neutralMultiplicity() > 10;
-    // }
-
-    // tight ID criteria from jetmet POG
-    if (absEta <= 2.4)
-    {
-        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
-            jet.neutralEmEnergyFraction() < 0.9 &&
-            jet.nConstituents() > 1 &&
-            jet.chargedHadronEnergyFraction() > 0. &&
-            jet.chargedMultiplicity() > 0;
-    }
-    else if (absEta <= 2.7)
-    {
-        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
-            jet.neutralEmEnergyFraction() < 0.9 &&
-            jet.nConstituents() > 1;
-    }
-    else if (absEta <= 3.)
-    {
-        passPOGID = jet.neutralEmEnergyFraction() > 0.02 &&
-            jet.neutralEmEnergyFraction() < 0.99 &&
-            jet.neutralMultiplicity() > 2;
-    }
-    else
-    {
-        passPOGID = jet.neutralEmEnergyFraction() < 0.9 &&
-            jet.neutralHadronEnergyFraction() > 0.02 &&
-            jet.neutralMultiplicity() > 10;
     }
 
     if (!passPOGID)
@@ -1322,6 +1317,7 @@ void TreeMaker::applyJES(pat::Jet& jet, const string& variation, const string& d
     // so "p4 * uncorrectFactor = p4_orig"
     // or "p4 = uncorrectFactor / p4_orig"
     double uncorrectFactor = jet.jecFactor("Uncorrected");
+
     jet.setP4(jet.p4() * uncorrectFactor);
 
     // then, calculate the new correction factor
@@ -1438,6 +1434,106 @@ void TreeMaker::applyJER(pat::Jet& jet, const std::vector<reco::GenJet>* genJets
 
     // finally, update the jet
     jet.setP4(jet.p4() * jerFactor);
+}
+
+// campaign specific functions
+// tight ID criteria from jetmet POG
+bool TreeMaker::tightJetID_2016(pat::Jet& jet) {
+    bool passPOGID;
+    double absEta = fabs(jet.eta());
+
+    if (absEta <= 2.4)
+    {
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.nConstituents() > 1 &&
+            jet.chargedHadronEnergyFraction() > 0. &&
+            jet.chargedMultiplicity() > 0 &&
+            jet.chargedEmEnergyFraction() < 0.99;
+    }
+    else if (absEta <= 2.7)
+    {
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.nConstituents() > 1;
+    }
+    else if (absEta <= 3.)
+    {
+        passPOGID = jet.neutralEmEnergyFraction() > 0.01 &&
+            jet.neutralHadronEnergyFraction() < 0.98 &&
+            jet.neutralMultiplicity() > 2;
+    }
+    else
+    {
+        passPOGID = jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.neutralMultiplicity() > 10;
+    }
+    return passPOGID;
+}
+
+bool TreeMaker::tightJetID_2017(pat::Jet& jet) {
+    bool passPOGID;
+    double absEta = fabs(jet.eta());
+
+    if (absEta <= 2.4)
+    {
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.nConstituents() > 1 &&
+            jet.chargedHadronEnergyFraction() > 0. &&
+            jet.chargedMultiplicity() > 0;
+    }
+    else if (absEta <= 2.7)
+    {
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.nConstituents() > 1;
+    }
+    else if (absEta <= 3.)
+    {
+        passPOGID = jet.neutralEmEnergyFraction() > 0.02 &&
+            jet.neutralEmEnergyFraction() < 0.99 &&
+            jet.neutralMultiplicity() > 2;
+    }
+    else
+    {
+        passPOGID = jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.neutralHadronEnergyFraction() > 0.02 &&
+            jet.neutralMultiplicity() > 10;
+    }
+    return passPOGID;
+}
+
+bool TreeMaker::tightJetID_2018(pat::Jet& jet) {
+    bool passPOGID;
+    double absEta = fabs(jet.eta());
+    if (absEta <= 2.6)
+    {
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.nConstituents() > 1 &&
+            jet.chargedHadronEnergyFraction() > 0. &&
+            jet.chargedMultiplicity() > 0;
+    }
+    else if (absEta <= 2.7)
+    {
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.99 &&
+            jet.chargedMultiplicity() > 0;
+    }
+    else if (absEta <= 3.)
+    {
+        passPOGID = jet.neutralEmEnergyFraction() > 0.02 &&
+            jet.neutralEmEnergyFraction() < 0.99 &&
+            jet.neutralMultiplicity() > 2;
+    }
+    else
+    {
+        passPOGID = jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.neutralHadronEnergyFraction() > 0.02 &&
+            jet.neutralMultiplicity() > 10;
+    }
+    return passPOGID;
 }
 
 DEFINE_FWK_MODULE(TreeMaker);

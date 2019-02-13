@@ -5,8 +5,8 @@ action() {
     local scram_cores="$SCRAM_CORES"
     [ -z "$scram_cores" ] && scram_cores="1"
 
-    export SCRAM_ARCH="slc6_amd64_gcc630"
-    export CMSSW_VERSION="CMSSW_9_4_9"
+    export SCRAM_ARCH="slc6_amd64_gcc700"
+    export CMSSW_VERSION="CMSSW_10_2_11"
     export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
@@ -19,17 +19,14 @@ action() {
         eval `scramv1 runtime -sh`
         scram b
 
-
         #
         # custom topics
         #
 
-        # ECAL scale and resolution corrections
-        # https://twiki.cern.ch/twiki/bin/viewauth/CMS/Egamma2017DataRecommendations
-        git cms-merge-topic cms-egamma:EgammaPostRecoTools_940
+        git cms-merge-topic cms-egamma:EgammaPostRecoTools
+        git cms-addpkg RecoBTag/TensorFlow
+        git cherry-pick 94ceae257f846998c357fcad408986cc8a039152
 
-        # Updated MET filter
-        # https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2#Moriond%202018
         git cms-addpkg RecoMET/METFilters
 
         scram b -j "$scram_cores"
@@ -40,5 +37,6 @@ action() {
     fi
 
     cd "$origin"
+    export PYTHONPATH=/cvmfs/cms.cern.ch/slc6_amd64_gcc700/lcg/root/6.12.07-gnimlf5/lib:$PYTHONPATH
 }
 action "$@"

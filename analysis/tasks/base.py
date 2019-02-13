@@ -30,7 +30,7 @@ class AnalysisTask(law.Task):
 
     outputs_siblings = True
 
-    config = luigi.Parameter(default="2017_Run2_pp_13TeV_ICHEP18")
+    config = luigi.Parameter(default="2018_Run2_pp_13TeV_MORIOND19")
 
     accepts_messages = True
     message_cache_size = 20

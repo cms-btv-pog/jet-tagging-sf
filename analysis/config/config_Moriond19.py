@@ -23,7 +23,7 @@ def create_config(base_cfg):
         "st_tW_t", "st_tW_tbar",
         "WW", "WZ", "ZZ",
         "W_lep",
-        #"ttH_bb", "ttH_nonbb",
+        "ttH_bb", "ttH_nonbb",
         "ttWJets", "ttZJets",
     ]
 
@@ -53,12 +53,12 @@ def create_config(base_cfg):
     })
 
     # luminosities per channel in /pb
-    cfg.set_aux("lumi", { # TODO: Calculate exact number in task
-        ch_ee: 59970.0,
-        ch_emu: 59970.0,
-        ch_mumu: 59970.0,
-        #ch_e: 59970.0,
-        #ch_mu: 59970.0,
+    cfg.set_aux("lumi", {
+        ch_ee: 59970.0, #59966.1613198,
+        ch_emu: 59970.0, #59966.1613198,
+        ch_mumu: 59970.0, #59966.1613198,
+        #ch_e: 59966.1613198,
+        #ch_mu: 59966.1613198,
     })
 
     # run ranges
@@ -107,7 +107,8 @@ def create_config(base_cfg):
         #ch_mu: [
         #],
     })
-
+    # special triggers per real dataset
+    cfg.set_aux("data_triggers", {})
 
     # MET filters
     # https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2?rev=131
@@ -134,18 +135,17 @@ def create_config(base_cfg):
     # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC
     cfg.set_aux("jes_version", {
         "data": [
-            rr["A"] + ("Fall17_17Nov2017_V32_102X_DATA",),
-            rr["B"] + ("Fall17_17Nov2017_V32_102X_DATA",),
-            rr["C"] + ("Fall17_17Nov2017_V32_102X_DATA",),
-            rr["D"] + ("Fall17_17Nov2017_V32_102X_DATA",),
+            rr["A"] + ("Fall17_09May2018F_V3_DATA",),
+            rr["B"] + ("Fall17_09May2018F_V3_DATA",),
+            rr["C"] + ("Fall17_09May2018F_V3_DATA",),
+            rr["D"] + ("Fall17_09May2018F_V3_DATA",),
         ],
         "mc": [
-            (1, int(1e9), "Fall17_17Nov2017_V32_102X_MC"),
+            (1, int(1e9), "Fall17_17Nov2017_V32_MC"),
         ],
     })
 
     # https://github.com/cms-sw/cmssw/blob/master/SimGeneral/MixingModule/python/mix_2018_25ns_JuneProjectionFull18_PoissonOOTPU_cfi.py
-    # TODO: Correct file?
     cfg.set_aux("pileup_mc", [
         4.695341e-10, 1.206213e-06, 1.162593e-06, 6.118058e-06, 1.626767e-05,
         3.508135e-05, 7.12608e-05, 0.0001400641, 0.0002663403, 0.0004867473,
@@ -175,27 +175,29 @@ def create_config(base_cfg):
     # file merging information (stage -> dataset -> files after merging)
     cfg.set_aux("file_merging", {
         "trees": {
-            #"tt_dl": ,
-            #"tt_sl": ,
-            #"dy_lep_50ToInf": ,
-            #"st_tW_t": ,
-            #"st_tW_tbar": ,
-            #"ttZJets_lep": ,
+            "tt_dl": 88,
+            "tt_sl": 2,
+            "dy_lep_50ToInf": 19,
+            "st_tW_t": 2,
+            "ttH_bb": 3,
+            "ttH_nonbb": 3,
+            "ttWJets": 5,
+            "ttZJets": 11,
         }
     })
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod1",
-        "MergeTrees": "prod1",
+        "WriteTrees": "prod2",
+        "MergeTrees": "prod2",
         "MergeMetaData": "prod1",
-        "WriteHistograms": "prod1",
-        "MergeHistograms": "prod1",
-        "MeasureCScaleFactors": "prod1",
-        "MeasureScaleFactors": "prod1",
-        "FitScaleFactors": "prod1",
-        "GetScaleFactorWeights": "prod1",
-        "MergeScaleFactorWeights": "prod1",
+        "WriteHistograms": "test1",
+        "MergeHistograms": "test1",
+        "MeasureCScaleFactors": "test1",
+        "MeasureScaleFactors": "test1",
+        "FitScaleFactors": "test1",
+        "GetScaleFactorWeights": "test1",
+        "MergeScaleFactorWeights": "test1",
     })
 
     return cfg

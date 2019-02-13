@@ -44,7 +44,7 @@ action() {
     [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/software/$( whoami )"
     [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
     [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
-    [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="ICHEP18"
+    [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="Moriond19"
 
     # law and luigi setup
     export LAW_HOME="$JTSF_BASE/.law"
@@ -72,6 +72,8 @@ action() {
         echo "NOTE: skipping CMSSW setup"
     elif [ "$JTSF_CMSSW_SETUP" = "ICHEP18" ]; then
         source "$JTSF_BASE/cmssw/setup_ICHEP18.sh" || return "$?"
+    elif [ "$JTSF_CMSSW_SETUP" = "Moriond19" ]; then
+        source "$JTSF_BASE/cmssw/setup_Moriond19.sh" || return "$?"
     else
         2>&1 echo "unknown JTSF_CMSSW_SETUP '$JTSF_CMSSW_SETUP'"
         return "1"
@@ -124,7 +126,6 @@ action() {
         echo "installing development software in $JTSF_SOFTWARE"
         mkdir -p "$JTSF_SOFTWARE"
 
-        jtsf_install_pip --no-dependencies uproot
         jtsf_install_pip slackclient
         jtsf_install_pip docutils
         jtsf_install_pip git+https://github.com/riga/order.git@dev

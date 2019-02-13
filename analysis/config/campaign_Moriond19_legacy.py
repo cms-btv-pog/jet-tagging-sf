@@ -377,7 +377,25 @@ dataset_W_lep = od.Dataset(
 
 # tt+X
 
-# TODO: ttH bb+nonbb
+dataset_ttH_bb = od.Dataset(
+    "ttH_bb", 601,
+    campaign=campaign,
+    n_files=37,
+    keys=[
+        "/ttHTobb_M125_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_ttH_nonbb = od.Dataset(
+    "ttH_nonbb", 602,
+    campaign=campaign,
+    n_files=35,
+    keys=[
+        "/ttHToNonbb_M125_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
 
 dataset_ttWJets_lep = od.Dataset(
     "ttWJets_lep", 700,
@@ -442,6 +460,8 @@ dataset_WW.add_process(process_WW)
 dataset_WZ.add_process(process_WZ)
 dataset_ZZ.add_process(process_ZZ)
 dataset_W_lep.add_process(process_W_lep)
+dataset_ttH_bb.add_process(process_ttH_bb)
+dataset_ttH_nonbb.add_process(process_ttH_nonbb)
 dataset_ttWJets_lep.add_process(process_ttWJets_lep)
 dataset_ttWJets_had.add_process(process_ttWJets_had)
 dataset_ttZJets_lep.add_process(process_ttZJets_lep)

@@ -18,7 +18,7 @@ def create_config(base_cfg):
         "tt_dl", "tt_sl",
         "dy_lep_10To50",
         "dy_lep_50ToInf",
-        #"st_s_lep",
+        "st_s_lep",
         #"st_t_t", "st_t_tbar",
         "st_tW_t", "st_tW_tbar",
         "WW", "WZ", "ZZ",
@@ -117,7 +117,7 @@ def create_config(base_cfg):
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
             "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_eeBadScFilter",
-            "Flag_ecalBadCalibReducedMINIAODFilter", # TODO: Implement updated filter
+            "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
         "mc": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",

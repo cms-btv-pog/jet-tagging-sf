@@ -221,7 +221,7 @@ try:
             applyVIDOnCorrectedEgamma=False,
             era="2018-Prompt",
         )
-    else:
+    elif options.campaign == "2017_Run2_pp_13TeV_ICHEP18":
         setupEgammaPostRecoSeq(
             process,
             isMiniAOD=True,
@@ -229,6 +229,17 @@ try:
             applyVIDOnCorrectedEgamma=False,
             era="2017-Nov17ReReco",
         )
+    elif options.campaign == "2018_Run2_pp_13TeV_MORIOND19legacy":
+        setupEgammaPostRecoSeq(
+            process,
+            isMiniAOD=True,
+            runEnergyCorrections=False,
+            applyEnergyCorrections=False,
+            applyVIDOnCorrectedEgamma=False,
+            era="2016-Legacy",
+        )
+    else:
+        raise ValueError("Unknown campaign {}".format(options.campaign))
 
     seq += process.egammaScaleSmearSeq
     seq += process.egammaPostRecoSeq

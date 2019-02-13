@@ -85,6 +85,8 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
             return " ".join("{}={}".format(key, v) for v in law.util.make_list(value))
 
         output = self.output()
+        # get global tag from dataset if defined, otherwise take default from config
+        global_tag = self.dataset_inst.get_aux("global_tag", self.config_inst.get_aux("global_tag")[data_src])
         with output["tree"].localize("w") as tmp_tree, output["meta"].localize("w") as tmp_meta:
             args = [
                 ("inputFiles", input_file),
@@ -92,7 +94,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 ("campaign", self.config_inst.campaign.name),
                 ("metaDataFile", tmp_meta.path),
                 ("isData", self.dataset_inst.is_data),
-                ("globalTag", self.config_inst.get_aux("global_tag")[data_src]),
+                ("globalTag", global_tag,
                 ("lumiFile", setup_files["lumi_file"]),
                 ("metFilters", self.config_inst.get_aux("metFilters")[data_src]),
                 ("jesFiles", jes_files),

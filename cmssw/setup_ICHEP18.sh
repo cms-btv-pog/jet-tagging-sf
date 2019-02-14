@@ -39,6 +39,9 @@ action() {
         eval `scramv1 runtime -sh`
     fi
 
+    # set default campaign
+    export JTSF_CAMPAIGN="2017_Run2_pp_13TeV_ICHEP18"
+
     cd "$origin"
 }
 action "$@"

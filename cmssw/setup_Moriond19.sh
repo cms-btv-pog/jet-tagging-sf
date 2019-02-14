@@ -37,6 +37,10 @@ action() {
     fi
 
     cd "$origin"
+
+    # set default campaign
+    export JTSF_CAMPAIGN="2018_Run2_pp_13TeV_MORIOND19"
+
     export PYTHONPATH=/cvmfs/cms.cern.ch/slc6_amd64_gcc700/lcg/root/6.12.07-gnimlf5/lib:$PYTHONPATH
 }
 action "$@"

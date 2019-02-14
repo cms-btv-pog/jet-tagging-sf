@@ -30,7 +30,7 @@ class AnalysisTask(law.Task):
 
     outputs_siblings = True
 
-    config = luigi.Parameter(default="2018_Run2_pp_13TeV_MORIOND19")
+    config = luigi.Parameter(default=None)
 
     accepts_messages = True
     message_cache_size = 20
@@ -39,6 +39,9 @@ class AnalysisTask(law.Task):
 
     def __init__(self, *args, **kwargs):
         super(AnalysisTask, self).__init__(*args, **kwargs)
+
+        if self.config is None:
+            self.config = os.environ["JTSF_CAMPAIGN"] # TODO: Change to self.env once SandboxTask is implemented
 
         self.analysis_inst = analysis
         self.config_inst = self.analysis_inst.get_config(self.config)

@@ -215,6 +215,7 @@ private:
     string jerPtResolutionFile_;
     string jerScaleFactorFile_;
     bool (TreeMaker::*tightJetID_)(pat::Jet&);
+    double maxJetEta_;
 
     // tokens
     edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
@@ -522,14 +523,17 @@ void TreeMaker::beginJob()
     if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19legacy")
     {
         tightJetID_ = &TreeMaker::tightJetID_2016;
+        maxJetEta_ = 2.4;
     }
     else if (campaign_ == "2017_Run2_pp_13TeV_ICHEP18")
     {
         tightJetID_ = &TreeMaker::tightJetID_2017;
+        maxJetEta_ = 2.5;
     }
     else if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19")
     {
         tightJetID_ = &TreeMaker::tightJetID_2018;
+        maxJetEta_ = 2.5;
     }
     else
     {
@@ -1232,7 +1236,7 @@ JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandi
 
     // eta cut
     double absEta = fabs(jet.eta());
-    if (absEta >= 2.5)
+    if (absEta >= maxJetEta_)
     {
         return J_INVALID;
     }

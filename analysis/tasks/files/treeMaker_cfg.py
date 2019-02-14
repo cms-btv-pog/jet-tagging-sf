@@ -297,24 +297,37 @@ try:
     from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
 
     if options.campaign != "2018_Run2_pp_13TeV_MORIOND19":
-        #updateJetCollection(
-        #   process,
-        #   jetSource = jetCollection,
-        #   pvSource = cms.InputTag('offlineSlimmedPrimaryVertices'),
-        #   svSource = cms.InputTag('slimmedSecondaryVertices'),
-        #   jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute']), 'None'),
-        #   btagDiscriminators = [
-        #      'pfDeepFlavourJetTags:probb',
-        #      'pfDeepFlavourJetTags:probbb',
-        #      'pfDeepFlavourJetTags:problepb',
-        #      'pfDeepFlavourJetTags:probc',
-        #      'pfDeepFlavourJetTags:probuds',
-        #      'pfDeepFlavourJetTags:probg'
-        #      ],
-        #   postfix='NewDFTraining'
-        #)
-        #jetCollection = cms.InputTag("updatedPatJetsTransientCorrectedNewDFTraining", "", process.name_())
-        pass
+        updateJetCollection(
+           process,
+           jetSource = jetCollection,
+           pvSource = cms.InputTag('offlineSlimmedPrimaryVertices'),
+           svSource = cms.InputTag('slimmedSecondaryVertices'),
+           # Safe to always add 'L2L3Residual' as MC contains dummy L2L3Residual corrections (always set to 1)
+           jetCorrections = ('AK4PFchs', cms.vstring(['L1FastJet', 'L2Relative', 'L3Absolute', 'L2L3Residual']), 'None'),
+           btagDiscriminators = [
+              'pfDeepFlavourJetTags:probb',
+              'pfDeepFlavourJetTags:probbb',
+              'pfDeepFlavourJetTags:problepb',
+              'pfDeepFlavourJetTags:probc',
+              'pfDeepFlavourJetTags:probuds',
+              'pfDeepFlavourJetTags:probg'
+              ],
+           postfix='NewDFTraining'
+        )
+        process.deepFlavour = cms.Task(
+                             process.patJetCorrFactorsNewDFTraining,
+                             process.updatedPatJetsNewDFTraining,
+                             process.patJetCorrFactorsTransientCorrectedNewDFTraining,
+                             process.updatedPatJetsTransientCorrectedNewDFTraining,
+                             process.pfDeepFlavourJetTagsNewDFTraining,
+                             process.pfDeepFlavourTagInfosNewDFTraining,
+                             process.pfDeepCSVTagInfosNewDFTraining,
+                             process.selectedUpdatedPatJetsNewDFTraining,
+                             process.pfInclusiveSecondaryVertexFinderTagInfosNewDFTraining,
+                             process.pfImpactParameterTagInfosNewDFTraining
+                             )
+        seq.associate(process.deepFlavour)
+        jetCollection = cms.InputTag("updatedPatJetsTransientCorrectedNewDFTraining", "", process.name_())
 
     # load and configure the tree maker
     process.load("JetTaggingSF.JetTaggingSF.treeMaker_cfi")

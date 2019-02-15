@@ -175,14 +175,15 @@ def create_config(base_cfg):
     # file merging information (stage -> dataset -> files after merging)
     cfg.set_aux("file_merging", {
         "trees": {
-            "tt_dl": 88,
-            "tt_sl": 2,
-            "dy_lep_50ToInf": 19,
-            "st_tW_t": 2,
-            "ttH_bb": 3,
-            "ttH_nonbb": 3,
-            "ttWJets": 5,
-            "ttZJets": 11,
+            "tt_dl": 194,
+            "tt_sl": 3,
+            "dy_lep_50ToInf": 38,
+            "st_tW_t": 3,
+            "st_tW_tbar": 2,
+            "ttH_bb": 5,
+            "ttH_nonbb": 6,
+            "ttWJets": 9,
+            "ttZJets": 21,
         }
     })
 

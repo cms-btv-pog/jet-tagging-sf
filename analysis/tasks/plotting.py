@@ -106,7 +106,7 @@ class PlotVariable(PlotTask):
 
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
-            if category.has_tag((self.category_tag, self.b_tagger), mode="all"):
+            if category.has_tag((self.category_tag, self.b_tagger), mode=all):
                 categories.append(category)
 
         # create plot objects
@@ -150,8 +150,7 @@ class PlotVariable(PlotTask):
 
                                 hist = process_dir.Get(variable)
                                 if self.truncate:
-                                    hist = self.rebin_hist(hist, region)
-
+                                    hist = self.rebin_hist(hist, region, binning_type="measurement")
                                 if process.is_data:
                                     data_hist = add_hist(data_hist, hist)
                                 else:

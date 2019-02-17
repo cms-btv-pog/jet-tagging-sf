@@ -67,7 +67,7 @@ class MeasureScaleFactors(ShiftTask):
         # these are stored in the config itself as we measure them inclusively over channels
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
-            if category.has_tag(("merged", self.b_tagger), mode="all") and category.get_aux("phase_space") == "measure":
+            if category.has_tag(("merged", self.b_tagger), mode=all) and category.get_aux("phase_space") == "measure":
                 categories.append(category)
 
         # get categories from which to determine the rate scaling of MC to data
@@ -77,7 +77,7 @@ class MeasureScaleFactors(ShiftTask):
             for channel in self.config_inst.channels:
                 scale_categories[channel] = {}
                 for category, _, children in channel.walk_categories():
-                    if category.has_tag(("scales", self.b_tagger), mode="all") and category.get_aux("phase_space") == "closure":
+                    if category.has_tag(("scales", self.b_tagger), mode=all) and category.get_aux("phase_space") == "closure":
                         region = category.get_aux("region")
                         scale_categories[channel][region] = category
 
@@ -303,7 +303,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         # these are stored in the config itself as we measure them inclusively over channels
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
-            if category.has_tag(("c", self.b_tagger), mode="all"):
+            if category.has_tag(("c", self.b_tagger), mode=all):
                 categories.append(category)
 
         # create histogram for c flavour nominal, and up and down shifts
@@ -495,7 +495,7 @@ class FitScaleFactors(MeasureScaleFactors):
                     if category.has_tag(self.b_tagger):
                         categories.append(category)
             else:
-                if category.has_tag(("merged", self.b_tagger), mode="all") and category.get_aux("phase_space") == "measure":
+                if category.has_tag(("merged", self.b_tagger), mode=all) and category.get_aux("phase_space") == "measure":
                     categories.append(category)
 
         # get scaling factors for normalization

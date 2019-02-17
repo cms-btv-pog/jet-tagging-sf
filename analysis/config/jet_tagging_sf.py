@@ -102,13 +102,13 @@ hf_binning = {
     },
     "deepjet": {
         "plotting": [
-            -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
-            0.4257, 0.4941, 0.5553, 0.6165, 0.6777, 0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968,
+            -2.01, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.16, 0.24,
+            0.32, 0.40, 0.48, 0.56, 0.64, 0.72, 0.8, 0.84, 0.88, 0.92, 0.95, 0.98,
             1.01,
         ],
         "measurement": [
-            -2.01, 0.0, 0.1522, 0.2205, 0.2889, 0.3573, 0.4257, 0.4941, 0.5553, 0.6165, 0.6777,
-            0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968, 1.01
+            -2.01, 0.0, 0.16, 0.24, 0.32, 0.40, 0.48, 0.56, 0.64, 0.72,
+            0.8, 0.84, 0.88, 0.92, 0.95, 0.98, 1.01,
         ],
     },
 }
@@ -129,12 +129,13 @@ cfg.set_aux("binning", {
         },
         "deepjet": {
             "plotting": [
-                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
-                0.4257, 0.4941, 0.5961, 0.6981, 0.8001, 0.835, 0.87, 0.905, 0.94, 0.975, 1.01,
+                -2.01, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.16, 0.24,
+                0.32, 0.40, 0.48, 0.56, 0.64, 0.72, 0.8, 0.84, 0.88, 0.92, 0.95, 0.98,
+                1.01,
             ],
             "measurement": [
-                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
-                0.4257, 0.4941, 1.01,
+                -2.01, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.16, 0.24,
+                0.32, 0.40, 0.48, 1.01,
             ],
         }
     },
@@ -278,6 +279,7 @@ for lep_idx in xrange(1, 3):
         expression="(lep{}_px**2 + lep{}_py**2)**0.5".format(lep_idx, lep_idx),
         binning=(25, 0., 500.,),
         unit="GeV",
+        tags={"main"},
         x_title="Lep_{} p_{{T}}".format(lep_idx),
     )
 
@@ -287,7 +289,7 @@ for jet_idx in xrange(1, 5):
         tags = tags | {"main"}
     cfg.add_variable(
         name="jet{}_pt".format(jet_idx),
-        expression="jet{}_pt".format(jet_idx),
+        expression="jet{}_pt{{jec_identifier}}".format(jet_idx),
         binning=(25, 0., 500.,),
         unit="GeV",
         x_title="Jet_{} p_{{T}}".format(jet_idx),
@@ -295,7 +297,7 @@ for jet_idx in xrange(1, 5):
     )
     cfg.add_variable(
         name="jet{}_eta".format(jet_idx),
-        expression="jet{}_eta".format(jet_idx),
+        expression="jet{}_eta{{jec_identifier}}".format(jet_idx),
         binning=(25, -2.5, 2.5),
         x_title="Jet_{} Eta".format(jet_idx),
         tags=tags,
@@ -341,6 +343,7 @@ def add_btag_variables(cfg):
                 binning=binning,
                 x_title="Jet_{} deepcsv".format(jet_idx),
                 tags=tags,
+                aux={"b_tagger": "deepcsv"}, # to filter required b-tagger in histogram writer
                 context=cfg.name,
             )
 
@@ -349,11 +352,12 @@ def add_btag_variables(cfg):
                 binning = cfg.get_aux("binning")[region]["deepjet"]["plotting"]
             cfg.add_variable(
                 name="jet{}_deepjet_bcomb{}".format(jet_idx, postfix),
-                expression="jet{0}_deepjet_b{{jec_identifier}} + jet{0}_deepjet_bb{{jec_identifier}}"\
+                expression="jet{0}_deepjet_b{{jec_identifier}} + jet{0}_deepjet_bb{{jec_identifier}} + "\
                     "jet{0}_deepjet_lepb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
                 x_title="Jet_{} deepjet".format(jet_idx),
                 tags=tags,
+                aux={"b_tagger": "deepjet"}, # to filter required b-tagger in histogram writer
                 context=cfg.name,
             )
 
@@ -370,7 +374,7 @@ def add_categories(cfg, b_tagger):
                     continue
 
                 rg_cat_combined = ch.add_category(
-                    name="{}__{}__{}".format(ch.name, ps_name, rg_name),
+                    name="{}__{}__{}__{}".format(ch.name, ps_name, rg_name, b_tagger),
                     label="{}, {}, {}".format(ch.name, ps_name, rg_name),
                     selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
                     tags={"scales", b_tagger},
@@ -382,7 +386,7 @@ def add_categories(cfg, b_tagger):
                     context="{}_{}".format(cfg.name, b_tagger),
                 )
                 # combine region categories to create inclusive control regions for plotting
-                rg_merged_name = "{}__{}".format(ps_name, rg_name)
+                rg_merged_name = "{}__{}__{}".format(ps_name, rg_name, b_tagger)
                 if not cfg.has_category(rg_merged_name):
                     rg_merged_cat = cfg.add_category(
                         name=rg_merged_name,
@@ -410,7 +414,7 @@ def add_categories(cfg, b_tagger):
                         continue
 
                     rg_cat = ch.add_category(
-                        name="{}__{}__{}__j{}".format(ch.name, ps_name, rg_name, i_tag_jet),
+                        name="{}__{}__{}__j{}__{}".format(ch.name, ps_name, rg_name, i_tag_jet, b_tagger),
                         label="{}, {}, {} region (j{} tagged)".format(ch.name, ps_name, rg_name, i_tag_jet),
                         selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
                         context="{}_{}".format(cfg.name, b_tagger),
@@ -446,6 +450,7 @@ def add_categories(cfg, b_tagger):
                                     aux={
                                         "channel": ch,
                                         "i_probe_jet": i_probe_jet,
+                                        "i_tag_jet": i_tag_jet,
                                         "phase_space": ps_name,
                                         "region": rg_name,
                                         "flavor": fl_name,
@@ -455,8 +460,8 @@ def add_categories(cfg, b_tagger):
                                 )
 
                                 # merged category for both jets and all flavors
-                                merged_vars = (ps_name, rg_name, pt_name, eta_name)
-                                merged_name = "{}__{}__pt{}__eta{}".format(*merged_vars)
+                                merged_vars = (ps_name, rg_name, pt_name, eta_name, b_tagger)
+                                merged_name = "{}__{}__pt{}__eta{}__{}".format(*merged_vars)
                                 if not cfg.has_category(merged_name):
                                     label = "{}, {} region, pt {}, eta {}".format(*merged_vars)
                                     merged_cat = cfg.add_category(
@@ -473,8 +478,8 @@ def add_categories(cfg, b_tagger):
                                     )
                                     if rg_name == "hf":
                                         # add c categories (not written to histograms)
-                                        c_vars = (ps_name, "c", pt_name, eta_name)
-                                        c_name = "{}__{}__pt{}__eta{}".format(*c_vars)
+                                        c_vars = (ps_name, "c", pt_name, eta_name, b_tagger)
+                                        c_name = "{}__{}__pt{}__eta{}__{}".format(*c_vars)
                                         label = "{}, {} region, pt {}, eta {}".format(*c_vars)
                                         cfg.add_category(
                                             name=c_name,

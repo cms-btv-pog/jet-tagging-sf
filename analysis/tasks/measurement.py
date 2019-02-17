@@ -106,7 +106,7 @@ class MeasureScaleFactors(ShiftTask):
         with inp["hist"].load("r") as input_file:
             # get scale factor to scale MC (withouts b-tag SFs) to data per channel
             if self.iteration == 0 and self.shift == "nominal":
-                variable_name = "jet1_deepcsv_bcomb"
+                variable_name = "jet1_{}_bcomb".format(self.b_tagger)
                 scales = defaultdict(dict)
                 for channel, region_categories in scale_categories.items():
                     for region, category in region_categories.items():

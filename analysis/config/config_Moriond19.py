@@ -192,13 +192,13 @@ def create_config(base_cfg):
         "WriteTrees": "prod2",
         "MergeTrees": "prod2",
         "MergeMetaData": "prod1",
-        "WriteHistograms": "test2",
-        "MergeHistograms": "test2",
-        "MeasureCScaleFactors": "test1",
-        "MeasureScaleFactors": "test1",
-        "FitScaleFactors": "test1",
-        "GetScaleFactorWeights": "test1",
-        "MergeScaleFactorWeights": "test1",
+        "WriteHistograms": "prod1",
+        "MergeHistograms": "prod1",
+        "MeasureCScaleFactors": "prod1",
+        "MeasureScaleFactors": "prod1",
+        "FitScaleFactors": "prod1",
+        "GetScaleFactorWeights": "prod1",
+        "MergeScaleFactorWeights": "prod1",
     })
 
     return cfg

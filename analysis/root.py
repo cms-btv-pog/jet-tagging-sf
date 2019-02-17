@@ -57,7 +57,7 @@ class ROOTPad(object):
         self.objects.append(obj)
 
     def draw(self, obj_dict, stacked=False, invis=False, line_color=1, fill_color=1,
-        options=[]):
+        stack_maximum=None, options=[]):
         if not isinstance(options, (list, tuple)):
             options = [options]
 
@@ -88,6 +88,8 @@ class ROOTPad(object):
                 stack.Add(obj)
                 self.add_object(obj)
             options.append("HIST")
+            if stack_maximum is not None:
+                stack.SetMaximum(stack_maximum)
             draw_objs = [stack]
         else:
             for key, obj in sorted(obj_dict.items()):

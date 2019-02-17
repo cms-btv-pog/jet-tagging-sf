@@ -171,15 +171,11 @@ class PlotVariable(PlotTask):
                     mc_hist_sum = mc_hists.values()[0].Clone()
                     for mc_hist in mc_hists.values()[1:]:
                         mc_hist_sum.Add(mc_hist)
-                    max_hist = mc_hist_sum.Clone() if \
-                        (mc_hist_sum.GetMaximum() > data_hist.GetMaximum()) else data_hist.Clone()
-                    max_hist.Scale(1.5)
-
+                    hist_maximum = max([mc_hist_sum.GetMaximum(), data_hist.GetMaximum()])
                     plot = plot_dict[category]
                     # data and mc histograms
                     plot.cd(target_idx, 1)
-                    plot.draw({"invis": max_hist}, invis=True)
-                    plot.draw(mc_hists, stacked=True, options="SAME")
+                    plot.draw(mc_hists, stacked=True, stack_maximum=1.5*hist_maximum)
                     plot.draw({"data": data_hist}, options="SAME")
 
                     # ratio of data to mc below the main plot TODO: Error propagation

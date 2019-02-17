@@ -306,8 +306,6 @@ dataset_ttH_nonbb = od.Dataset(
     context=campaign_name,
 )
 
-# TODO: ttH bb+nonbb
-
 dataset_ttWJets = od.Dataset(
     "ttWJets", 700,
     campaign=campaign,

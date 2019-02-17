@@ -6,7 +6,7 @@ from array import array
 
 tcolors = {
     "data": ROOT.kBlack,
-    "tt_dl": ROOT.kBlue,
+    "tt_dl": ROOT.kGray,
     "dy_lep_5To50_Ht70To100": ROOT.kSpring + 1,
     "dy_lep_5To50_Ht100To200": ROOT.kSpring + 10,
     "dy_lep_5To50_Ht200To400": ROOT.kGreen,

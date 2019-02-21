@@ -15,13 +15,13 @@ from order.util import join_root_selection
 from collections import defaultdict
 
 from analysis.config.jet_tagging_sf import get_category, jes_sources
-from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow
+from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow, HTCondorWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
 from analysis.util import TreeExtender
 
 
-class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
+class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow):
 
     iteration = luigi.IntParameter(default=0, description="iteration of the scale factor "
         "calculation, starting at zero, default: 0")
@@ -113,6 +113,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 pu_hist.GetBinContent(i)
                 for i in range(1, pu_hist.GetNbinsX() + 1)
             ]
+            pu_values = [value if (value < 1000) else 1. for value in pu_values] # TODO: Temporary, due to high pu weights in 2018 data
 
         def add_branch(extender):
             extender.add_branch("pu_weight", unpack="pu")
@@ -279,7 +280,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             with TreeExtender(tree) as te:
                                 for add_branch, _ in weighters:
                                     add_branch(te)
-                                for entry in te:
+                                for i, entry in enumerate(te):
+                                    if (i % 1000) == 0:
+                                        print "event {}".format(i)
                                     for _, add_value in weighters:
                                         add_value(entry)
 
@@ -347,8 +350,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                         continue
                                     if region and variable.has_tag("skip_{}".format(region)):
                                         continue
-                                    # if a vaiable tag is given, require it
+                                    # if a variable tag is given, require it
                                     if self.variable_tag and not variable.has_tag(self.variable_tag):
+                                        continue
+                                    # do not write one b-tag discriminant in the category of another
+                                    if variable.get_aux("b_tagger", self.b_tagger) != self.b_tagger:
                                         continue
 
                                     hist = ROOT.TH1F("{}_{}".format(variable.name, shift),
@@ -659,7 +665,9 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
             with TreeExtender(tree) as te:
                 # unpack all branches
                 te.unpack_branch("*")
-                for entry in te:
+                for i, entry in enumerate(te):
+                    if (i % 1000) == 0:
+                        print "entry {}".format(i)
                     # get event weight
                     gen_weight = entry.gen_weight[0]
                     channel_id = entry.channel[0]

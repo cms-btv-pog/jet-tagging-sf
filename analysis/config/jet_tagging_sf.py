@@ -102,7 +102,7 @@ hf_binning = {
     },
     "deepjet": {
         "plotting": [
-            -2.01, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.16, 0.24,
+            -2.01, 0.0, 0.015, 0.03, 0.045, 0.06, 0.075, 0.09, 0.105, 0.12, 0.16, 0.24,
             0.32, 0.40, 0.48, 0.56, 0.64, 0.72, 0.8, 0.84, 0.88, 0.92, 0.95, 0.98,
             1.01,
         ],
@@ -129,13 +129,13 @@ cfg.set_aux("binning", {
         },
         "deepjet": {
             "plotting": [
-                -2.01, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.16, 0.24,
+                -2.01, 0.0, 0.015, 0.03, 0.045, 0.06, 0.075, 0.09, 0.105, 0.12, 0.16, 0.24,
                 0.32, 0.40, 0.48, 0.56, 0.64, 0.72, 0.8, 0.84, 0.88, 0.92, 0.95, 0.98,
                 1.01,
             ],
             "measurement": [
-                -2.01, 0.0, 0.02, 0.04, 0.06, 0.08, 0.1, 0.12, 0.16, 0.24,
-                0.32, 0.40, 0.48, 1.01,
+                -2.01, 0.0, 0.015, 0.03, 0.045, 0.06, 0.075, 0.09, 0.105, 0.12, 0.16, 0.24,
+                0.32, 1.01,
             ],
         }
     },
@@ -515,6 +515,10 @@ config_Moriond19 = create_config_Moriond19(cfg)
 add_btag_variables(config_Moriond19)
 add_categories(config_Moriond19, "deepcsv")
 add_categories(config_Moriond19, "deepjet")
+config_Moriond19.get_aux("binning")["lf"]["deepcsv"]["measurement"] = [
+                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+                0.4257, 1.01,
+            ]
 
 from analysis.config.config_Moriond19_legacy import create_config as create_config_Moriond19_legacy
 config_Moriond19_legacy = create_config_Moriond19_legacy(cfg)

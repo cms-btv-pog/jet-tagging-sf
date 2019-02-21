@@ -525,7 +525,7 @@ class FitScaleFactors(MeasureScaleFactors):
                 x_axis = hist.GetXaxis()
                 interpolation_hist = ROOT.TH1D(hist.GetName() + "_fine", hist.GetTitle(),
                     interpolation_bins, x_axis.GetXmin(), x_axis.GetXmax())
-                if region == "lf":
+                if region == "lf" and self.b_tagger != "deepjet": # deepjet fit too oscillating -> use interpolation
                     fit_function = fit_func_pol6()
                     # perform fit
                     hist.Fit(fit_function, "+mrNQ0S")
@@ -534,7 +534,7 @@ class FitScaleFactors(MeasureScaleFactors):
                     # (centers of second and second to last bin)
                     first_point = hist.GetBinCenter(2)
                     last_point = hist.GetBinCenter(nbins - 1)
-                elif region in ("hf", "c"):
+                elif region in ("hf", "c") or (region == "lf" and self.b_tagger == "deepjet"):
                     x_values = ROOT.vector("double")()
                     y_values = ROOT.vector("double")()
                     for bin_idx in range(1, nbins + 1):
@@ -590,10 +590,10 @@ class FitScaleFactors(MeasureScaleFactors):
                         interpolator.Eval(first_point)))
 
                     # intermediate functions
-                    if region == "lf":
+                    if region == "lf" and self.b_tagger != "deepjet":
                         fit_results.append(fit_results_tpl + ", {}, {}, {}".format(first_point,
                             last_point, str(interpolator.GetExpFormula("p"))))
-                    elif region in ("hf", "c"):  # piecewise linear function
+                    elif region in ("hf", "c") or (region == "lf" and self.b_tagger == "deepjet"):  # piecewise linear function
                         for bin_idx in range(1, nbins):
                             if hist.GetBinCenter(bin_idx) < first_point:
                                 continue

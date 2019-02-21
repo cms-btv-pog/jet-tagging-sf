@@ -14,12 +14,12 @@ import law
 import luigi
 import six
 
-from analysis.tasks.base import AnalysisTask, DatasetTask, WrapperTask, GridWorkflow
+from analysis.tasks.base import AnalysisTask, DatasetTask, WrapperTask, GridWorkflow, HTCondorWorkflow
 from analysis.tasks.external import GetDatasetLFNs, DownloadSetupFiles
 from analysis.util import wget, determine_xrd_redirector
 from analysis.config.jet_tagging_sf import jes_sources
 
-class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
+class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow):
 
     max_events = luigi.IntParameter(default=law.NO_INT)
 
@@ -153,7 +153,7 @@ class WriteTreesWrapper(WrapperTask):
     wrapped_task = WriteTrees
 
 
-class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow):
+class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow, HTCondorWorkflow):
 
     merge_factor = 8
 

@@ -197,8 +197,8 @@ def create_config(base_cfg):
         "MeasureCScaleFactors": "prod1",
         "MeasureScaleFactors": "prod1",
         "FitScaleFactors": "prod1",
-        "GetScaleFactorWeights": "prod1",
-        "MergeScaleFactorWeights": "prod1",
+        "GetScaleFactorWeights": "prod2",
+        "MergeScaleFactorWeights": "prod2",
     })
 
     return cfg

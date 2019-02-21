@@ -280,10 +280,10 @@ datasets_data_mu = [
 dataset_tt_dl = od.Dataset(
     "tt_dl", 101,
     campaign=campaign,
-    n_files=143 + 1112,
+    n_files=153 + 1056,
     keys=[
-        "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-        "/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+        "/TTTo2L2Nu_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_new_pmx_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+        "/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_new_pmx_94X_mc2017_realistic_v14-v2/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -291,10 +291,10 @@ dataset_tt_dl = od.Dataset(
 dataset_tt_sl = od.Dataset(
     "tt_sl", 102,
     campaign=campaign,
-    n_files=615 + 2176,
+    n_files=828,
     keys=[
-        "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
-        "/TTToSemiLeptonic_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
+        "/TTToSemiLeptonic_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_new_pmx_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+        #"/TTToSemiLeptonic_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -473,9 +473,9 @@ dataset_st_s_lep = od.Dataset(
 dataset_st_t_t = od.Dataset(
     "st_t_t", 301,
     campaign=campaign,
-    n_files=111,
+    n_files=93,
     keys= [
-        "/ST_t-channel_top_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+        "/ST_t-channel_top_4f_inclusiveDecays_TuneCP5_13TeV-powhegV2-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_new_pmx_94X_mc2017_realistic_v14-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -495,9 +495,9 @@ dataset_st_t_tbar = od.Dataset(
 dataset_st_tW_t = od.Dataset(
     "st_tW_t", 321,
     campaign=campaign,
-    n_files=130,
+    n_files=114,
     keys=[
-        "/ST_tW_top_5f_inclusiveDecays_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+        "/ST_tW_top_5f_inclusiveDecays_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_new_pmx_94X_mc2017_realistic_v14-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -505,9 +505,9 @@ dataset_st_tW_t = od.Dataset(
 dataset_st_tW_tbar = od.Dataset(
     "st_tW_tbar", 322,
     campaign=campaign,
-    n_files=129,
+    n_files=150,
     keys=[
-        "/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+        "/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v2/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -571,9 +571,9 @@ dataset_ttH = od.Dataset(
 dataset_ttWJets_lep = od.Dataset(
     "ttWJets_lep", 700,
     campaign=campaign,
-    n_files=90,
+    n_files=122,
     keys=[
-        "/TTWJetsToLNu_TuneCP5_13TeV-amcatnloFXFX-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+        "/TTWJetsToLNu_TuneCP5_PSweights_13TeV-amcatnloFXFX-madspin-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_new_pmx_94X_mc2017_realistic_v14-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )

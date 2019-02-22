@@ -715,7 +715,7 @@ class MergeScaleFactorWeights(AnalysisTask):
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
-        return super(MergeScaleFactorWeights, self).store_parts() + (self.b_tagger) + (self.iteration,) + (c_err_part,)
+        return super(MergeScaleFactorWeights, self).store_parts() + (self.b_tagger,) + (self.iteration,) + (c_err_part,)
 
     @law.decorator.notify
     def run(self):

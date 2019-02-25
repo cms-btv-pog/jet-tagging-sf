@@ -205,12 +205,15 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         categories = []
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
-        for channel in channels:
-            for category, _, children in channel.walk_categories():
-                if not children:
-                    # only use categories for the chosen b-tag algorithm
-                    if category.has_tag(self.b_tagger):
-                        categories.append((channel, category))
+        for category, _, children in self.config_inst.walk_categories():
+            if not children:
+                # only use categories matching the task config
+                if category.get_aux("config", None) != self.config_inst.name:
+                    continue
+                # only use categories for the chosen b-tag algorithm
+                if category.has_tag(self.b_tagger):
+                    channel = category.get_aux("channel")
+                    categories.append((channel, category))
         categories = list(set(categories))
 
         # get processes
@@ -611,9 +614,14 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         categories = []
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
-        for channel in channels:
-            for category, _, children in channel.walk_categories():
-                if not children:
+        for category, _, children in self.config_inst.walk_categories():
+            if not children:
+                # only use categories matching the task config
+                if category.get_aux("config", None) != self.config_inst.name:
+                    continue
+                # only use categories for the chosen b-tag algorithm
+                if category.has_tag(self.b_tagger):
+                    channel = category.get_aux("channel")
                     categories.append((channel, category))
         categories = list(set(categories))
 

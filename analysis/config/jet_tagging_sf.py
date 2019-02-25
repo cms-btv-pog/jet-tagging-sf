@@ -374,7 +374,7 @@ def add_categories(cfg, b_tagger):
                     continue
 
                 rg_cat_combined = ch.add_category(
-                    name="{}__{}__{}__{}".format(ch.name, ps_name, rg_name, b_tagger),
+                    name="{}__{}__{}__{}__{}".format(ch.name, ps_name, rg_name, b_tagger, cfg.name),
                     label="{}, {}, {}".format(ch.name, ps_name, rg_name),
                     selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
                     tags={"scales", b_tagger},
@@ -382,8 +382,8 @@ def add_categories(cfg, b_tagger):
                         "channel": ch,
                         "phase_space": ps_name,
                         "region": rg_name,
+                        "config": cfg.name,
                     },
-                    context="{}_{}".format(cfg.name, b_tagger),
                 )
                 # combine region categories to create inclusive control regions for plotting
                 rg_merged_name = "{}__{}__{}".format(ps_name, rg_name, b_tagger)
@@ -396,7 +396,7 @@ def add_categories(cfg, b_tagger):
                             "phase_space": ps_name,
                             "region": rg_name,
                         },
-                        context="{}_{}".format(cfg.name, b_tagger),
+                        context=cfg.name,
                     )
                 else:
                     rg_merged_cat = cfg.get_category(rg_merged_name)
@@ -414,10 +414,9 @@ def add_categories(cfg, b_tagger):
                         continue
 
                     rg_cat = ch.add_category(
-                        name="{}__{}__{}__j{}__{}".format(ch.name, ps_name, rg_name, i_tag_jet, b_tagger),
+                        name="{}__{}__{}__j{}__{}__{}".format(ch.name, ps_name, rg_name, i_tag_jet, b_tagger, cfg.name),
                         label="{}, {}, {} region (j{} tagged)".format(ch.name, ps_name, rg_name, i_tag_jet),
                         selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
-                        context="{}_{}".format(cfg.name, b_tagger),
                         tags={b_tagger},
                     )
 
@@ -427,7 +426,6 @@ def add_categories(cfg, b_tagger):
                             name="{}__f{}".format(rg_cat.name, fl_name),
                             label="{}, {} flavor".format(rg_cat.label, fl_name),
                             selection=join_root_selection(rg_cat.selection, fl_sel),
-                            context="{}_{}".format(cfg.name, b_tagger),
                             tags={b_tagger},
                         )
 
@@ -437,7 +435,6 @@ def add_categories(cfg, b_tagger):
                                 name="{}__pt{}".format(fl_cat.name, pt_name),
                                 label="{}, pt {}".format(fl_cat.label, pt_name),
                                 selection=join_root_selection(fl_cat.selection, pt_sel),
-                                context="{}_{}".format(cfg.name, b_tagger),
                                 tags={b_tagger},
                             )
 
@@ -454,9 +451,9 @@ def add_categories(cfg, b_tagger):
                                         "phase_space": ps_name,
                                         "region": rg_name,
                                         "flavor": fl_name,
+                                        "config": cfg.name,
                                     },
                                     tags={b_tagger},
-                                    context="{}_{}".format(cfg.name, b_tagger),
                                 )
 
                                 # merged category for both jets and all flavors
@@ -474,7 +471,7 @@ def add_categories(cfg, b_tagger):
                                             "eta": eta_range,
                                             "pt": pt_range,
                                         },
-                                        context="{}_{}".format(cfg.name, b_tagger),
+                                        context=cfg.name,
                                     )
                                     if rg_name == "hf":
                                         # add c categories (not written to histograms)
@@ -491,7 +488,7 @@ def add_categories(cfg, b_tagger):
                                                 "eta": eta_range,
                                                 "pt": pt_range,
                                             },
-                                            context="{}_{}".format(cfg.name, b_tagger),
+                                            context=cfg.name,
                                         )
                                 else:
                                     merged_cat = cfg.get_category(merged_name)
@@ -508,7 +505,7 @@ from analysis.config.config_ICHEP18 import create_config as create_config_ICHEP1
 config_ICHEP18 = create_config_ICHEP18(cfg)
 add_btag_variables(config_ICHEP18)
 add_categories(config_ICHEP18, "deepcsv")
-#add_categories(config_ICHEP18, "deepjet")
+add_categories(config_ICHEP18, "deepjet")
 
 from analysis.config.config_Moriond19 import create_config as create_config_Moriond19
 config_Moriond19 = create_config_Moriond19(cfg)

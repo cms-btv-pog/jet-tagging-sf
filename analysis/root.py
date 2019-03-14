@@ -57,13 +57,14 @@ class ROOTPad(object):
         self.objects.append(obj)
 
     def draw(self, obj_dict, stacked=False, invis=False, line_color=1, fill_color=1,
-        stack_maximum=None, options=[]):
+        stack_maximum=None, options=None):
+        if options is None:
+            options = []
         if not isinstance(options, (list, tuple)):
             options = [options]
 
         if invis:
-            # Draw an invisible object to fix the axis ranges. Required if the first object to be
-            # drawn is a THStack
+            # Draw an invisible object to fix the axis ranges.
             for obj in obj_dict.values():
                 invis_obj = obj.Clone()
                 self.add_object(invis_obj)
@@ -73,7 +74,8 @@ class ROOTPad(object):
             return None
 
         if stacked:
-            stack = ROOT.THStack("stack", "")
+            from random import randint
+            stack = ROOT.THStack("stack_" + str(randint(0, 10**9)), str(randint(0, 10**9)))
             for key, obj in sorted(obj_dict.items()):
                 obj.SetFillColor(tcolors.get(key, fill_color))
                 obj.SetLineColor(tcolors.get(key, line_color))
@@ -102,7 +104,9 @@ class ROOTPad(object):
             self.add_object(obj)
             obj.Draw(" ".join(options))
 
-    def draw_as_graph(self, hist, options=[]):
+    def draw_as_graph(self, hist, options=None):
+        if options is None:
+            options = []
         if not isinstance(options, (list, tuple)):
             options = [options]
 
@@ -132,6 +136,9 @@ class ROOTPad(object):
         self.pad.cd()
         if draw_legend:
             self.legend.Draw()
+        for obj in self.objects:
+            if hasattr(obj, "Update"):
+                obj.Update()
         self.pad.Update()
 
     def close(self):

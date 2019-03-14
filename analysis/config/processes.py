@@ -397,14 +397,14 @@ process_ttH = od.Process(
     }
 )
 
-process_ttH_bb = od.Process(
+process_ttH_bb = process_ttH.add_process(
     "ttH_bb", 61,
     xsecs={
         13: process_ttH.get_xsec(13) * BR_H_BB,
     }
 )
 
-process_ttH_nonbb = od.Process(
+process_ttH_nonbb = process_ttH.add_process(
     "ttH_nonbb", 62,
     xsecs={
         13: process_ttH.get_xsec(13) * (1 - BR_H_BB),

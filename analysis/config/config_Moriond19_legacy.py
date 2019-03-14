@@ -23,7 +23,7 @@ def create_config(base_cfg):
         "st_tW_t", "st_tW_tbar",
         "WW", "WZ", "ZZ",
         "W_lep",
-        #"ttH_bb", "ttH_nonbb",
+        "ttH_bb", "ttH_nonbb",
         "ttWJets_lep", "ttWJets_had", "ttZJets_lep", "ttZJets_had",
     ]
 
@@ -45,7 +45,7 @@ def create_config(base_cfg):
             "medium": 0.6321,
             "tight": 0.8953,
         },
-        "deepflavor": {
+        "deepjet": {
             "loose": 0.0614,
             "medium": 0.3093,
             "tight": 0.7221,
@@ -81,7 +81,7 @@ def create_config(base_cfg):
     })
 
     # lumi, normtag and pileup file
-    cfg.set_aux("lumi_file", "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/"
+    cfg.set_aux("lumi_file", "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions16/13TeV/ReReco/"
         "Final/Cert_271036-284044_13TeV_23Sep2016ReReco_Collisions16_JSON.txt")
     # https://twiki.cern.ch/twiki/bin/view/CMS/TWikiLUM
     cfg.set_aux("normtag_file", "/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_PHYSICS.json")
@@ -171,12 +171,15 @@ def create_config(base_cfg):
     # file merging information (stage -> dataset -> files after merging)
     cfg.set_aux("file_merging", {
         "trees": {
-            #"tt_dl": ,
-            #"tt_sl": ,
-            #"dy_lep_50ToInf": ,
-            #"st_tW_t": ,
-            #"st_tW_tbar": ,
-            #"ttZJets_lep": ,
+            "tt_dl": 198,
+            "tt_sl": 3,
+            "dy_lep_50ToInf": 36,
+            "st_tW_t": 2,
+            "st_tW_tbar": 2,
+            "ttH_bb": 2,
+            "ttH_nonbb": 3,
+            "ttWJets_lep": 4,
+            "ttZJets_lep": 20,
         }
     })
 
@@ -190,8 +193,8 @@ def create_config(base_cfg):
         "MeasureCScaleFactors": "prod1",
         "MeasureScaleFactors": "prod1",
         "FitScaleFactors": "prod1",
-        "GetScaleFactorWeights": "prod1",
-        "MergeScaleFactorWeights": "prod1",
+        "GetScaleFactorWeights": "prod2",
+        "MergeScaleFactorWeights": "prod2",
     })
 
     return cfg

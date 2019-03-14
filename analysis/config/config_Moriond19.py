@@ -18,7 +18,7 @@ def create_config(base_cfg):
         "tt_dl", "tt_sl",
         "dy_lep_10To50",
         "dy_lep_50ToInf",
-        #"st_s_lep",
+        "st_s_lep",
         #"st_t_t", "st_t_tbar",
         "st_tW_t", "st_tW_tbar",
         "WW", "WZ", "ZZ",
@@ -45,7 +45,7 @@ def create_config(base_cfg):
             "medium": 0.4184,
             "tight": 0.7527,
         },
-        "deepflavor": {
+        "deepjet": {
             "loose": 0.0494,
             "medium": 0.2770,
             "tight": 0.7264,
@@ -54,9 +54,9 @@ def create_config(base_cfg):
 
     # luminosities per channel in /pb
     cfg.set_aux("lumi", {
-        ch_ee: 59970.0, #59966.1613198,
-        ch_emu: 59970.0, #59966.1613198,
-        ch_mumu: 59970.0, #59966.1613198,
+        ch_ee: 59966.1613198,
+        ch_emu: 59966.1613198,
+        ch_mumu: 59966.1613198,
         #ch_e: 59966.1613198,
         #ch_mu: 59966.1613198,
     })
@@ -117,7 +117,7 @@ def create_config(base_cfg):
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
             "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_eeBadScFilter",
-            "Flag_ecalBadCalibReducedMINIAODFilter", # TODO: Implement updated filter
+            "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
         "mc": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
@@ -175,14 +175,15 @@ def create_config(base_cfg):
     # file merging information (stage -> dataset -> files after merging)
     cfg.set_aux("file_merging", {
         "trees": {
-            "tt_dl": 88,
-            "tt_sl": 2,
-            "dy_lep_50ToInf": 19,
-            "st_tW_t": 2,
-            "ttH_bb": 3,
-            "ttH_nonbb": 3,
-            "ttWJets": 5,
-            "ttZJets": 11,
+            "tt_dl": 194,
+            "tt_sl": 3,
+            "dy_lep_50ToInf": 38,
+            "st_tW_t": 3,
+            "st_tW_tbar": 2,
+            "ttH_bb": 5,
+            "ttH_nonbb": 6,
+            "ttWJets": 9,
+            "ttZJets": 21,
         }
     })
 
@@ -191,13 +192,13 @@ def create_config(base_cfg):
         "WriteTrees": "prod2",
         "MergeTrees": "prod2",
         "MergeMetaData": "prod1",
-        "WriteHistograms": "test1",
-        "MergeHistograms": "test1",
-        "MeasureCScaleFactors": "test1",
-        "MeasureScaleFactors": "test1",
-        "FitScaleFactors": "test1",
-        "GetScaleFactorWeights": "test1",
-        "MergeScaleFactorWeights": "test1",
+        "WriteHistograms": "prod1",
+        "MergeHistograms": "prod1",
+        "MeasureCScaleFactors": "prod1",
+        "MeasureScaleFactors": "prod1",
+        "FitScaleFactors": "prod1",
+        "GetScaleFactorWeights": "prod2",
+        "MergeScaleFactorWeights": "prod2",
     })
 
     return cfg

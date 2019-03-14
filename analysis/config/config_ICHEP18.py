@@ -45,12 +45,17 @@ def create_config(base_cfg):
         if dataset.is_data
     })
 
-    # store DeepCSV working points
+    # store b-tagger working points
     cfg.set_aux("working_points", {
         "deepcsv": {
             "loose": 0.1522,
             "medium": 0.4941,
             "tight": 0.8001,
+        },
+        "deepjet": {
+            "loose": 0.0521,
+            "medium": 0.3033,
+            "tight": 0.7489,
         }
     })
 
@@ -139,12 +144,12 @@ def create_config(base_cfg):
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
             "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_eeBadScFilter",
-            "Flag_ecalBadCalibFilter",
+            "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
         "mc": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
-            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_ecalBadCalibFilter",
+            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
     })
 
@@ -194,27 +199,29 @@ def create_config(base_cfg):
     # file merging information (stage -> dataset -> files after merging)
     cfg.set_aux("file_merging", {
         "trees": {
-            "tt_dl": 140,
-            "tt_sl": 4,
-            "dy_lep_50ToInf": 90,
+            "tt_dl": 202,
+            "tt_sl": 2,
+            "dy_lep_50ToInf": 106,
             "st_tW_t": 2,
             "st_tW_tbar": 2,
-            "ttZJets_lep": 5,
+            "ttH": 6,
+            "ttWJets_lep": 6,
+            "ttZJets_lep": 15,
         }
     })
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod7",
-        "MergeTrees": "prod7",
-        "MergeMetaData": "prod7",
-        "WriteHistograms": "prod17",
-        "MergeHistograms": "prod17",
-        "MeasureCScaleFactors": "prod10",
-        "MeasureScaleFactors": "prod10",
-        "FitScaleFactors": "prod10",
-        "GetScaleFactorWeights": "prod10",
-        "MergeScaleFactorWeights": "prod10",
+        "WriteTrees": "prod1",
+        "MergeTrees": "prod1",
+        "MergeMetaData": "prod1",
+        "WriteHistograms": "prod1",
+        "MergeHistograms": "prod1",
+        "MeasureCScaleFactors": "prod1",
+        "MeasureScaleFactors": "prod1",
+        "FitScaleFactors": "prod1",
+        "GetScaleFactorWeights": "prod1",
+        "MergeScaleFactorWeights": "prod1",
     })
 
     return cfg

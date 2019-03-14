@@ -69,9 +69,13 @@ cfg.set_aux("jes_levels", {
     "mc": ["L1FastJet", "L2Relative", "L3Absolute"],
 })
 
-cfg.set_aux("btagger", {
-    "name": "deepcsv",
-    "variable": "deepcsv_bcomb",
+cfg.set_aux("btaggers", {
+    "deepcsv": {
+        "variable": "deepcsv_bcomb",
+    },
+    "deepjet": {
+        "variable": "deepjet_bcomb",
+    },
 })
 
 # flavor IDs for .csv result file
@@ -96,7 +100,19 @@ hf_binning = {
             0.7389, 0.8001, 0.842, 0.884, 0.926, 0.968, 1.01
         ],
     },
+    "deepjet": {
+        "plotting": [
+            -2.01, 0.0, 0.015, 0.03, 0.045, 0.06, 0.075, 0.09, 0.105, 0.12, 0.16, 0.24,
+            0.32, 0.40, 0.48, 0.56, 0.64, 0.72, 0.8, 0.84, 0.88, 0.92, 0.95, 0.98,
+            1.01,
+        ],
+        "measurement": [
+            -2.01, 0.0, 0.16, 0.24, 0.32, 0.40, 0.48, 0.56, 0.64, 0.72,
+            0.8, 0.84, 0.88, 0.92, 0.95, 0.98, 1.01,
+        ],
+    },
 }
+
 cfg.set_aux("binning", {
     "lf": {
         "pt": [20, 30, 40, 60, np.inf],
@@ -111,6 +127,17 @@ cfg.set_aux("binning", {
                 0.4257, 0.4941, 1.01,
             ],
         },
+        "deepjet": {
+            "plotting": [
+                -2.01, 0.0, 0.015, 0.03, 0.045, 0.06, 0.075, 0.09, 0.105, 0.12, 0.16, 0.24,
+                0.32, 0.40, 0.48, 0.56, 0.64, 0.72, 0.8, 0.84, 0.88, 0.92, 0.95, 0.98,
+                1.01,
+            ],
+            "measurement": [
+                -2.01, 0.0, 0.015, 0.03, 0.045, 0.06, 0.075, 0.09, 0.105, 0.12, 0.16, 0.24,
+                0.32, 1.01,
+            ],
+        }
     },
     "hf": hf_binning,
     "c": hf_binning,
@@ -132,13 +159,12 @@ def get_phasespace_info():
         ("closure", join_root_selection(["n_jets{jec_identifier} >= 2", "mll > 12", "dr_ll > 0.2"])),
     ]
 
-def get_region_info(cfg, idx, channel, et_miss=30., z_window=10., add_btag_cut=True):
-    btagger = cfg.get_aux("btagger")
-    btag_name = btagger["name"]
-    btag_variable = cfg.get_variable("jet{}_{}".format(idx, btagger["variable"]))
+def get_region_info(cfg, idx, channel, et_miss=30., z_window=10., add_btag_cut=True, b_tagger="deepcsv"):
+    btag_cfg = cfg.get_aux("btaggers")[b_tagger]
+    btag_variable = cfg.get_variable("jet{}_{}".format(idx, btag_cfg["variable"]))
 
-    csv_medium = cfg.get_aux("working_points")[btag_name]["medium"]
-    csv_loose = cfg.get_aux("working_points")[btag_name]["loose"]
+    csv_medium = cfg.get_aux("working_points")[b_tagger]["medium"]
+    csv_loose = cfg.get_aux("working_points")[b_tagger]["loose"]
 
     hf_cuts, lf_cuts = [], []
     if add_btag_cut:
@@ -207,9 +233,11 @@ def get_axis_info(cfg, idx, axis_var, fmt=None):
         "lf": binning_to_selection(lf_bins, variable),
     }
 
-def get_category(cfg, pt, eta, region, phase_space="measure"):
+def get_category(cfg, pt, eta, region, b_tagger, phase_space="measure"):
     matches = []
     for category in cfg.categories:
+        if not category.has_tag(b_tagger):
+            continue
         cat_phasespace = category.get_aux("phase_space", None)
         if not cat_phasespace == phase_space:
             continue
@@ -251,6 +279,7 @@ for lep_idx in xrange(1, 3):
         expression="(lep{}_px**2 + lep{}_py**2)**0.5".format(lep_idx, lep_idx),
         binning=(25, 0., 500.,),
         unit="GeV",
+        tags={"main"},
         x_title="Lep_{} p_{{T}}".format(lep_idx),
     )
 
@@ -260,12 +289,20 @@ for jet_idx in xrange(1, 5):
         tags = tags | {"main"}
     cfg.add_variable(
         name="jet{}_pt".format(jet_idx),
-        expression="jet{}_pt".format(jet_idx),
+        expression="jet{}_pt{{jec_identifier}}".format(jet_idx),
         binning=(25, 0., 500.,),
         unit="GeV",
         x_title="Jet_{} p_{{T}}".format(jet_idx),
         tags=tags
     )
+    cfg.add_variable(
+        name="jet{}_eta".format(jet_idx),
+        expression="jet{}_eta{{jec_identifier}}".format(jet_idx),
+        binning=(25, -2.5, 2.5),
+        x_title="Jet_{} Eta".format(jet_idx),
+        tags=tags,
+    )
+
 
 def add_btag_variables(cfg):
     for jet_idx in xrange(1, 5):
@@ -290,7 +327,6 @@ def add_btag_variables(cfg):
                 expression="jet{}_deepcsv_b{{jec_identifier}}".format(jet_idx),
                 binning=binning,
                 x_title="Jet_{} prob_{{b}}".format(jet_idx),
-                #tags=tags,
                 context=cfg.name,
             )
             cfg.add_variable(
@@ -298,49 +334,64 @@ def add_btag_variables(cfg):
                 expression="jet{}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
                 x_title="Jet_{} prob_{{bb}}".format(jet_idx),
-                #tags=tags,
                 context=cfg.name,
             )
+            # deepcsv discriminator
             cfg.add_variable(
                 name="jet{}_deepcsv_bcomb{}".format(jet_idx, postfix),
                 expression="jet{0}_deepcsv_b{{jec_identifier}} + jet{0}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} prob_{{b+bb}}".format(jet_idx),
+                x_title="Jet_{} deepcsv".format(jet_idx),
                 tags=tags,
+                aux={"b_tagger": "deepcsv"}, # to filter required b-tagger in histogram writer
                 context=cfg.name,
             )
 
-def add_categories(cfg):
+            # deepjet discriminator
+            if region in ["lf", "hf"]:
+                binning = cfg.get_aux("binning")[region]["deepjet"]["plotting"]
+            cfg.add_variable(
+                name="jet{}_deepjet_bcomb{}".format(jet_idx, postfix),
+                expression="jet{0}_deepjet_b{{jec_identifier}} + jet{0}_deepjet_bb{{jec_identifier}} + "\
+                    "jet{0}_deepjet_lepb{{jec_identifier}}".format(jet_idx),
+                binning=binning,
+                x_title="Jet_{} deepjet".format(jet_idx),
+                tags=tags,
+                aux={"b_tagger": "deepjet"}, # to filter required b-tagger in histogram writer
+                context=cfg.name,
+            )
+
+def add_categories(cfg, b_tagger):
     # categories
     for ch in [ch_ee, ch_emu, ch_mumu]:
         # phase space region loop (measurement, closure, ...)
         for ps_name, ps_sel in get_phasespace_info():
             # inclusive region categories to measure rates
-            for rg_name, rg_sel in get_region_info(cfg, 1, ch, add_btag_cut=False):
+            for rg_name, rg_sel in get_region_info(cfg, 1, ch, add_btag_cut=False, b_tagger=b_tagger):
                 # we skip the emu channel in the lf region because the DY (the main contribution)
                 # should have same-flavored leptons
                 if rg_name == "lf" and ch == ch_emu:
                     continue
 
                 rg_cat_combined = ch.add_category(
-                    name="{}__{}__{}".format(ch.name, ps_name, rg_name),
+                    name="{}__{}__{}__{}__{}".format(ch.name, ps_name, rg_name, b_tagger, cfg.name),
                     label="{}, {}, {}".format(ch.name, ps_name, rg_name),
                     selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
-                    tags={"scales"},
+                    tags={"scales", b_tagger},
                     aux={
                         "channel": ch,
                         "phase_space": ps_name,
                         "region": rg_name,
+                        "config": cfg.name,
                     },
-                    context=cfg.name,
                 )
                 # combine region categories to create inclusive control regions for plotting
-                rg_merged_name = "{}__{}".format(ps_name, rg_name)
+                rg_merged_name = "{}__{}__{}".format(ps_name, rg_name, b_tagger)
                 if not cfg.has_category(rg_merged_name):
                     rg_merged_cat = cfg.add_category(
                         name=rg_merged_name,
                         label="{}, {}".format(ps_name, rg_name),
-                        tags={"inclusive"},
+                        tags={"inclusive", b_tagger},
                         aux={
                             "phase_space": ps_name,
                             "region": rg_name,
@@ -358,15 +409,15 @@ def add_categories(cfg):
             # loop over both jet1 jet2 permutations
             for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
                 # region loop (hf, lf, ...)
-                for rg_name, rg_sel in get_region_info(cfg, i_tag_jet, ch):
+                for rg_name, rg_sel in get_region_info(cfg, i_tag_jet, ch, b_tagger=b_tagger):
                     if rg_name == "lf" and ch == ch_emu:
                         continue
 
                     rg_cat = ch.add_category(
-                        name="{}__{}__{}__j{}".format(ch.name, ps_name, rg_name, i_tag_jet),
+                        name="{}__{}__{}__j{}__{}__{}".format(ch.name, ps_name, rg_name, i_tag_jet, b_tagger, cfg.name),
                         label="{}, {}, {} region (j{} tagged)".format(ch.name, ps_name, rg_name, i_tag_jet),
                         selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
-                        context=cfg.name,
+                        tags={b_tagger},
                     )
 
                     # flavor loop (b, c, udsg, ...)
@@ -375,7 +426,7 @@ def add_categories(cfg):
                             name="{}__f{}".format(rg_cat.name, fl_name),
                             label="{}, {} flavor".format(rg_cat.label, fl_name),
                             selection=join_root_selection(rg_cat.selection, fl_sel),
-                            context=cfg.name,
+                            tags={b_tagger},
                         )
 
                         # pt loop
@@ -384,7 +435,7 @@ def add_categories(cfg):
                                 name="{}__pt{}".format(fl_cat.name, pt_name),
                                 label="{}, pt {}".format(fl_cat.label, pt_name),
                                 selection=join_root_selection(fl_cat.selection, pt_sel),
-                                context=cfg.name,
+                                tags={b_tagger},
                             )
 
                             # eta loop
@@ -396,22 +447,24 @@ def add_categories(cfg):
                                     aux={
                                         "channel": ch,
                                         "i_probe_jet": i_probe_jet,
+                                        "i_tag_jet": i_tag_jet,
                                         "phase_space": ps_name,
                                         "region": rg_name,
                                         "flavor": fl_name,
+                                        "config": cfg.name,
                                     },
-                                    context=cfg.name,
+                                    tags={b_tagger},
                                 )
 
                                 # merged category for both jets and all flavors
-                                merged_vars = (ps_name, rg_name, pt_name, eta_name)
-                                merged_name = "{}__{}__pt{}__eta{}".format(*merged_vars)
+                                merged_vars = (ps_name, rg_name, pt_name, eta_name, b_tagger)
+                                merged_name = "{}__{}__pt{}__eta{}__{}".format(*merged_vars)
                                 if not cfg.has_category(merged_name):
                                     label = "{}, {} region, pt {}, eta {}".format(*merged_vars)
                                     merged_cat = cfg.add_category(
                                         name=merged_name,
                                         label=label,
-                                        tags={"merged"},
+                                        tags={"merged", b_tagger},
                                         aux={
                                             "phase_space": ps_name,
                                             "region": rg_name,
@@ -422,13 +475,13 @@ def add_categories(cfg):
                                     )
                                     if rg_name == "hf":
                                         # add c categories (not written to histograms)
-                                        c_vars = (ps_name, "c", pt_name, eta_name)
-                                        c_name = "{}__{}__pt{}__eta{}".format(*c_vars)
+                                        c_vars = (ps_name, "c", pt_name, eta_name, b_tagger)
+                                        c_name = "{}__{}__pt{}__eta{}__{}".format(*c_vars)
                                         label = "{}, {} region, pt {}, eta {}".format(*c_vars)
                                         cfg.add_category(
                                             name=c_name,
                                             label=label,
-                                            tags={"c"},
+                                            tags={"c", b_tagger},
                                             aux={
                                                 "phase_space": ps_name,
                                                 "region": "c",
@@ -451,14 +504,21 @@ cfg.set_aux("get_file_merging", get_file_merging)
 from analysis.config.config_ICHEP18 import create_config as create_config_ICHEP18
 config_ICHEP18 = create_config_ICHEP18(cfg)
 add_btag_variables(config_ICHEP18)
-add_categories(config_ICHEP18)
+add_categories(config_ICHEP18, "deepcsv")
+add_categories(config_ICHEP18, "deepjet")
 
 from analysis.config.config_Moriond19 import create_config as create_config_Moriond19
 config_Moriond19 = create_config_Moriond19(cfg)
 add_btag_variables(config_Moriond19)
-add_categories(config_Moriond19)
+add_categories(config_Moriond19, "deepcsv")
+add_categories(config_Moriond19, "deepjet")
+config_Moriond19.get_aux("binning")["lf"]["deepcsv"]["measurement"] = [
+                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
+                0.4257, 1.01,
+            ]
 
 from analysis.config.config_Moriond19_legacy import create_config as create_config_Moriond19_legacy
 config_Moriond19_legacy = create_config_Moriond19_legacy(cfg)
 add_btag_variables(config_Moriond19_legacy)
-add_categories(config_Moriond19_legacy)
+add_categories(config_Moriond19_legacy, "deepcsv")
+add_categories(config_Moriond19_legacy, "deepjet")

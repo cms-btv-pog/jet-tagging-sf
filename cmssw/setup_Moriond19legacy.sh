@@ -6,7 +6,7 @@ action() {
     [ -z "$scram_cores" ] && scram_cores="1"
 
     export SCRAM_ARCH="slc6_amd64_gcc630"
-    export CMSSW_VERSION="CMSSW_9_4_9"
+    export CMSSW_VERSION="CMSSW_9_4_12"
     export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
@@ -34,10 +34,6 @@ action() {
         git cms-addpkg RecoBTag/TensorFlow
         git cherry-pick 94ceae257f846998c357fcad408986cc8a039152
 
-        # Updated MET filter
-        # https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2#Moriond%202018
-        git cms-addpkg RecoMET/METFilters
-
         scram b -j "$scram_cores"
 
     else
@@ -46,7 +42,7 @@ action() {
     fi
 
     # set default campaign
-    export JTSF_CAMPAIGN="2017_Run2_pp_13TeV_ICHEP18"
+    export JTSF_CAMPAIGN="2018_Run2_pp_13TeV_MORIOND19legacy"
 
     cd "$origin"
 }

@@ -20,7 +20,7 @@ from analysis.config.jet_tagging_sf import analysis
 from analysis.util import calc_checksum
 
 
-law.contrib.load("arc", "cms", "git", "glite", "numpy", "tasks", "root", "slack", "wlcg")
+law.contrib.load("arc", "cms", "git", "glite", "numpy", "tasks", "root", "slack", "wlcg", "htcondor")
 
 
 class AnalysisTask(law.Task):
@@ -30,7 +30,7 @@ class AnalysisTask(law.Task):
 
     outputs_siblings = True
 
-    config = luigi.Parameter(default="2018_Run2_pp_13TeV_MORIOND19")
+    config = luigi.Parameter(default=None)
 
     accepts_messages = True
     message_cache_size = 20
@@ -39,6 +39,9 @@ class AnalysisTask(law.Task):
 
     def __init__(self, *args, **kwargs):
         super(AnalysisTask, self).__init__(*args, **kwargs)
+
+        if self.config is None:
+            self.config = os.environ["JTSF_CAMPAIGN"] # TODO: Change to self.env once SandboxTask is implemented
 
         self.analysis_inst = analysis
         self.config_inst = self.analysis_inst.get_config(self.config)
@@ -298,6 +301,27 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
 
     def arc_stageout_file(self):
         return law.util.rel_path(__file__, "files", "arc_stageout.sh")
+
+
+class HTCondorWorkflow(law.HTCondorWorkflow):
+
+    def htcondor_output_directory(self):
+        return law.LocalDirectoryTarget(self.local_path())
+
+    def htcondor_create_job_file_factory(self, **kwargs):
+        # add the class name to the job file directory
+        job_file_dir = law.config.get_expanded("job", "job_file_dir")
+        kwargs["dir"] = os.path.join(job_file_dir, self.__class__.__name__)
+        return super(HTCondorWorkflow, self).htcondor_create_job_file_factory(**kwargs)
+
+    def htcondor_job_config(self, config, job_num, branches):
+        # copy the entire environment
+        config.custom_content.append(("getenv", "true"))
+        config.custom_content.append(("+MaxRuntime", 100000))
+        # the CERN htcondor setup requires a "log" config, but we can safely set it to /dev/null
+        # if you are interested in the logs of the batch system itself, set a meaningful value here
+        config.log = "log.txt"
+        return config
 
 
 class InstallCMSSWCode(AnalysisTask):

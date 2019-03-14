@@ -192,14 +192,14 @@ dataset_dy_lep_50ToInf = od.Dataset(
 # single top
 
 # s-channel
-#dataset_st_s_lep = od.Dataset(
-#    "st_s_lep", 300,
-#    campaign=campaign,
-#    n_files=,
-#    keys= [
-#        /ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-madgraph-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v4/MINIAODSIM
-#    ]
-#)
+dataset_st_s_lep = od.Dataset(
+    "st_s_lep", 300,
+    campaign=campaign,
+    n_files=353,
+    keys= [
+        "/ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-madgraph-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v4/MINIAODSIM",
+    ]
+)
 
 # t-channel
 #dataset_st_t_t = od.Dataset(
@@ -306,8 +306,6 @@ dataset_ttH_nonbb = od.Dataset(
     context=campaign_name,
 )
 
-# TODO: ttH bb+nonbb
-
 dataset_ttWJets = od.Dataset(
     "ttWJets", 700,
     campaign=campaign,
@@ -341,7 +339,7 @@ dataset_tt_dl.add_process(process_tt_dl)
 dataset_tt_sl.add_process(process_tt_sl)
 dataset_dy_lep_10To50.add_process(process_dy_lep_10To50)
 dataset_dy_lep_50ToInf.add_process(process_dy_lep_50ToInf)
-#dataset_st_s_lep.add_process(process_st_s_lep)
+dataset_st_s_lep.add_process(process_st_s_lep)
 #dataset_st_t_t.add_process(process_st_t_t)
 #dataset_st_t_tbar.add_process(process_st_t_tbar)
 dataset_st_tW_t.add_process(process_st_tW_t)

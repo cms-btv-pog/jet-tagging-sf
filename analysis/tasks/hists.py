@@ -15,13 +15,13 @@ from order.util import join_root_selection
 from collections import defaultdict
 
 from analysis.config.jet_tagging_sf import get_category, jes_sources
-from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow
+from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow, HTCondorWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
 from analysis.util import TreeExtender
 
 
-class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
+class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow):
 
     iteration = luigi.IntParameter(default=0, description="iteration of the scale factor "
         "calculation, starting at zero, default: 0")
@@ -30,6 +30,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
     variable_tag = luigi.Parameter(default="", description="Only consider variables with the given "
         "tag. Use all if empty.")
     used_shifts = CSVParameter(default=[]) # needs to be named differently from the wrapper task parameter
+
+    b_tagger = luigi.Parameter(default="deepcsv", description="Name of the b-tagger to use.")
 
     file_merging = "trees"
 
@@ -93,7 +95,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         return reqs
 
     def store_parts(self):
-        return super(WriteHistograms, self).store_parts() + (self.iteration,)
+        return super(WriteHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,)
 
     def output(self):
         return self.wlcg_target("hists_{}.root".format(self.branch))
@@ -111,6 +113,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 pu_hist.GetBinContent(i)
                 for i in range(1, pu_hist.GetNbinsX() + 1)
             ]
+            pu_values = [value if (value < 1000) else 1. for value in pu_values] # TODO: Temporary, due to high pu weights in 2018 data
 
         def add_branch(extender):
             extender.add_branch("pu_weight", unpack="pu")
@@ -138,7 +141,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                 sf_hists[category.GetName()] = hist
 
-        btag_var = self.config_inst.get_aux("btagger")["variable"]
+        btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
         identifier = self.get_jec_identifier(shift)
 
         def add_branch(extender):
@@ -170,7 +173,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 # TODO: Handle c-jets
                 region = "hf" if abs(jet_flavor) in (4, 5) else "lf"
                 category = get_category(self.config_inst, jet_pt, abs(jet_eta),
-                    region, phase_space="measure")
+                    region, self.b_tagger, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]
@@ -202,9 +205,14 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
         categories = []
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
-        for channel in channels:
-            for category, _, children in channel.walk_categories():
-                if not children:
+        for category, _, children in self.config_inst.walk_categories():
+            if not children:
+                # only use categories matching the task config
+                if category.get_aux("config", None) != self.config_inst.name:
+                    continue
+                # only use categories for the chosen b-tag algorithm
+                if category.has_tag(self.b_tagger):
+                    channel = category.get_aux("channel")
                     categories.append((channel, category))
         categories = list(set(categories))
 
@@ -246,7 +254,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             tree.SetAlias("{0}_pt{1}".format(obj, jec_identifier),
                                 "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, jec_identifier))
                         # b-tagging alias
-                        btag_var = self.config_inst.get_aux("btagger")["variable"]
+                        btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
                         for obj in ["jet1", "jet2", "jet3", "jet4"]:
                             variable = self.config_inst.get_variable("{0}_{1}".format(obj, btag_var))
                             tree.SetAlias(variable.name + jec_identifier, variable.expression.format(
@@ -275,9 +283,14 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                             with TreeExtender(tree) as te:
                                 for add_branch, _ in weighters:
                                     add_branch(te)
-                                for entry in te:
+                                for i, entry in enumerate(te):
+                                    if (i % 1000) == 0:
+                                        print "event {}".format(i)
                                     for _, add_value in weighters:
                                         add_value(entry)
+
+                        # read in total number of events
+                        sum_weights = inp["meta"].load()["event_weights"]["sum"]
 
                     for i, (channel, category) in enumerate(categories):
                         self.publish_message("writing histograms in category {} ({}/{})".format(
@@ -290,12 +303,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                         # set weights that are common for all shifts
                         base_weights = []
-                        if self.dataset_inst.is_mc: # TODO: Should be done separately for each process
+                        if self.dataset_inst.is_mc:
                             base_weights.append("gen_weight")
                             # lumi weight
                             lumi = self.config_inst.get_aux("lumi")[channel]
                             x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal
-                            sum_weights = inp["meta"].load()["event_weights"]["sum"]
                             lumi_weight = lumi * x_sec / sum_weights
                             base_weights.append(str(lumi_weight))
 
@@ -341,8 +353,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                         continue
                                     if region and variable.has_tag("skip_{}".format(region)):
                                         continue
-                                    # if a vaiable tag is given, require it
+                                    # if a variable tag is given, require it
                                     if self.variable_tag and not variable.has_tag(self.variable_tag):
+                                        continue
+                                    # do not write one b-tag discriminant in the category of another
+                                    if variable.get_aux("b_tagger", self.b_tagger) != self.b_tagger:
                                         continue
 
                                     hist = ROOT.TH1F("{}_{}".format(variable.name, shift),
@@ -381,6 +396,8 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
     iteration = WriteHistograms.iteration
     final_it = WriteHistograms.final_it
 
+    b_tagger = WriteHistograms.b_tagger
+
     merge_factor = 12
 
     def create_branch_map(self):
@@ -417,7 +434,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
         ]
 
     def store_parts(self):
-        return super(MergeHistograms, self).store_parts() + (self.iteration,)
+        return super(MergeHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,)
 
     def cascade_output(self):
         return self.wlcg_target("hists.root")
@@ -466,6 +483,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     iteration = WriteHistograms.iteration
     file_merging = WriteHistograms.file_merging
+
+    b_tagger = WriteHistograms.b_tagger
 
     normalize_cerrs = luigi.BoolParameter()
 
@@ -519,7 +538,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
-        return super(GetScaleFactorWeights, self).store_parts() + (self.iteration,) + (c_err_part,)
+        return super(GetScaleFactorWeights, self).store_parts() + (self.b_tagger,) + (self.iteration,) + (c_err_part,)
 
     def output(self):
         return self.wlcg_target("stats_{}.json".format(self.branch))
@@ -541,7 +560,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                 sf_hists[category.GetName()] = hist
 
-        btag_var = self.config_inst.get_aux("btagger")["variable"]
+        btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
         identifier = self.get_jec_identifier(shift)
 
         def get_value(entry):
@@ -570,7 +589,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     continue
 
                 category = get_category(self.config_inst,jet_pt, abs(jet_eta),
-                    region, phase_space="measure")
+                    region, self.b_tagger, phase_space="measure")
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]
@@ -595,9 +614,14 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         categories = []
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
-        for channel in channels:
-            for category, _, children in channel.walk_categories():
-                if not children:
+        for category, _, children in self.config_inst.walk_categories():
+            if not children:
+                # only use categories matching the task config
+                if category.get_aux("config", None) != self.config_inst.name:
+                    continue
+                # only use categories for the chosen b-tag algorithm
+                if category.has_tag(self.b_tagger):
+                    channel = category.get_aux("channel")
                     categories.append((channel, category))
         categories = list(set(categories))
 
@@ -626,7 +650,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     tree.SetAlias("{0}_pt{1}".format(obj, jec_identifier),
                         "({0}_px{1}**2 + {0}_py{1}**2)**0.5".format(obj, jec_identifier))
                 # b-tagging alias
-                btag_var = self.config_inst.get_aux("btagger")["variable"]
+                btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
                 for obj in ["jet1", "jet2", "jet3", "jet4"]:
                     variable = self.config_inst.get_variable("{0}_{1}".format(obj, btag_var))
                     tree.SetAlias(variable.name + jec_identifier, variable.expression.format(
@@ -649,7 +673,9 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
             with TreeExtender(tree) as te:
                 # unpack all branches
                 te.unpack_branch("*")
-                for entry in te:
+                for i, entry in enumerate(te):
+                    if (i % 1000) == 0:
+                        print "entry {}".format(i)
                     # get event weight
                     gen_weight = entry.gen_weight[0]
                     channel_id = entry.channel[0]
@@ -685,6 +711,8 @@ class MergeScaleFactorWeights(AnalysisTask):
     iteration = GetScaleFactorWeights.iteration
     normalize_cerrs = GetScaleFactorWeights.normalize_cerrs
 
+    b_tagger = GetScaleFactorWeights.b_tagger
+
     def requires(self):
         return {dataset.name: GetScaleFactorWeights.req(self, dataset=dataset.name,
             version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
@@ -695,7 +723,7 @@ class MergeScaleFactorWeights(AnalysisTask):
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
-        return super(MergeScaleFactorWeights, self).store_parts() + (self.iteration,) + (c_err_part,)
+        return super(MergeScaleFactorWeights, self).store_parts() + (self.b_tagger,) + (self.iteration,) + (c_err_part,)
 
     @law.decorator.notify
     def run(self):

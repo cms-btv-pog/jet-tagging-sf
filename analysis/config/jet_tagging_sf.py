@@ -522,3 +522,6 @@ config_Moriond19_legacy = create_config_Moriond19_legacy(cfg)
 add_btag_variables(config_Moriond19_legacy)
 add_categories(config_Moriond19_legacy, "deepcsv")
 add_categories(config_Moriond19_legacy, "deepjet")
+config_Moriond19_legacy.get_aux("binning")["lf"]["abs(eta)"] = [0., 0.8, 1.6, 2.4]
+config_Moriond19_legacy.get_aux("binning")["hf"]["abs(eta)"] = [0., 2.4]
+config_Moriond19_legacy.get_aux("binning")["c"]["abs(eta)"] = [0., 2.4]

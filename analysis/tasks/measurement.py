@@ -696,7 +696,7 @@ class CreateScaleFactorResults(AnalysisTask):
         inp = self.input()
         outp = self.output()
 
-        csv_results = ["3, iterativefit, central, 1, 0.0, 2.5, 20.0, 10000, -15, 1.1, 1.0\n"]
+        csv_results = ["3, iterativefit, central, 1, {}, {}, 20.0, 10000, -15, 1.1, 1.0\n".format(*self.config_inst.get_aux("binning")["c"]["abs(eta)"])]
         hf_hists = []
         lf_hists = []
 

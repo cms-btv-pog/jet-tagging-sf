@@ -706,6 +706,7 @@ class CreateScaleFactorResults(AnalysisTask):
                 for line in csv_file.readlines():
                     if not line.endswith("\n"):
                         line += "\n"
+                    line = line.replace("jesTotal", "jes")
                     csv_results.append(line)
 
 

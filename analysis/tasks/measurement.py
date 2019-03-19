@@ -78,6 +78,9 @@ class MeasureScaleFactors(ShiftTask):
                 scale_categories[channel] = {}
                 for category, _, children in channel.walk_categories():
                     if category.has_tag(("scales", self.b_tagger), mode=all) and category.get_aux("phase_space") == "closure":
+                        if category.get_aux("config", None) != self.config_inst.name:
+                            continue
+
                         region = category.get_aux("region")
                         scale_categories[channel][region] = category
 

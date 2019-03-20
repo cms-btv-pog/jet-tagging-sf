@@ -5,9 +5,9 @@ action() {
     local scram_cores="$SCRAM_CORES"
     [ -z "$scram_cores" ] && scram_cores="1"
 
-    export SCRAM_ARCH="slc6_amd64_gcc630"
+    export SCRAM_ARCH="slc${JTSF_DIST_VERSION}_amd64_gcc630"
     export CMSSW_VERSION="CMSSW_9_4_12"
-    export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
+    export CMSSW_BASE="$JTSF_DATA/$JTSF_SANDBOX/cmssw/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
 

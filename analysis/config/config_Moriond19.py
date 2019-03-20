@@ -73,8 +73,8 @@ def create_config(base_cfg):
     # global tags
     # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVAnalysisSummaryTable
     cfg.set_aux("global_tag", {
-        "data": "102X_dataRun2_Sep2018Rereco_v1", # 102X_dataRun2_Prompt_v11
-        "mc": "102X_upgrade2018_realistic_v12",
+        "data": "102X_dataRun2_Sep2018ABC_v2", # 102X_dataRun2_Prompt_v13
+        "mc": "102X_upgrade2018_realistic_v18",
     })
 
     # lumi, normtag and pileup file
@@ -129,19 +129,19 @@ def create_config(base_cfg):
 
     # JER
     # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution
-    cfg.set_aux("jer_version", "Fall17_V3")
+    cfg.set_aux("jer_version", "Autumn18_V1") # temporary, will be superseeded
 
     # JES
     # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC
     cfg.set_aux("jes_version", {
         "data": [
-            rr["A"] + ("Fall17_09May2018F_V3_DATA",),
-            rr["B"] + ("Fall17_09May2018F_V3_DATA",),
-            rr["C"] + ("Fall17_09May2018F_V3_DATA",),
-            rr["D"] + ("Fall17_09May2018F_V3_DATA",),
+            rr["A"] + ("Autumn18_RunA_V8_DATA",),
+            rr["B"] + ("Autumn18_RunB_V8_DATA",),
+            rr["C"] + ("Autumn18_RunC_V8_DATA",),
+            rr["D"] + ("Autumn18_RunD_V8_DATA",),
         ],
         "mc": [
-            (1, int(1e9), "Fall17_17Nov2017_V32_MC"),
+            (1, int(1e9), "Autumn18_V8_MC"),
         ],
     })
 

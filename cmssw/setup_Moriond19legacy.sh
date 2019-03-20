@@ -7,7 +7,7 @@ action() {
 
     export SCRAM_ARCH="slc${JTSF_DIST_VERSION}_amd64_gcc630"
     export CMSSW_VERSION="CMSSW_9_4_12"
-    export CMSSW_BASE="$JTSF_DATA/$JTSF_SANDBOX/cmssw/$CMSSW_VERSION"
+    export CMSSW_BASE="$JTSF_DATA/cmssw/$SCRAM_ARCH/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
 

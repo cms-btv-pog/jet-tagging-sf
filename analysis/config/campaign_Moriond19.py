@@ -202,21 +202,23 @@ dataset_st_s_lep = od.Dataset(
 )
 
 # t-channel
-#dataset_st_t_t = od.Dataset(
-#    "st_t_t", 301,
-#    campaign=campaign,
-#    n_files=,
-#    keys= [
-#    ],
-#)
-#
-#dataset_st_t_tbar = od.Dataset(
-#    "st_t_tbar", 302,
-#    campaign=campaign,
-#    n_files=,
-#    keys= [
-#    ],
-#)
+dataset_st_t_t = od.Dataset(
+    "st_t_t", 301,
+    campaign=campaign,
+    n_files=2395,
+    keys= [
+        "/ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+)
+
+dataset_st_t_tbar = od.Dataset(
+    "st_t_tbar", 302,
+    campaign=campaign,
+    n_files=1319,
+    keys= [
+        "/ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+)
 
 
 # tW-channel

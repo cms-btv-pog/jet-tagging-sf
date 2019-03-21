@@ -66,6 +66,8 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         elif not path.startswith("http") and not path.startswith("/"):
             return None
         else:
+            if "luigi-tmp-" in path: # to prevent randomized hashing
+                path = os.path.basename(path)
             return "{}_{}".format(law.util.create_hash(path), os.path.basename(path))
 
     def get_source_files(self):
@@ -75,6 +77,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
 
         jes_tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
         jes_tmp_dir.touch()
+
         jes_files = collections.defaultdict(lambda: collections.defaultdict(dict))
         for src in ("mc", "data"):
             for _, _, version in self.config_inst.get_aux("jes_version")[src]:
@@ -87,11 +90,12 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
                 tar.close()
                 # select the ones we need
                 for level in self.config_inst.get_aux("jes_levels")[src] + ["Uncertainty"]:
-                    jes_file = jes_file_name(version, level)
-                    jes_files[src][version][level] = os.path.join(jes_tmp_dir.path, jes_file)
-        jes_unc_src_file = os.path.join(jes_tmp_dir.path,
-            jes_file_name(self.config_inst.get_aux("jes_version")["mc"][0][2], "UncertaintySources")
-            )
+                    jes_files[src][version][level] = os.path.join(
+                        jes_tmp_dir.path, jes_file_name(version, level)
+                    )
+        jes_unc_src_file = os.path.join(
+            jes_tmp_dir.path, jes_file_name(self.config_inst.get_aux("jes_version")["mc"][0][2], "UncertaintySources")
+        )
 
         # prepare JER files
         jer_url = lambda version, src: "https://raw.githubusercontent.com/cms-jet/JRDatabase" \

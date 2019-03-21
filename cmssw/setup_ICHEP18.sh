@@ -38,6 +38,9 @@ action() {
         # https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2#Moriond%202018
         git cms-addpkg RecoMET/METFilters
 
+        # MET EE fix
+        git cms-merge-topic cms-met:METFixEE2017_949_v2
+
         scram b -j "$scram_cores"
 
     else

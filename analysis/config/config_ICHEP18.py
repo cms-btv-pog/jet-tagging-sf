@@ -143,13 +143,14 @@ def create_config(base_cfg):
         "data": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
-            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_eeBadScFilter",
-            "Flag_ecalBadCalibReducedMINIAODFilter",
+            "Flag_BadPFMuonFilter", #"Flag_BadChargedCandidateFilter",
+            "Flag_eeBadScFilter", "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
         "mc": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
-            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_ecalBadCalibReducedMINIAODFilter",
+            "Flag_BadPFMuonFilter", #"Flag_BadChargedCandidateFilter",
+            "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
     })
 

@@ -11,6 +11,8 @@ action() {
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
 
+    export PYTHONPATH=/cvmfs/cms.cern.ch/slc6_amd64_gcc700/lcg/root/6.12.07-gnimlf5/lib:$PYTHONPATH
+
     if [ ! -d "$CMSSW_BASE" ]; then
         mkdir -p "$( dirname "$CMSSW_BASE" )"
         cd "$( dirname "$CMSSW_BASE" )"
@@ -26,6 +28,7 @@ action() {
         git cms-merge-topic cms-egamma:EgammaPostRecoTools
         git cms-merge-topic cms-egamma:PhotonIDValueMapSpeedup1029 #optional but speeds up the photon ID value module so things fun faster
         git cms-merge-topic cms-egamma:slava77-btvDictFix_10210 #fixes the Run2018D dictionary issue, see https://github.com/cms-sw/cmssw/issues/26182
+        scram b -j "$scram_cores"
 
         # E-gamma
         git cms-addpkg EgammaAnalysis/ElectronTools  #check out the package otherwise code accessing it will crash
@@ -35,14 +38,6 @@ action() {
         git checkout ScalesSmearing2018_Dev
         cd -
         git cms-merge-topic cms-egamma:EgammaPostRecoTools_dev
-
-        # b-tagging
-        git cms-addpkg RecoBTag
-        git cms-addpkg PhysicsTools/PatAlgos
-        git cms-merge-topic rauser:PrunedTraining_NoPuppi_10_2_11
-        git clone -b PrunedTraining_NoPuppi https://github.com/emilbols/RecoBTag-Combined RecoBTag/Combined/data
-
-        git clone -b 10_2_X_v1.06 --depth 1 https://github.com/cms-btv-pog/RecoBTag-PerformanceMeasurements.git RecoBTag/PerformanceMeasurements
 
         # MET
         git cms-addpkg RecoMET/METFilters
@@ -59,6 +54,5 @@ action() {
     # set default campaign
     export JTSF_CAMPAIGN="2018_Run2_pp_13TeV_MORIOND19"
 
-    export PYTHONPATH=/cvmfs/cms.cern.ch/slc6_amd64_gcc700/lcg/root/6.12.07-gnimlf5/lib:$PYTHONPATH
 }
 action "$@"

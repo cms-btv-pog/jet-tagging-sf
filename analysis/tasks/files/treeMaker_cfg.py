@@ -211,6 +211,7 @@ try:
 
     # electron ID on uncorrected electrons
     # no option to configure the electron collection available here
+    # https://twiki.cern.ch/twiki/bin/view/CMS/EgammaPostRecoRecipes
     from RecoEgamma.EgammaTools.EgammaPostRecoTools import setupEgammaPostRecoSeq
     params = {
             "isMiniAOD": True,
@@ -218,7 +219,6 @@ try:
             "applyVIDOnCorrectedEgamma": False,
     }
     if options.campaign == "2018_Run2_pp_13TeV_MORIOND19":
-        params["runEnergyCorrections"] = False
         params["era"] = "2018-Prompt"
     elif options.campaign == "2017_Run2_pp_13TeV_ICHEP18":
         params["era"] = "2017-Nov17ReReco"

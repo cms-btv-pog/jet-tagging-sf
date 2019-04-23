@@ -24,6 +24,19 @@ action() {
         #
 
         git cms-merge-topic cms-egamma:EgammaPostRecoTools
+        git cms-merge-topic cms-egamma:PhotonIDValueMapSpeedup1029 #optional but speeds up the photon ID value module so things fun faster
+        git cms-merge-topic cms-egamma:slava77-btvDictFix_10210 #fixes the Run2018D dictionary issue, see https://github.com/cms-sw/cmssw/issues/26182
+
+        # E-gamma
+        git cms-addpkg EgammaAnalysis/ElectronTools  #check out the package otherwise code accessing it will crash
+        rm EgammaAnalysis/ElectronTools/data -rf   #delete the data directory so we can populate it ourselves
+        git clone git@github.com:cms-egamma/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
+        cd EgammaAnalysis/ElectronTools/data
+        git checkout ScalesSmearing2018_Dev
+        cd -
+        git cms-merge-topic cms-egamma:EgammaPostRecoTools_dev
+
+        # b-tagging
         git cms-addpkg RecoBTag
         git cms-addpkg PhysicsTools/PatAlgos
         git cms-merge-topic rauser:PrunedTraining_NoPuppi_10_2_11
@@ -31,6 +44,7 @@ action() {
 
         git clone -b 10_2_X_v1.06 --depth 1 https://github.com/cms-btv-pog/RecoBTag-PerformanceMeasurements.git RecoBTag/PerformanceMeasurements
 
+        # MET
         git cms-addpkg RecoMET/METFilters
 
         scram b -j "$scram_cores"

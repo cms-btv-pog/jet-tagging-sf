@@ -7,7 +7,7 @@ action() {
 
     export SCRAM_ARCH="slc${JTSF_DIST_VERSION}_amd64_gcc700"
     export CMSSW_VERSION="CMSSW_10_2_11"
-    export CMSSW_BASE="$JTSF_DATA/cmssw/$SCRAM_ARCH/$CMSSW_VERSION"
+    [ -z "$CMSSW_BASE" ] && export CMSSW_BASE="$JTSF_DATA/cmssw/$SCRAM_ARCH/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
 
@@ -24,8 +24,12 @@ action() {
         #
 
         git cms-merge-topic cms-egamma:EgammaPostRecoTools
-        git cms-addpkg RecoBTag/TensorFlow
-        git cherry-pick 94ceae257f846998c357fcad408986cc8a039152
+        git cms-addpkg RecoBTag
+        git cms-addpkg PhysicsTools/PatAlgos
+        git cms-merge-topic rauser:PrunedTraining_NoPuppi_10_2_11
+        git clone -b PrunedTraining_NoPuppi https://github.com/emilbols/RecoBTag-Combined RecoBTag/Combined/data
+
+        git clone -b 10_2_X_v1.06 --depth 1 https://github.com/cms-btv-pog/RecoBTag-PerformanceMeasurements.git RecoBTag/PerformanceMeasurements
 
         git cms-addpkg RecoMET/METFilters
 

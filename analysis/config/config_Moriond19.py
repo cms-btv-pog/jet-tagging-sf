@@ -19,7 +19,7 @@ def create_config(base_cfg):
         "dy_lep_10To50",
         "dy_lep_50ToInf",
         "st_s_lep",
-        #"st_t_t", "st_t_tbar",
+        "st_t_t", "st_t_tbar",
         "st_tW_t", "st_tW_tbar",
         "WW", "WZ", "ZZ",
         "W_lep",
@@ -189,16 +189,16 @@ def create_config(base_cfg):
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod3",
-        "MergeTrees": "prod3",
-        "MergeMetaData": "prod3",
-        "WriteHistograms": "prod3",
-        "MergeHistograms": "prod3",
-        "MeasureCScaleFactors": "prod3",
-        "MeasureScaleFactors": "prod3",
-        "FitScaleFactors": "prod3",
-        "GetScaleFactorWeights": "prod3",
-        "MergeScaleFactorWeights": "prod3",
+        "WriteTrees": "prod4",
+        "MergeTrees": "prod4",
+        "MergeMetaData": "prod4",
+        "WriteHistograms": "prod4",
+        "MergeHistograms": "prod4",
+        "MeasureCScaleFactors": "prod4",
+        "MeasureScaleFactors": "prod4",
+        "FitScaleFactors": "prod4",
+        "GetScaleFactorWeights": "prod4",
+        "MergeScaleFactorWeights": "prod4",
     })
 
     return cfg

@@ -14,7 +14,7 @@ from law.parameter import CSVParameter
 from order.util import join_root_selection
 from collections import defaultdict
 
-from analysis.config.jet_tagging_sf import get_category, jes_sources
+from analysis.config.jet_tagging_sf import get_category
 from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow, HTCondorWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
@@ -43,6 +43,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         if self.dataset_inst.is_data:
             shifts = {"nominal"}
         else:
+            jes_sources = self.config_inst.get_aux("jes_sources")
             shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
                 jes_sources, ["up", "down"])}
             if self.iteration > 0:
@@ -170,7 +171,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                     break
 
                 # find category in which the scale factor of the jet was computed to get correct histogram
-                # TODO: Handle c-jets
                 region = "hf" if abs(jet_flavor) in (4, 5) else "lf"
                 category = get_category(self.config_inst, jet_pt, abs(jet_eta),
                     region, self.b_tagger, phase_space="measure")
@@ -183,7 +183,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                 if abs(jet_flavor) == 5:
                     scale_factor_hf *= scale_factor
                 elif abs(jet_flavor) == 4:
-                    scale_factor_c *= 1.  # TODO: set to scale_factor once we have sf hists for c jets
+                    scale_factor_c *= 1.
                 else:
                     scale_factor_lf *= scale_factor
 
@@ -498,6 +498,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
             self.shifts = {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
                 ["c_stats1", "c_stats2"], ["up", "down"])}
         else:
+            jes_sources = self.config_inst.get_aux("jes_sources")
             self.shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
                 jes_sources, ["up", "down"])} | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
                 ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}

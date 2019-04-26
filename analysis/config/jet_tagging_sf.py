@@ -63,6 +63,8 @@ jes_sources = [
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
 ]
 
+cfg.set_aux("jes_sources", jes_sources)
+
 # add auxiliary info to base config
 cfg.set_aux("jes_levels", {
     "data": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
@@ -516,6 +518,7 @@ config_Moriond19.get_aux("binning")["lf"]["deepcsv"]["measurement"] = [
                 -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
                 0.4257, 1.01,
             ]
+config_Moriond19.get_aux("jes_sources").insert(0, "AbsoluteSample")
 
 from analysis.config.config_Moriond19_legacy import create_config as create_config_Moriond19_legacy
 config_Moriond19_legacy = create_config_Moriond19_legacy(cfg)

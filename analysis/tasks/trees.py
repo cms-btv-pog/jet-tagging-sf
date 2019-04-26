@@ -17,7 +17,6 @@ import six
 from analysis.tasks.base import AnalysisTask, DatasetTask, WrapperTask, GridWorkflow, HTCondorWorkflow
 from analysis.tasks.external import GetDatasetLFNs, DownloadSetupFiles
 from analysis.util import wget, determine_xrd_redirector
-from analysis.config.jet_tagging_sf import jes_sources
 
 class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow):
 
@@ -101,7 +100,7 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow)
                 ("jesRanges", jes_ranges),
                 ("jesUncFiles", jes_unc_files),
                 ("jesUncSrcFile", jes_unc_src_file),
-                ("jesUncSources", jes_sources),
+                ("jesUncSources", self.config_inst.get_aux("jes_sources")),
                 ("jerPtResolutionFile", setup_files["jer_files"]["PtResolution"]),
                 ("jerScaleFactorFile", setup_files["jer_files"]["SF"]),
             ]

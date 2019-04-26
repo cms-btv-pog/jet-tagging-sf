@@ -126,7 +126,7 @@ action() {
 
         jtsf_install_pip slackclient
         jtsf_install_pip docutils
-        jtsf_install_pip git+https://github.com/riga/order.git@dev
+        jtsf_install_pip git+https://github.com/riga/order.git@4b78ad6c06caee65f42e470a3c88fb61bba2d8f8
         jtsf_install_pip git+https://github.com/spotify/luigi.git
         LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip --no-dependencies git+https://github.com/riga/law.git
 

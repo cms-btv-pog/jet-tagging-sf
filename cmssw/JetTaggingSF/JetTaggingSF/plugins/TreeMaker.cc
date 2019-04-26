@@ -1534,7 +1534,7 @@ bool TreeMaker::tightJetID_2018(pat::Jet& jet) {
     else
     {
         passPOGID = jet.neutralEmEnergyFraction() < 0.9 &&
-            jet.neutralHadronEnergyFraction() > 0.02 &&
+            jet.neutralHadronEnergyFraction() > 0.2 &&
             jet.neutralMultiplicity() > 10;
     }
     return passPOGID;

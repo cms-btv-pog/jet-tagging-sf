@@ -265,7 +265,7 @@ dataset_dy_lep_50ToInf_Ht200To400 = od.Dataset(
     campaign=campaign,
     n_files=311,
     keys=[
-        "/DYJetsToLL_M-50_HT-100to200_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
+        "/DYJetsToLL_M-50_HT-200to400_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
     ],
     context=campaign_name,
 )

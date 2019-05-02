@@ -8,6 +8,7 @@ from collections import defaultdict, OrderedDict
 
 import numpy as np
 import array
+import itertools
 
 import matplotlib
 matplotlib.use('Agg')
@@ -206,26 +207,57 @@ class PlotVariable(PlotTask):
 class PlotScaleFactor(PlotTask):
     hist_name = "sf"
 
-    shifts = CSVParameter(default=["nominal"])
+    shifts = CSVParameter(default=["ALL"], description="Systematic shifts to plot."
+        "Nominal scale factors are added and up/down variations are created from this.")
     iterations = CSVParameter(default=[0])
     fix_normalization = FitScaleFactors.fix_normalization
     norm_to_nominal = luigi.BoolParameter()
+    is_c_flavour = luigi.BoolParameter()
+
+    def __init__(self, *args, **kwargs):
+        super(PlotScaleFactor, self).__init__(*args, **kwargs)
+        # identifiers used in file names
+        self.shifts_identifier = "_".join(self.shifts)
+        self.file_identifiers = [self.b_tagger, self.shifts_identifier]
+        if self.is_c_flavour:
+            self.file_identifiers.append("c")
+        if self.norm_to_nominal:
+            self.file_identifiers.append("normed")
+
+        # Check if multiple shifts are present and thus have to be combined (envelope)
+        self.multiple_shifts = "ALL" in self.shifts or len(self.shifts) >= 2
+
+        if "ALL" in self.shifts:
+            if self.is_c_flavour:
+                self.shifts = MeasureCScaleFactors.shifts
+            else:
+                self.shifts = MeasureScaleFactors.shifts
+        else:
+            self.shifts = ["{}_{}".format(shift, direction) for shift, direction
+                in itertools.product(self.shifts, ["up", "down"])]
+            if not self.is_c_flavour:
+                self.shifts.insert(0, "nominal")
+
+        if len(self.shifts) != len(set(self.shifts)):
+            raise Exception("Duplicate shift in {}".format(self.shifts))
 
     def requires(self):
         reqs = OrderedDict()
+        measure_task = MeasureCScaleFactors if self.is_c_flavour else MeasureScaleFactors
         for iteration in self.iterations:
             reqs[iteration] = OrderedDict()
             for shift in self.shifts:
                 reqs[iteration][shift] = {
                     "fit": FitScaleFactors.req(self, iteration=iteration, shift=shift,
                         version=self.get_version(FitScaleFactors), _prefer_cli=["version"]),
-                    "hist": MeasureScaleFactors.req(self, iteration=iteration, shift=shift,
-                        version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
+                    "hist": measure_task.req(self, iteration=iteration, shift=shift,
+                        version=self.get_version(measure_task), _prefer_cli=["version"])
                     }
         return reqs
 
     def output(self):
-        return self.local_target("plots.tgz")
+        filename = "plots_{}.tgz".format("_".join(self.file_identifiers))
+        return self.local_target(filename)
 
     def run(self):
         import ROOT
@@ -240,40 +272,56 @@ class PlotScaleFactor(PlotTask):
         local_tmp.touch()
 
         plots = {}
-        nominal_hists = {}
-        nominal_fit_hists = {}
 
         for iteration, inp_dict in inp.items():
             if self.norm_to_nominal and inp_dict.keys()[0] != "nominal":
                 raise KeyError("When 'norm_to_nominal' is set to true, the first shift has to be 'nominal'.")
+
+            nominal_hists = {}
+            nominal_fit_hists = {}
+            # combined errors for multiple shifts
+            up_shifted_fit_hists = defaultdict(dict)
+            down_shifted_fit_hists = defaultdict(dict)
+
             for shift_idx, (shift, inp_target) in enumerate(inp_dict.items()):
                 with inp_target["fit"]["sf"].load("r") as fit_file, \
                     inp_target["hist"]["scale_factors"].load("r") as hist_file:
                     for category_key in fit_file.GetListOfKeys():
-                        if not self.config_inst.has_category(category_key.GetName()):
-                            continue
+                        category_name = category_key.GetName()
+                        if not self.config_inst.has_category(category_name):
+                            raise KeyError("Unknown category {}".format(category_name))
 
-                        category = self.config_inst.get_category(category_key.GetName())
+                        category = self.config_inst.get_category(category_name)
                         pt_range = category.get_aux("pt")
                         eta_range = category.get_aux("eta")
                         region = category.get_aux("region")
-                        fit_category_dir = fit_file.Get(category_key.GetName())
-                        hist_category_dir = hist_file.Get(category_key.GetName())
 
+                        fit_category_dir = fit_file.Get(category_name)
                         fit_hist = fit_category_dir.Get(self.hist_name)
-                        hist = hist_category_dir.Get(self.hist_name)
-                        hist = self.rebin_hist(hist, region, binning_type="measurement")
+
+                        if shift == "nominal":
+                            hist_category_dir = hist_file.Get(category_name)
+                            hist = hist_category_dir.Get(self.hist_name)
+                            hist = self.rebin_hist(hist, region, binning_type="measurement")
+
+                            # make sure histograms are not cleaned up when the file is closed
+                            nominal_fit_hists[category] = fit_hist.Clone()
+                            nominal_fit_hists[category].SetDirectory(0)
+
+                        if shift != "nominal" and self.multiple_shifts:
+                            # collect all shifted fit histograms to build envelope later
+                            sys, direction = shift.rsplit("_", 1)
+                            if direction == "up":
+                                up_shifted_fit_values[category][sys] = fit_hist.Clone()
+                                up_shifted_fit_values[category][sys].SetDirectory(0)
+                            elif direction == "down":
+                                down_shifted_fit_values[category][sys] = fit_hist.Clone()
+                                down_shifted_fit_values[category][sys].SetDirectory(0)
+                            else:
+                                raise ValueError("Unknown direction {}".format(direction))
 
                         if self.norm_to_nominal:
-                            if shift == "nominal":
-                                # make sure histograms are not cleaned up when the file is closed
-                                nominal_hists[category] = hist.Clone()
-                                nominal_hists[category].SetDirectory(0)
-                                nominal_fit_hists[category] = fit_hist.Clone()
-                                nominal_fit_hists[category].SetDirectory(0)
-                            hist.Divide(nominal_hists[category])
                             fit_hist.Divide(nominal_fit_hists[category])
-
 
                         if category in plots:
                             plot = plots[category]
@@ -283,8 +331,8 @@ class PlotScaleFactor(PlotTask):
                             plots[category] = plot
                         plot.cd(0, 0)
                         fit_hist.GetXaxis().SetRangeUser(-.1, 1.0)
-                        y_min = 0.95 if self.norm_to_nominal else 0.
-                        y_max = 1.05 if self.norm_to_nominal else 2.
+                        y_min = 0.6 if self.norm_to_nominal else 0.
+                        y_max = 1.4 if self.norm_to_nominal else 2.
                         fit_hist.GetYaxis().SetRangeUser(y_min, y_max)
                         fit_hist.GetXaxis().SetTitle("DeepCSV")
                         fit_hist.GetXaxis().SetTitleSize(.045)
@@ -294,10 +342,11 @@ class PlotScaleFactor(PlotTask):
                         if shift_idx == 0:
                             line = ROOT.TLine(0., 0., 0., 2.)
                             line.SetLineStyle(9)
-                            plot.draw({"sf": fit_hist})
-                            if not self.norm_to_nominal:
-                                plot.draw({"hist": hist}, options="SAME")
+                            if not self.multiple_shifts or shift == "nominal":
+                                # only draw this fit histogram if it is not part of a shifted envelope
+                                plot.draw({"sf": fit_hist})
                             plot.draw({"line": line})
+
                             # add category information to plot
                             if not np.isinf(pt_range[1]):
                                 text = r"#splitline{%d < p_{T} < %d}{%.1f < |#eta| < %.1f}" % \
@@ -306,14 +355,55 @@ class PlotScaleFactor(PlotTask):
                                 text = r"#splitline{p_{T} > %d}{%.1f < |#eta| < %.1f}" % \
                                     (pt_range[0], eta_range[0], eta_range[1])
                             plot.draw_text(text, .7, .8, size=0.04)
-                        else:
+                        elif not self.multiple_shifts:
                             plot.draw({shift: fit_hist}, options="SAME",
                                 line_color=2*shift_idx)
+
+                        if shift == "nominal" and not self.norm_to_nominal:
+                            plot.draw({"hist": hist}, options="SAME")
+
+            if self.multiple_shifts:
+                for category in plots:
+                    plot = plots[category]
+                    errors_up = []
+                    errors_down = []
+                    for shift in up_shifted_fit_hists[category]:
+                        up_shifted_hist = up_shifted_fit_hists[category][shift]
+                        down_shifted_hist = down_shifted_fit_hists[category][shift]
+                        for bin_idx in range(1, up_shifted_hist.GetNbinsX() + 1):
+                            if self.is_c_flavour:
+                                nominal_value = 1.
+                            else:
+                                nominal_value = nominal_fit_hists[category].GetBinContent(bin_idx)
+                            # add in quadrature all shifts that have an effect in the same direction
+                            diff_up = up_shifted_hist.GetBinContent(bin_idx) - nominal_value
+                            diff_down = down_shifted_hist.GetBinContent(bin_idx) - nominal_value
+                            error_up = max([diff_up, diff_down, 0])
+                            error_down = min([diff_up, diff_down, 0])
+                            if error_up == 0 or error_down == 0:
+                                print "One sided shift: {}, {}".format(shift, category)
+                            errors_up[bin_idx - 1] += error_up**2
+                            errors_down[bin_idx - 1] += error_down**2
+                    errors_up = np.sqrt(errors_up)
+                    errors_down = np.sqrt(errors_down)
+                    fit_hist_up = nominal_fit_hist.Clone()
+                    fit_hist_down = nominal_fit_hist.Clone()
+                    for bin_idx in range(1, fit_hist_up.GetNbinsX() + 1):
+                        fit_hist_up.SetBinContent(nominal_fit_hist.GetBinContent(bin_idx) + errors_up[bin_idx - 1])
+                        fit_hist_down.SetBinContent(nominal_fit_hist.GetBinContent(bin_idx) - errors_down[bin_idx - 1])
+
+                    if self.norm_to_nominal:
+                        fit_hist_up.Divide(nominal_fit_hists[category])
+                        fit_hist_down.Divide(nominal_fit_hists[category])
+
+                    plot.draw({"up": fit_hist_up}, options="SAME", line_color=2)
+                    plot.draw({"down": fit_hist_down}, options="SAME", line_color=4)
+
         # save plots
         for category in plots:
             plot = plots[category]
-            plot.save(os.path.join(local_tmp.path, "{}.pdf".format(category.name)),
-                lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
+            plot.save(os.path.join(local_tmp.path, "{}_{}.pdf".format(category.name,
+                self.shifts_identifier)), lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
             del plot
 
         with outp.localize("w") as tmp:

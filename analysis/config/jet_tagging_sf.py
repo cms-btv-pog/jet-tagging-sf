@@ -7,6 +7,7 @@ Definition of the analysis for extracting jet tagging scale factors
 
 
 import re
+import os
 
 import numpy as np
 import order as od
@@ -62,6 +63,12 @@ jes_sources = [
     "RelativeStatFSR", "RelativeStatEC", "RelativeStatHF", "PileUpDataMC", "PileUpPtRef",
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
 ]
+# jes sources are required for ShiftTasks already on class level to define list of shift
+# however, no information about the config instance is available at that point
+if os.environ.get("JTSF_CAMPAIGN", None) is None:
+    raise Exception("JTSF campaign has to be defined.")
+if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19":
+    jes_sources.insert(0, "AbsoluteSample")
 
 cfg.set_aux("jes_sources", jes_sources)
 

@@ -30,6 +30,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
     variable_tag = luigi.Parameter(default="", description="Only consider variables with the given "
         "tag. Use all if empty.")
     used_shifts = CSVParameter(default=[]) # needs to be named differently from the wrapper task parameter
+    n_bins = luigi.IntParameter(default=-1, description="Overwrite number of bins in histogram. Forces "
+        "fixed bin width.")
 
     b_tagger = luigi.Parameter(default="deepcsv", description="Name of the b-tagger to use.")
 
@@ -360,9 +362,18 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                                     if variable.get_aux("b_tagger", self.b_tagger) != self.b_tagger:
                                         continue
 
+                                    # if number of bins is specified, overwrite variable binning
+                                    if self.n_bins > 0:
+                                        n_bins = self.n_bins
+                                        bin_edges = np.linspace(variable.bin_edges[0],
+                                            variable.bin_edges[-1], n_bins)
+                                    else:
+                                        n_bins = variable.n_bins
+                                        bin_edges = variable.bin_edges
+
                                     hist = ROOT.TH1F("{}_{}".format(variable.name, shift),
-                                        variable.full_title(root=True), variable.n_bins,
-                                        array.array("f", variable.bin_edges))
+                                        variable.full_title(root=True), n_bins,
+                                        array.array("f", bin_edges))
                                     hist.Sumw2()
 
                                     # build the full selection string, including the total event weight

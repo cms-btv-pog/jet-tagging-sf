@@ -9,7 +9,7 @@ import numpy as np
 
 from collections import defaultdict
 
-from analysis.config.jet_tagging_sf import jes_sources
+from analysis.config.jet_tagging_sf import jes_sources, jes_total_shifts
 from analysis.tasks.base import AnalysisTask, ShiftTask, WrapperTask
 from analysis.tasks.hists import MergeHistograms, GetScaleFactorWeights, MergeScaleFactorWeights
 
@@ -281,7 +281,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
     def requires(self):
         skip_shifts = {"{}_{}".format(shift, direction) for shift, direction in
             itertools.product(["hf", "lf_stats1", "lf_stats2"], ["up", "down"])}
-        skip_shifts = skip_shifts | {"jesTotal_up", "jesTotal_down"}
+        skip_shifts = skip_shifts | jes_total_shifts
 
         reqs = {}
         reqs["scale_factors"] = {

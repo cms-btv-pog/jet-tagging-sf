@@ -63,6 +63,8 @@ jes_sources = [
     "RelativeStatFSR", "RelativeStatEC", "RelativeStatHF", "PileUpDataMC", "PileUpPtRef",
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
 ]
+jes_total_shifts = {"jesTotal_up", "jesTotal_down"}
+
 # jes sources are required for ShiftTasks already on class level to define list of shift
 # however, no information about the config instance is available at that point
 if os.environ.get("JTSF_CAMPAIGN", None) is None:

@@ -39,6 +39,8 @@ class ROOTPad(object):
         self.objects = []
         self.missing_key = False # Contains plot object not found in tcolors dict
 
+        self.has_drawn_object = False # To automatically set option 'SAME' if needed
+
 
     def draw_base_legend(self):
         self.legend = ROOT.TLegend(0.5, 0.7, 0.88, 0.88)
@@ -56,12 +58,22 @@ class ROOTPad(object):
             obj.SetDirectory(0)
         self.objects.append(obj)
 
-    def draw(self, obj_dict, stacked=False, invis=False, line_color=1, fill_color=1,
-        stack_maximum=None, options=None):
+    def update_options(self, options, add_same_option):
         if options is None:
             options = []
         if not isinstance(options, (list, tuple)):
             options = [options]
+
+        if add_same_option and self.has_drawn_object and not "SAME" in options:
+            options.append("SAME")
+        self.has_drawn_object = True
+
+        return options
+
+    def draw(self, obj_dict, stacked=False, invis=False, line_color=1, fill_color=1,
+        stack_maximum=None, options=None, add_same_option=True):
+
+        options = self.update_options(options, add_same_option)
 
         if invis:
             # Draw an invisible object to fix the axis ranges.
@@ -105,10 +117,7 @@ class ROOTPad(object):
             obj.Draw(" ".join(options))
 
     def draw_as_graph(self, hist, options=None):
-        if options is None:
-            options = []
-        if not isinstance(options, (list, tuple)):
-            options = [options]
+        options = self.update_options(options, add_same_option)
 
         x, y = [], []
         xerr_down, xerr_up = [], []

@@ -311,6 +311,16 @@ class PlotScaleFactor(PlotTask):
                         nominal_fit_hists[category] = fit_hist.Clone()
                         nominal_fit_hists[category].SetDirectory(0)
 
+                    # for c-jets, there is no nominal histogram
+                    # Instead, all nominal values are set to 1
+                    if shift_idx == 0 and self.is_c_flavour:
+                        nominal_fit_hist = fit_hist.Clone()
+                        for bin_idx in range(1, nominal_fit_hist.GetNbinsX() + 1):
+                            nominal_fit_hist.SetBinContent(bin_idx, 1.0)
+
+                        nominal_fit_hist.SetDirectory(0)
+                        nominal_fit_hists[category] = nominal_fit_hist
+
                     if shift != "nominal" and self.multiple_shifts:
                         # collect all shifted fit histograms to build envelope later
                         sys, direction = shift.rsplit("_", 1)
@@ -374,20 +384,20 @@ class PlotScaleFactor(PlotTask):
                 for shift_idx, shift in enumerate(up_shifted_fit_hists[category]):
                     up_shifted_hist = up_shifted_fit_hists[category][shift]
                     down_shifted_hist = down_shifted_fit_hists[category][shift]
+
                     for bin_idx in range(1, up_shifted_hist.GetNbinsX() + 1):
-                        if self.is_c_flavour:
-                            nominal_value = 1.
-                        else:
-                            nominal_value = nominal_fit_hists[category].GetBinContent(bin_idx)
+                        nominal_value = nominal_fit_hists[category].GetBinContent(bin_idx)
+
                         # combine all shifts that have an effect in the same direction
                         # effect from <shift>_up/done systematics
                         diff_up = up_shifted_hist.GetBinContent(bin_idx) - nominal_value
                         diff_down = down_shifted_hist.GetBinContent(bin_idx) - nominal_value
+
                         # shift with effect in up/down direction
                         error_up = max([diff_up, diff_down, 0])
                         error_down = min([diff_up, diff_down, 0])
 
-                        # detect systermatics where up/down shift direction is the same
+                        # detect systematics where up/down shift direction is the same
                         #if diff_up * diff_down > 0:
                         #    print "One sided shift: {}, {}".format(shift, category)
 
@@ -400,9 +410,11 @@ class PlotScaleFactor(PlotTask):
                             errors_down[bin_idx - 1] += error_down**2
                 errors_up = np.sqrt(errors_up)
                 errors_down = np.sqrt(errors_down)
+
                 # build shifted histograms
                 fit_hist_up = nominal_fit_hists[category].Clone()
                 fit_hist_down = nominal_fit_hists[category].Clone()
+
                 for bin_idx in range(1, fit_hist_up.GetNbinsX() + 1):
                     fit_hist_up.SetBinContent(bin_idx, fit_hist_up.GetBinContent(bin_idx)
                         + errors_up[bin_idx - 1])

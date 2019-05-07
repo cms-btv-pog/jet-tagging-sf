@@ -18,6 +18,7 @@ class MeasureScaleFactors(ShiftTask):
 
     iteration = MergeHistograms.iteration
     b_tagger = MergeHistograms.b_tagger
+    category_tags = MergeHistograms.category_tags
 
     shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
                 jes_sources, ["up", "down"])} | {"{}_{}".format(shift, direction) for shift, direction in
@@ -68,6 +69,8 @@ class MeasureScaleFactors(ShiftTask):
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
             if category.has_tag(("merged", self.b_tagger), mode=all) and category.get_aux("phase_space") == "measure":
+                if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                    continue
                 categories.append(category)
 
         # get categories from which to determine the rate scaling of MC to data
@@ -136,6 +139,12 @@ class MeasureScaleFactors(ShiftTask):
                 for leaf_cat, _, children in category.walk_categories():
                     # we are only interested in leaves
                     if children:
+                        continue
+                    # only use categories with at least one given tag if specified
+                    if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                        if len(hist_dict) > 0:
+                            raise Exception("category {} has no required tag, but other "
+                                "child categories of {} do.".format(leaf_cat, category))
                         continue
 
                     flavor = leaf_cat.get_aux("flavor")
@@ -307,6 +316,8 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
             if category.has_tag(("c", self.b_tagger), mode=all):
+                if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                    continue
                 categories.append(category)
 
         # create histogram for c flavour nominal, and up and down shifts
@@ -493,6 +504,8 @@ class FitScaleFactors(MeasureScaleFactors):
         # get categories in which to fit the scale factors
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
+            if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                continue
             if self.has_c_shift:
                 if category.get_aux("region") == "c":
                     if category.has_tag(self.b_tagger):

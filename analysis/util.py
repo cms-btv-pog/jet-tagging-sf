@@ -4,6 +4,7 @@
 __all__ = [
     "calc_checksum", "wget", "call_thread", "determine_xrd_redirector", "parse_leaf_list",
     "get_tree_names", "get_trees", "copy_trees", "TreeExtender", "TreeInFileExtender",
+    "walk_categories",
 ]
 
 
@@ -425,6 +426,18 @@ def parse_branch_names(expression, tree, expandAliases=True):
                 branches.append(b)
 
     return branches
+
+def walk_categories(category):
+    """
+    Recurses through nested categories, yielding each category and its children.
+    """
+    categories = [category]
+    while categories:
+        category = categories.pop(0)
+        children = category.categories.values()
+
+        yield category, children
+        categories.extend(children)
 
 
 class TreeInFileExtender(TreeExtender):

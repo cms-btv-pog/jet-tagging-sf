@@ -18,7 +18,7 @@ from analysis.config.jet_tagging_sf import get_category
 from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow, HTCondorWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
-from analysis.util import TreeExtender
+from analysis.util import TreeExtender, walk_categories
 
 
 class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow):
@@ -29,6 +29,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         "calculation.")
     variable_tag = luigi.Parameter(default="", description="Only consider variables with the given "
         "tag. Use all if empty.")
+    category_tags = CSVParameter(default=[], description="Only consider categories whose top-level "
+    "category has one or more of the given tags. Use all if empty.")
     used_shifts = CSVParameter(default=[]) # needs to be named differently from the wrapper task parameter
     n_bins = luigi.IntParameter(default=-1, description="Overwrite number of bins in histogram. Forces "
         "fixed bin width.")
@@ -207,15 +209,22 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         categories = []
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
-        for category, _, children in self.config_inst.walk_categories():
-            if not children:
-                # only use categories matching the task config
-                if category.get_aux("config", None) != self.config_inst.name:
-                    continue
-                # only use categories for the chosen b-tag algorithm
-                if category.has_tag(self.b_tagger):
-                    channel = category.get_aux("channel")
-                    categories.append((channel, category))
+
+        for category in self.config_inst.categories:
+            # only consider top-level categories with at least one given tag if specified
+            if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                continue
+            # recurse through all children of category, add leaf categories
+            for cat, children in walk_categories(category):
+                if not children:
+                    # only use categories matching the task config
+                    if cat.get_aux("config", None) != self.config_inst.name:
+                        continue
+                    # only use categories for the chosen b-tag algorithm
+                    if cat.has_tag(self.b_tagger):
+                        channel = cat.get_aux("channel")
+                        categories.append((channel, cat))
+
         categories = list(set(categories))
 
         # get processes
@@ -408,6 +417,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
     final_it = WriteHistograms.final_it
 
     b_tagger = WriteHistograms.b_tagger
+    category_tags = WriteHistograms.category_tags
 
     merge_factor = 12
 
@@ -496,6 +506,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
     file_merging = WriteHistograms.file_merging
 
     b_tagger = WriteHistograms.b_tagger
+    category_tags = WriteHistograms.category_tags
 
     normalize_cerrs = luigi.BoolParameter()
 
@@ -626,15 +637,22 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         categories = []
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
-        for category, _, children in self.config_inst.walk_categories():
-            if not children:
-                # only use categories matching the task config
-                if category.get_aux("config", None) != self.config_inst.name:
-                    continue
-                # only use categories for the chosen b-tag algorithm
-                if category.has_tag(self.b_tagger):
-                    channel = category.get_aux("channel")
-                    categories.append((channel, category))
+
+        for category in self.config_inst.categories():
+            # only consider top-level categories with at least one given tag if specified
+            if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                continue
+            # recurse through all children of category, add leaf categories
+            for cat, children in walk_categories(category):
+                if not children:
+                    # only use categories matching the task config
+                    if cat.get_aux("config", None) != self.config_inst.name:
+                        continue
+                    # only use categories for the chosen b-tag algorithm
+                    if cat.has_tag(self.b_tagger):
+                        channel = cat.get_aux("channel")
+                        categories.append((channel, cat))
+
         categories = list(set(categories))
 
         # get processes

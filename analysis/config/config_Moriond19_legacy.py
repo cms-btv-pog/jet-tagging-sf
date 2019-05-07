@@ -146,7 +146,7 @@ def create_config(base_cfg):
             rr["H"] + ("Summer16_07Aug2017GH_V11_DATA",),
         ],
         "mc": [
-            (1, int(1e9), "Summer16_07Aug2017_V11_MC"), # TODO: Or Summer16_23Sep2016V4_MC? (no formula evaluator bug)
+            (1, int(1e9), "Summer16_07Aug2017_V11_MC"),
         ],
     })
 

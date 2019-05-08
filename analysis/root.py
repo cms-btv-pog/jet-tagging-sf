@@ -116,7 +116,7 @@ class ROOTPad(object):
             self.add_object(obj)
             obj.Draw(" ".join(options))
 
-    def draw_as_graph(self, hist, options=None):
+    def draw_as_graph(self, hist, options=None, add_same_option=True):
         options = self.update_options(options, add_same_option)
 
         x, y = [], []

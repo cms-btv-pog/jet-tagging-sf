@@ -416,6 +416,8 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
     iteration = WriteHistograms.iteration
     final_it = WriteHistograms.final_it
 
+    n_bins = WriteHistograms.n_bins
+
     b_tagger = WriteHistograms.b_tagger
     category_tags = WriteHistograms.category_tags
 

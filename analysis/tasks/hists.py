@@ -32,8 +32,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
     category_tags = CSVParameter(default=[], description="Only consider categories whose top-level "
     "category has one or more of the given tags. Use all if empty.")
     used_shifts = CSVParameter(default=[]) # needs to be named differently from the wrapper task parameter
-    n_bins = luigi.IntParameter(default=-1, description="Overwrite number of bins in histogram. Forces "
-        "fixed bin width.")
+    binning = CSVParameter(default=[], cls=luigi.FloatParameter, description="Overwrite default binning "
+        "of variables. If exactly three values are provided, they are interpreted as a tuple of (n_bins, min, max).")
 
     b_tagger = luigi.Parameter(default="deepcsv", description="Name of the b-tagger to use.")
 
@@ -372,17 +372,18 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                                         continue
 
                                     # if number of bins is specified, overwrite variable binning
-                                    if self.n_bins > 0:
-                                        n_bins = self.n_bins
-                                        bin_edges = np.linspace(variable.bin_edges[0],
-                                            variable.bin_edges[-1], n_bins)
-                                    else:
-                                        n_bins = variable.n_bins
-                                        bin_edges = variable.bin_edges
+                                    if self.binning:
+                                        self.binning = list(self.binning)
+                                        # if a tuple of (n_bins, x_min, x_max) is given, ensure that n_bins is an integer
+                                        if len(self.binning) == 3:
+                                            self.binning[0] = int(self.binning[0])
+                                            self.binning = tuple(self.binning)
+
+                                        variable.binning = self.binning
 
                                     hist = ROOT.TH1F("{}_{}".format(variable.name, shift),
-                                        variable.full_title(root=True), n_bins,
-                                        array.array("f", bin_edges))
+                                        variable.full_title(root=True), variable.n_bins,
+                                        array.array("f", variable.bin_edges))
                                     hist.Sumw2()
 
                                     # build the full selection string, including the total event weight
@@ -416,7 +417,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
     iteration = WriteHistograms.iteration
     final_it = WriteHistograms.final_it
 
-    n_bins = WriteHistograms.n_bins
+    binning = WriteHistograms.binning
 
     b_tagger = WriteHistograms.b_tagger
     category_tags = WriteHistograms.category_tags

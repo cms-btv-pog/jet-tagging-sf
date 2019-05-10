@@ -485,7 +485,7 @@ class FitScaleFactors(MeasureScaleFactors):
         interpolation_type = ROOT.Math.Interpolation.kAKIMA
         interpolation_bins = 1000
 
-        def fit_func_pol6(x_min=0.0, x_max=0.5):
+        def fit_func_pol6(x_min=0.0, x_max=1.0):
             # 6th degree polynomial for LF region
             func = ROOT.TF1("f_pol6", "[0] + x*([1] + x*([2] + x*([3] + x*([4] + x*([5] + x*[6])))))", x_min, x_max)
             for i_param in range(func.GetNpar()):
@@ -547,9 +547,9 @@ class FitScaleFactors(MeasureScaleFactors):
                     hist.Fit(fit_function, "+mrNQ0S")
                     interpolator = fit_function
                     # define region in which to use the function values to create the histogram
-                    # (centers of second and second to last bin)
+                    # (centers of second and last bin)
                     first_point = hist.GetBinCenter(2)
-                    last_point = hist.GetBinCenter(nbins - 1)
+                    last_point = hist.GetBinCenter(nbins)
                 elif region in ("hf", "c") or (region == "lf" and self.b_tagger == "deepjet"):
                     x_values = ROOT.vector("double")()
                     y_values = ROOT.vector("double")()

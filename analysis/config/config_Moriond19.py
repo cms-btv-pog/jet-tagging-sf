@@ -209,13 +209,42 @@ def create_config(base_cfg):
         "WriteTrees": "prod4",
         "MergeTrees": "prod4",
         "MergeMetaData": "prod4",
-        "WriteHistograms": "prod4",
-        "MergeHistograms": "prod4",
-        "MeasureCScaleFactors": "prod4",
-        "MeasureScaleFactors": "prod4",
-        "FitScaleFactors": "prod4",
-        "GetScaleFactorWeights": "prod4",
-        "MergeScaleFactorWeights": "prod4",
+        "WriteHistograms": "prod5",
+        "MergeHistograms": "prod5",
+        "MeasureCScaleFactors": "prod5",
+        "MeasureScaleFactors": "prod5",
+        "FitScaleFactors": "prod5",
+        "GetScaleFactorWeights": "prod5",
+        "MergeScaleFactorWeights": "prod5",
     })
 
+    cfg.get_aux("binning")["lf"]["deepcsv"]["measurement"] = [
+        -2.01, 0., 0.015, 0.03, 0.045, 0.06, 0.08, 0.11, 0.145, 0.195, 0.26, 0.35, 0.495, 1.01
+    ]
+    cfg.get_aux("binning")["lf"]["deepcsv"]["plotting"] = [
+        -2.01, 0., 0.015, 0.03, 0.045, 0.06, 0.08, 0.11, 0.145, 0.195, 0.26, 0.35, 0.425,
+        0.495, 0.57, 0.65, 0.725, 0.8, 0.85, 0.89, 0.93, 0.97, 1.01
+    ]
+    cfg.get_aux("binning")["lf"]["deepjet"]["measurement"] = [
+        -2.01, 0., 0.01, 0.02, 0.03, 0.04, 0.055, 0.07, 0.09, 0.12, 0.17, 0.245, 0.38, 1.01
+    ]
+    cfg.get_aux("binning")["lf"]["deepjet"]["plotting"] = [
+        -2.01, 0., 0.01, 0.02, 0.03, 0.04, 0.055, 0.07, 0.09, 0.12, 0.17, 0.245, 0.3, 0.38,
+        0.46, 0.54, 0.62, 0.7, 0.78, 0.85, 0.9, 0.94, 0.97, 1.01
+
+    ]
+    cfg.get_aux("binning")["hf"]["deepcsv"]["measurement"] = [
+        -2.01, 0., 0.155, 0.255, 0.345, 0.415, 0.48, 0.545, 0.61, 0.675, 0.735, 0.79, 0.84, 0.885, 0.925, 0.96, 0.985, 1.01
+    ]
+    cfg.get_aux("binning")["hf"]["deepcsv"]["plotting"] = [
+        -2.01, 0., 0.03, 0.06, 0.09, 0.12, 0.155, 0.205, 0.255, 0.3, 0.345, 0.415, 0.48, 0.545, 0.61, 0.675, 0.735, 0.79,
+        0.84, 0.885, 0.925, 0.96, 0.985, 1.01
+    ]
+    cfg.get_aux("binning")["hf"]["deepjet"]["measurement"] = [
+        -2.01, 0., 0.135, 0.21, 0.305, 0.38, 0.45, 0.53, 0.605, 0.675, 0.74, 0.8, 0.86, 0.91, 0.95, 0.98, 1.01
+    ]
+    cfg.get_aux("binning")["hf"]["deepjet"]["plotting"] = [
+        -2.01, 0., 0.03, 0.06, 0.09, 0.135, 0.17, 0.21, 0.25, 0.305, 0.38, 0.45, 0.53, 0.605, 0.675, 0.74, 0.8,
+        0.86, 0.91, 0.95, 0.98, 1.01
+    ]
     return cfg

@@ -325,11 +325,11 @@ def add_btag_variables(cfg):
             elif region == "hf":
                 binning = cfg.get_aux("binning")["hf"]["deepcsv"]["plotting"]
                 tags = {"skip_lf", "basic"}
-                postfix = "_HF"
+                postfix = "_hf"
             elif region == "lf":
                 binning = cfg.get_aux("binning")["lf"]["deepcsv"]["plotting"]
                 tags = {"skip_hf", "basic"}
-                postfix = "_LF"
+                postfix = "_lf"
 
             if jet_idx <= 2:
                 tags = tags | {"measurement", "main"}
@@ -384,6 +384,7 @@ def add_categories(cfg, b_tagger):
                 if rg_name == "lf" and ch == ch_emu:
                     continue
 
+                # categories to perform overall normalization of each channel
                 rg_cat_combined = ch.add_category(
                     name="{}__{}__{}__{}__{}".format(ch.name, ps_name, rg_name, b_tagger, cfg.name),
                     label="{}, {}, {}".format(ch.name, ps_name, rg_name),
@@ -523,10 +524,6 @@ config_Moriond19 = create_config_Moriond19(cfg)
 add_btag_variables(config_Moriond19)
 add_categories(config_Moriond19, "deepcsv")
 add_categories(config_Moriond19, "deepjet")
-config_Moriond19.get_aux("binning")["lf"]["deepcsv"]["measurement"] = [
-                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
-                0.4257, 1.01,
-            ]
 config_Moriond19.get_aux("jes_sources").insert(0, "AbsoluteSample")
 
 from analysis.config.config_Moriond19_legacy import create_config as create_config_Moriond19_legacy

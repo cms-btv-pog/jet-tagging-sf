@@ -442,7 +442,9 @@ def add_categories(cfg, b_tagger):
                         )
 
                         # pt loop
-                        for pt_name, pt_sel, pt_range in get_axis_info(cfg, i_probe_jet, "pt", "jet{}_pt{{jec_identifier}}")[rg_name]:
+                        for pt_idx, (pt_name, pt_sel, pt_range) in enumerate(
+                            get_axis_info(cfg, i_probe_jet, "pt", "jet{}_pt{{jec_identifier}}")[rg_name]):
+
                             pt_cat = fl_cat.add_category(
                                 name="{}__pt{}".format(fl_cat.name, pt_name),
                                 label="{}, pt {}".format(fl_cat.label, pt_name),
@@ -451,7 +453,9 @@ def add_categories(cfg, b_tagger):
                             )
 
                             # eta loop
-                            for eta_name, eta_sel, eta_range in get_axis_info(cfg, i_probe_jet, "abs(eta)", fmt="abs(jet{}_eta{{jec_identifier}})")[rg_name]:
+                            for eta_idx, (eta_name, eta_sel, eta_range) in enumerate(
+                                get_axis_info(cfg, i_probe_jet, "abs(eta)", fmt="abs(jet{}_eta{{jec_identifier}})")[rg_name]):
+
                                 eta_cat = pt_cat.add_category(
                                     name="{}__eta{}".format(pt_cat.name, eta_name),
                                     label="{}, eta {}".format(pt_cat.label, eta_name),
@@ -471,12 +475,20 @@ def add_categories(cfg, b_tagger):
                                 # merged category for both jets and all flavors
                                 merged_vars = (ps_name, rg_name, pt_name, eta_name, b_tagger)
                                 merged_name = "{}__{}__pt{}__eta{}__{}".format(*merged_vars)
+
+                                # define categories for testing
+                                merged_tags = {"merged", b_tagger}
+                                if rg_name == "hf" and (pt_idx == 1 and eta_idx == 0):
+                                    merged_tags = merged_tags | {"test"}
+                                if rg_name == "lf" and (pt_idx == 2 and eta_idx == 0):
+                                    merged_tags = merged_tags | {"test"}
+
                                 if not cfg.has_category(merged_name):
                                     label = "{}, {} region, pt {}, eta {}".format(*merged_vars)
                                     merged_cat = cfg.add_category(
                                         name=merged_name,
                                         label=label,
-                                        tags={"merged", b_tagger},
+                                        tags=merged_tags,
                                         aux={
                                             "phase_space": ps_name,
                                             "region": rg_name,

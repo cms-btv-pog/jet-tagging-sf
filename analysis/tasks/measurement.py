@@ -123,7 +123,7 @@ class MeasureScaleFactors(ShiftTask):
                         for process_key in category_dir.GetListOfKeys():
                             process = self.config_inst.get_process(process_key.GetName())
                             process_dir = category_dir.GetDirectory(process.name)
-                            hist = process_dir.Get("{}_{}_{}".format(variable_name, region.upper(), self.shift))
+                            hist = process_dir.Get("{}_{}_{}".format(variable_name, region, self.shift))
                             if process.is_data:
                                 data_yield += hist_integral(hist)
                             else:
@@ -163,7 +163,7 @@ class MeasureScaleFactors(ShiftTask):
                             hist_shift = "nominal"
                         else:  # TODO: make nicer
                             hist_shift = self.effective_shift if not (self.iteration == 0 and not self.effective_shift.startswith("jes")) else "nominal"
-                        variable_name = "jet{}_{}_{}_{}".format(i_probe_jet, btag_variable, region.upper(), hist_shift)
+                        variable_name = "jet{}_{}_{}_{}".format(i_probe_jet, btag_variable, region, hist_shift)
 
                         # we cannot distinguish flavors in data
                         if process.is_data and flavor != "inclusive":

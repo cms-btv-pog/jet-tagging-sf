@@ -103,8 +103,8 @@ class PlotFromCSV(AnalysisTask):
 
 class PlotFromRoot(AnalysisTask):
 
-    hf_file = "/user/rath/SFs/csv_rwt_fit_hf_v2_final_2017_6_7_all.root"
-    lf_file = "/user/rath/SFs/csv_rwt_fit_lf_v2_final_2017_6_7_all.root"
+    hf_file = "/user/rath/Deepcsv_rwt_fit_hf_v2_final_2018_2_12test.root"
+    lf_file = "/user/rath/Deepcsv_rwt_fit_lf_v2_final_2018_2_12test.root"
 
     flavor = luigi.ChoiceParameter(choices=["hf", "lf"])
     norm_to_nominal = luigi.BoolParameter()

@@ -541,28 +541,16 @@ class FitScaleFactors(MeasureScaleFactors):
                 x_axis = hist.GetXaxis()
                 interpolation_hist = ROOT.TH1D(hist.GetName() + "_fine", hist.GetTitle(),
                     interpolation_bins, x_axis.GetXmin(), x_axis.GetXmax())
-                if region == "lf" and self.b_tagger != "deepjet": # deepjet fit too oscillating -> use interpolation
-                    fit_function = fit_func_pol6()
-                    # perform fit
-                    hist.Fit(fit_function, "+mrNQ0S")
-                    interpolator = fit_function
-                    # define region in which to use the function values to create the histogram
-                    # (centers of second and last bin)
-                    first_point = hist.GetBinCenter(2)
-                    last_point = hist.GetBinCenter(nbins)
-                elif region in ("hf", "c") or (region == "lf" and self.b_tagger == "deepjet"):
-                    x_values = ROOT.vector("double")()
-                    y_values = ROOT.vector("double")()
-                    for bin_idx in range(1, nbins + 1):
-                        if hist.GetBinCenter(bin_idx) < 0:
-                            continue
-                        x_values.push_back(hist.GetBinCenter(bin_idx))
-                        y_values.push_back(hist.GetBinContent(bin_idx))
-                    interpolator = ROOT.Math.Interpolator(x_values, y_values, interpolation_type)
-                    # define region in which to use interpolation
-                    first_point, last_point = min(x_values), max(x_values)
-                else:
-                    raise ValueError("Unknown region %s" % region)
+                x_values = ROOT.vector("double")()
+                y_values = ROOT.vector("double")()
+                for bin_idx in range(1, nbins + 1):
+                    if hist.GetBinCenter(bin_idx) < 0:
+                        continue
+                    x_values.push_back(hist.GetBinCenter(bin_idx))
+                    y_values.push_back(hist.GetBinContent(bin_idx))
+                interpolator = ROOT.Math.Interpolator(x_values, y_values, interpolation_type)
+                # define region in which to use interpolation
+                first_point, last_point = min(x_values), max(x_values)
 
                 # create finely binned histogram from either TF1 or interpolator
                 for bin_idx in range(interpolation_bins + 2):
@@ -606,25 +594,19 @@ class FitScaleFactors(MeasureScaleFactors):
                         interpolator.Eval(first_point)))
 
                     # intermediate functions
-                    if region == "lf" and self.b_tagger != "deepjet":
-                        fit_results.append(fit_results_tpl + ", {}, {}, {}".format(first_point,
-                            last_point, str(interpolator.GetExpFormula("p"))))
-                    elif region in ("hf", "c") or (region == "lf" and self.b_tagger == "deepjet"):  # piecewise linear function
-                        for bin_idx in range(1, nbins):
-                            if hist.GetBinCenter(bin_idx) < first_point:
-                                continue
-                            x_min = hist.GetBinCenter(bin_idx)
-                            x_max = hist.GetBinCenter(bin_idx + 1)
-                            y_start = hist.GetBinContent(bin_idx)
-                            y_end = hist.GetBinContent(bin_idx + 1)
-                            slope = (y_end - y_start) / (x_max - x_min)
-                            intercept = y_start - x_min * slope
-                            func = fit_func_pol1(x_min, x_max, [intercept, slope])
+                    for bin_idx in range(1, nbins):
+                        if hist.GetBinCenter(bin_idx) < first_point:
+                            continue
+                        x_min = hist.GetBinCenter(bin_idx)
+                        x_max = hist.GetBinCenter(bin_idx + 1)
+                        y_start = hist.GetBinContent(bin_idx)
+                        y_end = hist.GetBinContent(bin_idx + 1)
+                        slope = (y_end - y_start) / (x_max - x_min)
+                        intercept = y_start - x_min * slope
+                        func = fit_func_pol1(x_min, x_max, [intercept, slope])
 
-                            fit_results.append(fit_results_tpl + ", {}, {}, {}".format(x_min,
-                                x_max, str(func.GetExpFormula("p"))))
-                    else:
-                        raise ValueError("Unknown region %s" % region)
+                        fit_results.append(fit_results_tpl + ", {}, {}, {}".format(x_min,
+                            x_max, str(func.GetExpFormula("p"))))
 
                     fit_results.append(fit_results_tpl + ", {}, 1.1, {}".format(last_point,
                         interpolator.Eval(last_point)))

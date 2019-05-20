@@ -108,6 +108,7 @@ class PlotFromRoot(AnalysisTask):
 
     flavor = luigi.ChoiceParameter(choices=["hf", "lf"])
     norm_to_nominal = luigi.BoolParameter()
+    shift = luigi.Parameter(default="ALL")
 
     def output(self):
         return self.local_target("plots.tgz")
@@ -144,9 +145,12 @@ class PlotFromRoot(AnalysisTask):
             errors_up = []
             errors_down = []
             # collect all shifts from file
-            shifts = [key.GetName().split("_")[-1] for key in root_file.GetListOfKeys()
-                if key.GetName().startswith(hist_name)]
-            shifts = set([shift[:-2] for shift in shifts if shift[-2:] == "Up"])
+            if self.shift == "ALL":
+                shifts = [key.GetName().split("_")[-1] for key in root_file.GetListOfKeys()
+                    if key.GetName().startswith(hist_name)]
+                shifts = set([shift[:-2] for shift in shifts if shift[-2:] == "Up"])
+            else:
+                shifts = [self.shift]
             for shift_idx, shift in enumerate(shifts):
                 hist_name_up = hist_name + "_" + shift + "Up"
                 hist_name_down = hist_name + "_" + shift + "Down"
@@ -161,23 +165,31 @@ class PlotFromRoot(AnalysisTask):
                     diff_up = hist_up.GetBinContent(bin_idx) - nominal_value
                     diff_down = hist_down.GetBinContent(bin_idx) - nominal_value
 
-                    # shift with effect in up/down direction
-                    error_up = max([diff_up, diff_down, 0])
-                    error_down = min([diff_up, diff_down, 0])
 
                     # detect systematics where up/down shift direction is the same
                     #if diff_up * diff_down > 0:
                     #    print "One sided shift: {}, {}".format(shift, category)
 
-                    # add in quadrature
-                    if shift_idx == 0:
-                        errors_up.append(error_up**2)
-                        errors_down.append(error_down**2)
+                    # if multiple shifts, build envelope
+                    if len(shifts) != 1:
+                        # shift with effect in up/down direction
+                        error_up = max([diff_up, diff_down, 0])
+                        error_down = min([diff_up, diff_down, 0])
+
+                        # add in quadrature
+                        if shift_idx == 0:
+                            errors_up.append(error_up**2)
+                            errors_down.append(error_down**2)
+                        else:
+                            errors_up[bin_idx - 1] += error_up**2
+                            errors_down[bin_idx - 1] += error_down**2
                     else:
-                        errors_up[bin_idx - 1] += error_up**2
-                        errors_down[bin_idx - 1] += error_down**2
-            errors_up = np.sqrt(errors_up)
-            errors_down = np.sqrt(errors_down)
+                        errors_up.append(diff_up)
+                        errors_down.append(-diff_down) # is subtracted later
+            # multiple shifts have been added quadratically, take square root
+            if len(shifts) != 1:
+                errors_up = np.sqrt(errors_up)
+                errors_down = np.sqrt(errors_down)
 
             # build shifted histograms
             combined_hist_up = nominal_hist.Clone()
@@ -213,8 +225,8 @@ class PlotFromRoot(AnalysisTask):
                 signal_base = "h_csv_MC_bjets"
                 bg_base = "h_csv_MC_nonbjets"
             else:
-                signal_base = "h_csv_MC_nonbjets" # should be light jets (no c), but not in file
-                bg_base = "h_csv_MC_bjets"# should be b+c jets
+                signal_base = "h_csv_MC_nonbjets" # actually lf
+                bg_base = "h_csv_MC_bjets" # actually b + c
 
             signal_hist = root_file.Get("{}_Pt{}_Eta{}".format(signal_base, pt_idx, eta_idx))
             bg_hist = root_file.Get("{}_Pt{}_Eta{}".format(bg_base, pt_idx, eta_idx))

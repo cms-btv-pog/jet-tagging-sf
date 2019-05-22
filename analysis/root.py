@@ -38,7 +38,7 @@ class ROOTPad(object):
 
         self.objects = []
         self.missing_key = False # Contains plot object not found in tcolors dict
-        self.line_colors = [2, 4, 3, 90]
+        self.line_colors = [2, 4, 3, 90, 6, 8]
         self.has_drawn_object = False # To automatically set option 'SAME' if needed
 
 
@@ -94,12 +94,12 @@ class ROOTPad(object):
         if stacked:
             from random import randint
             stack = ROOT.THStack("stack_" + str(randint(0, 10**9)), str(randint(0, 10**9)))
-            for key, obj in sorted(obj_dict.items()):
+            for key, obj in sorted(obj_dict.items(), reverse=True):
                 obj.SetFillColor(tcolors.get(key, fill_color))
                 obj.SetLineColor(tcolors.get(key, line_color))
                 obj.SetFillStyle(1001)
 
-                if key not in t_colors and not self.missing_key:
+                if key not in tcolors and not self.missing_key:
                     self.missing_key = True
                     key = "Other"
 
@@ -148,8 +148,10 @@ class ROOTPad(object):
         self.add_object(graph)
         graph.Draw(" ".join(options))
 
-    def save(self, draw_legend=False):
+    def save(self, draw_legend=False, log_y=False):
         self.pad.cd()
+        if log_y:
+            self.pad.SetLogy()
         if draw_legend:
             self.legend.Draw()
         for obj in self.objects:

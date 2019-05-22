@@ -58,7 +58,7 @@ class PlotVariable(PlotTask):
     final_it = MergeHistograms.final_it
 
     category_tag = luigi.Parameter(default="merged")
-    variable = CSVParameter(default=["jet{i_probe_jet}_deepcsv_bcomb_{region}_nominal"],
+    variable = CSVParameter(default=["jet{i_probe_jet}_{b_tag_var}_{region}_nominal"],
         description="Variable to plot, or multiple variables that are filled into one histogram. "
         "{} accesses auxiliary category information.")
     mc_split = luigi.ChoiceParameter(choices=["process", "flavor"])
@@ -68,6 +68,7 @@ class PlotVariable(PlotTask):
 
     compare_iteration = luigi.IntParameter(default=-1, description="Secondary iteration to compare to. Can"
         "not be the final iteration.")
+    logarithmic = luigi.BoolParameter(description="Plot y axis with logarithmic scale.")
 
     def requires(self):
         reqs = {"hists": OrderedDict()}
@@ -151,8 +152,9 @@ class PlotVariable(PlotTask):
                                     continue
                             for variable in self.variable:
                                 # create variable name from template
-                                variable = variable.format(**leaf_cat.aux)
-                                variable = variable.replace("hf", "HF").replace("lf", "LF") # TODO: Remove once capitalization is consistent
+                                aux = leaf_cat.aux.copy()
+                                aux["b_tag_var"] = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
+                                variable = variable.format(**aux)
 
                                 hist = process_dir.Get(variable)
                                 if self.truncate:
@@ -200,7 +202,8 @@ class PlotVariable(PlotTask):
         for category, plot in plot_dict.items():
             plot.save(os.path.join(local_tmp.path,
                 "{}_{}.pdf".format(category.name, self.variable)),
-                draw_legend=True, lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
+                draw_legend=True, log_y=self.logarithmic,
+                lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
             del plot
 
         with outp.localize("w") as tmp:
@@ -389,7 +392,7 @@ class PlotScaleFactor(PlotTask):
                             else:
                                 text = r"#splitline{p_{T} > %d}{%.1f < |#eta| < %.1f}" % \
                                     (pt_range[0], eta_range[0], eta_range[1])
-                            plot.draw_text(text, .7, .8, size=0.04)
+                            plot.draw_text(text, .7, .2, size=0.04)
                         elif not self.multiple_shifts:
                             plot.draw({shift: fit_hist})
 

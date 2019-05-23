@@ -19,8 +19,7 @@ class OptimizeBinning(AnalysisTask):
     n_target_bins = luigi.IntParameter(default=-1)
     binning = MergeHistograms.binning # should use even binning here
 
-    min_bin_size = 0.02
-    max_bin_size = 0.5
+    maximum_error = 0.5 # allowed relative error on scale factors
 
     def requires(self):
         return MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
@@ -84,25 +83,6 @@ class OptimizeBinning(AnalysisTask):
                         else:
                             hists[contrib_type].Add(hist)
 
-                def bin_loss(n_signal, err_signal, n_bg, err_bg, region):
-                    # expected error on scale factor, taking into account statistical
-                    # and contamination uncertainties
-                    contamination_factors = self.config_inst.get_aux("contamination_factors")
-                    contamination_down = contamination_factors["{}_down".format(region)]
-
-                    n_expected = n_signal + n_bg
-
-                    # take into account re-normalization for effect of contamination
-                    rescale_factor = n_expected / (contamination_down*n_bg + n_signal)
-                    contamination_error = ((1. - 1./rescale_factor) * n_expected - (1. - contamination_down)*n_bg) / n_signal
-
-                    return np.sqrt(
-                        (1. / n_signal)**2 * ( # common factor
-                        err_signal**2   # statistical error on signal
-                        + n_expected # expected statistical error on data
-                        + (err_bg**2 + contamination_error**2) # systematic + statistical error on contamination
-                    ))
-
                 # determine minimum and maximum bin sizes based on b-tagger working point
                 region = category.get_aux("region")
                 if self.n_target_bins < 0:
@@ -111,104 +91,126 @@ class OptimizeBinning(AnalysisTask):
                 else:
                     n_target_bins = self.n_target_bins
 
-                medium_wp = self.config_inst.get_aux("working_points")[self.b_tagger]["medium"]
-                if region == "hf":
-                    max_bin_size = medium_wp
-                    min_bin_size = (1. - medium_wp) / (2. * n_target_bins)
-                elif region == "lf":
-                    max_bin_size = 1. - medium_wp
-                    min_bin_size = medium_wp / (2. * n_target_bins)
-                else:
-                    raise ValueError("Unknown region {}.".formt(region))
-
                 # figure out best binning to have a reasonable number of events in each bin,
                 # as well as a good enough S/B
                 signal_hist = hists["signal"]
                 bg_hist = hists["bg"]
 
-                bin_width = signal_hist.GetBinWidth(1)
-                signal_values, bg_values = [], []
-                signal_errors, bg_errors = [], []
+                # determine rescale factor due to normalization if contamination is shifted
+                contamination_factors = self.config_inst.get_aux("contamination_factors")
+                contamination_down = contamination_factors["{}_down".format(region)]
 
-                for bin_idx in range(1, signal_hist.GetNbinsX() + 1):
-                    signal_values.append(signal_hist.GetBinContent(bin_idx))
-                    signal_errors.append(signal_hist.GetBinError(bin_idx))
-                    bg_values.append(bg_hist.GetBinContent(bin_idx))
-                    bg_errors.append(bg_hist.GetBinError(bin_idx))
-
-                    if not np.isclose(signal_hist.GetBinWidth(bin_idx), bin_width):
-                        raise Exception("Expect even binning to optimize from, but got {}, {}".format(
-                            bin_width, signal_hist.GetBinWidth(bin_idx)
-                        ))
+                signal_integral = signal_hist.Integral()
+                bg_integral = bg_hist.Integral()
+                rescale_factor = (signal_integral + bg_integral) / \
+                    (contamination_down * bg_integral + signal_integral)
 
                 # start with even split of bins to arrive at *target_bins*
-                n_initial_bins = len(signal_values)
+                n_initial_bins = signal_hist.GetNbinsX()
+                initial_widths = [signal_hist.GetBinWidth(idx) for idx in range(1, n_initial_bins + 1)]
                 bins = np.arange(n_initial_bins)
                 merged_bins = np.array_split(bins, n_target_bins)
-                initial_widths = [sub_bins[-1] - sub_bins[0] + 1 for sub_bins in merged_bins]
 
-                def calculate_losses(widths):
+                starting_widths = [sub_bins[-1] - sub_bins[0] + 1 for sub_bins in merged_bins]
+
+                # helper functions to calculate losses
+                def bin_loss(n_signal, err_signal, n_bg, err_bg, region, rescale_factor):
+                    # expected error on scale factor, taking into account statistical
+                    # and contamination uncertainties
+
+                    # we don't want bins without signal, caught here to prevent ZeroDivision errors
+                    if n_signal == 0:
+                        return np.inf
+
+                    n_expected = n_signal + n_bg
+
+                    # take into account re-normalization for effect of contamination
+                    contamination_error = ((1. - 1./rescale_factor) * n_expected - (1. - contamination_down)*n_bg) / n_signal
+
+                    return np.sqrt(
+                        (1. / n_signal)**2 * ( # common factor
+                        err_signal**2   # statistical error on signal
+                        + n_expected # expected statistical error on data
+                        + err_bg**2 # statistical error on contamination
+                        )
+                        + contamination_error**2 # systematic error on contamination
+                    )
+
+                def calculate_losses(widths, signal_hist, bg_hist, rescale_factor):
                     # get bin edges
-                    merged_high_edges = np.cumsum(widths) # one over high edge, for indexing
-                    merged_high_edges[-1] = n_initial_bins # make sure all bins are included
-                    merged_low_edges = np.insert(merged_high_edges[:-1], 0, 0)
+                    merged_edges = np.cumsum(widths) # one over high edge, for indexing
+                    merged_edges = np.insert(merged_edges, 0, 0)
+
+                    edge_positions = np.cumsum(initial_widths)
+                    edge_positions = np.insert(edge_positions, 0, 0)
+                    bin_edges = edge_positions[merged_edges]
+
+                    # rebin histograms
+                    signal_hist_rebinned = signal_hist.Rebin(len(bin_edges) - 1,
+                        "signal_rebinned", bin_edges)
+                    bg_hist_rebinned = bg_hist.Rebin(len(bin_edges) - 1,
+                        "bg_rebinned", bin_edges)
 
                     # for each bin, calculate expected error on scale factor
                     losses = []
-                    for low_edge, high_edge in zip(merged_low_edges, merged_high_edges):
-                        n_signal = sum(signal_values[low_edge:high_edge])
-                        err_signal = sum(signal_errors[low_edge:high_edge])
-                        n_bg = sum(bg_values[low_edge:high_edge])
-                        err_bg = sum(bg_errors[low_edge:high_edge])
+                    base_losses = []
+                    for bin_idx in range(1, signal_hist_rebinned.GetNbinsX() + 1):
+                        n_signal = signal_hist_rebinned.GetBinContent(bin_idx)
+                        n_bg = bg_hist_rebinned.GetBinContent(bin_idx)
+                        err_signal = signal_hist_rebinned.GetBinError(bin_idx)
+                        err_bg = bg_hist_rebinned.GetBinError(bin_idx)
 
-                        loss = bin_loss(n_signal, err_signal, n_bg, err_bg, region)
-                        # penalty term to enforce more even binning
-                        losses.append(loss / float(high_edge - low_edge))
+                        loss = bin_loss(n_signal, err_signal, n_bg, err_bg, region, rescale_factor)
+                        base_losses.append(loss)
+                        losses.append(loss / signal_hist_rebinned.GetBinWidth(bin_idx))
+                    return losses, base_losses
 
-                    return losses
-
-                # translate bin size limits to limits on the number of bins
-                min_merged_bins = min_bin_size * n_initial_bins
-                max_merged_bins = max_bin_size * n_initial_bins
-
-                widths = initial_widths[:]
-                best_widths = initial_widths[:]
+                widths = starting_widths[:]
+                best_widths = starting_widths[:]
                 best_loss = np.inf
-                patience = 10
+                patience = n_initial_bins
                 iter_since_best = 0
                 # Optimize binning by calculating a loss value for each bin
                 # and increasing the size of the bins with large losses and decreasing
                 # the size of those with low losses
                 # Break loop if total loss has not improved for *patience* iterations.
+                print "Optimizing category {}".format(category.name)
                 while True:
-                    bin_losses = calculate_losses(widths)
+                    bin_losses, base_losses = calculate_losses(widths, signal_hist, bg_hist, rescale_factor)
                     loss = sum(bin_losses)
 
-                    if loss < best_loss:
+                    if loss < best_loss and max(base_losses) < self.maximum_error:
                         best_widths = widths[:]
                         best_loss = loss
                         iter_since_best = 0
                     else:
                         iter_since_best += 1
                     if iter_since_best > patience:
+                        if best_loss == np.inf:
+                            raise Exception("Binning optimization failed")
                         break
 
-                    sorted_loss_idxs = np.argsort(bin_losses)
+                    # first make sure that none of the expected errors are larger than a certain value
+                    # to reduce likelihood of shifted scale factors going to 0
+                    if max(base_losses) > self.maximum_error:
+                        sorted_loss_idxs = np.argsort(base_losses)
+                    # then optimize heurisitcs
+                    else:
+                        sorted_loss_idxs = np.argsort(bin_losses)
 
                     # decrease size of bin with lowest loss that is not already at minimum size
                     for idx in sorted_loss_idxs:
-                        if widths[idx] > min_merged_bins:
+                        if widths[idx] > 1:
                             widths[idx] -= 1
                             break
                     # increase size of bin with highest loss that is not already at maximum size
                     for idx in sorted_loss_idxs[::-1]:
-                        if widths[idx] < max_merged_bins:
+                        if widths[idx] < n_initial_bins:
                             widths[idx] += 1
                             break
 
-                merged_edes = np.cumsum(best_widths)
-                bin_edge_values = merged_edes * bin_width
-                results[category.name] = [round(edge, 3) for edge in bin_edge_values]
-                print [round(edge, 3) for edge in bin_edge_values]
+                merged_edges = np.cumsum(best_widths)
+                bin_edge_values = np.round(merged_edges * signal_hist.GetBinWidth(1), 3)
+                results[category.name] = bin_edge_values
 
         self.output().dump(results, formatter="json", indent=4)

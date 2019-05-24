@@ -18,6 +18,7 @@ class MeasureScaleFactors(ShiftTask):
 
     iteration = MergeHistograms.iteration
     b_tagger = MergeHistograms.b_tagger
+    optimize_binning = MergeHistograms.optimize_binning
     category_tags = MergeHistograms.category_tags
 
     shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
@@ -32,6 +33,9 @@ class MeasureScaleFactors(ShiftTask):
         if self.iteration > 0 or self.effective_shift != "nominal":
             reqs["scale"] = MeasureScaleFactors.req(self, iteration=0, shift="nominal",
                 version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
+        if self.optimize_binning:
+            reqs["binning"] = OptimizeBinning(self, version=self.get_version(OptimizeBinning),
+                _prefer_cli=["version"])
         return reqs
 
     def store_parts(self):
@@ -89,25 +93,14 @@ class MeasureScaleFactors(ShiftTask):
 
         btagger_cfg = self.config_inst.get_aux("btaggers")[self.b_tagger]
 
+        # get category-dependent binning if optimized binning is used
+        if self.optimize_binning:
+            category_binnings = inp["binning"].load()
+
         # category -> component (heavy/light) -> histogram
         hist_dict = {}
         # category -> histogram
         sf_dict = {}
-
-        # create n-d histograms to hold all scale factors for lf/hf jets
-        binning = self.config_inst.get_aux("binning")
-        sf_hists_nd = {}
-        for region in ["lf", "hf"]:
-            eta_edges = array.array("d", binning[region]["abs(eta)"])
-            pt_edges = array.array("d", binning[region]["pt"])
-            btag_edges = array.array("d", binning[region][self.b_tagger]["measurement"])
-            sf_hist = ROOT.TH3F(
-                "scale_factors_{}".format(region), "Scale factors {}".format(region),
-                len(eta_edges) - 1, eta_edges,
-                len(pt_edges) - 1, pt_edges,
-                len(btag_edges) - 1, btag_edges,
-            )
-            sf_hists_nd[region] = sf_hist
 
         with inp["hist"].load("r") as input_file:
             # get scale factor to scale MC (withouts b-tag SFs) to data per channel
@@ -184,6 +177,11 @@ class MeasureScaleFactors(ShiftTask):
 
                         # rebin
                         btag_edges = array.array("d", binning[region][self.b_tagger]["measurement"])
+                        if self.optimize_binning:
+                            binning_category = leaf_cat.get_aux("binning_category", leaf_cat)
+                            btag_edges = category_binnings.get(binning_category.name,
+                                btag_edges)
+
                         n_bins = len(btag_edges) - 1
                         hist_rebinned = hist.Rebin(n_bins, "rebinned_{}".format(category.name), btag_edges)
 
@@ -259,13 +257,6 @@ class MeasureScaleFactors(ShiftTask):
                 # store the corrected sf hist
                 sf_dict[category] = sf_hist
 
-                # write to nd histograms
-                eta_val = np.mean(category.get_aux("eta"))
-                pt_val = np.mean(category.get_aux("pt"))
-                for bin_idx in range(1, sf_hist.GetNbinsX() + 1):  # TODO: Add over- and underflow bin
-                    sf_hists_nd[region].Fill(eta_val, pt_val, sf_hist.GetBinCenter(bin_idx),
-                        sf_hist.GetBinContent(bin_idx))
-
             # open the output file
             with outp["scale_factors"].localize("w") as tmp:
                 with tmp.dump("RECREATE") as output_file:
@@ -273,10 +264,6 @@ class MeasureScaleFactors(ShiftTask):
                         category_dir = output_file.mkdir(category.name)
                         category_dir.cd()
                         sf_dict[category].Write("sf")
-                    for region in sf_hists_nd:
-                        region_dir = output_file.mkdir(region)
-                        region_dir.cd()
-                        sf_hists_nd[region].Write("sf")
 
             # for the first iteration, also save the channel rate scale factors
             if self.iteration == 0 and self.shift == "nominal":
@@ -300,6 +287,9 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         }
         reqs["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=False,
                 version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
+        if self.optimize_binning:
+            reqs["binning"] = OptimizeBinning(self, version=self.get_version(OptimizeBinning),
+                _prefer_cli=["version"])
         return reqs
 
     def output(self):
@@ -320,18 +310,27 @@ class MeasureCScaleFactors(MeasureScaleFactors):
                     continue
                 categories.append(category)
 
-        # create histogram for c flavour nominal, and up and down shifts
         btagger_cfg = self.config_inst.get_aux("btaggers")[self.b_tagger]
+        # get category-dependent binning if optimized binning is used
+        if self.optimize_binning:
+            category_binnings = inp["binning"].load()
+
         binning = self.config_inst.get_aux("binning")
         btag_edges = array.array("d", binning["hf"][self.b_tagger]["measurement"])
         n_bins = len(btag_edges) - 1
 
+        # create histogram for c flavour nominal, and up and down shifts
         sf_dict = {}
         for category in categories:
+            if self.optimize_binning:
+                binning_category = category.get_aux("binning_category", category)
+                cat_btag_edges = category_binnings.get(binning_category.name,
+                    btag_edges)
+
             nominal_hist = ROOT.TH1F("sf {}".format(category.name), "Scale factors c",
-                len(btag_edges) - 1, btag_edges
+                len(cat_btag_edges) - 1, cat_btag_edges
             )
-            for bin_idx in range(1, len(btag_edges)):
+            for bin_idx in range(1, len(cat_btag_edges)):
                 nominal_hist.SetBinContent(bin_idx, 1.)
             sf_dict[category] = nominal_hist
 

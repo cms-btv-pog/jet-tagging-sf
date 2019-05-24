@@ -502,7 +502,7 @@ def add_categories(cfg, b_tagger):
                                         c_vars = (ps_name, "c", pt_name, eta_name, b_tagger)
                                         c_name = "{}__{}__pt{}__eta{}__{}".format(*c_vars)
                                         label = "{}, {} region, pt {}, eta {}".format(*c_vars)
-                                        cfg.add_category(
+                                        c_cat = cfg.add_category(
                                             name=c_name,
                                             label=label,
                                             tags={"c", b_tagger},
@@ -514,9 +514,14 @@ def add_categories(cfg, b_tagger):
                                             },
                                             context=cfg.name,
                                         )
+                                        c_cat.set_aux("binning_category", merged_cat)
+
                                 else:
                                     merged_cat = cfg.get_category(merged_name)
                                 merged_cat.add_category(eta_cat)
+                                # Specialized b-tag discriminant binnings are defined on
+                                # the merged categories, but needed when writing leaf categories
+                                eta_cat.set_aux("binning_category", merged_cat)
 
 def get_file_merging(cfg, key, dataset):
     dataset_name = dataset if isinstance(dataset, six.string_types) else dataset.name

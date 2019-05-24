@@ -18,8 +18,15 @@ class OptimizeBinning(AnalysisTask):
     b_tagger = MergeHistograms.b_tagger
     n_target_bins = luigi.IntParameter(default=-1)
     binning = MergeHistograms.binning # should use even binning here
+    is_configured = luigi.BoolParameter(description="Asserts that all parameters and "
+        "requirements are set as intended. Used to make sure this task is only executed manually.")
 
     maximum_error = 0.5 # allowed relative error on scale factors
+
+    def __init__(self, *args, **kwargs):
+        super(OptimizeBinning, self).__init__(*args, **kwargs)
+        if not self.is_configured:
+            raise Exception("Cannot run OptimizeBinning task if not run with 'is_configured'")
 
     def requires(self):
         return MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
@@ -161,8 +168,8 @@ class OptimizeBinning(AnalysisTask):
                         err_bg = bg_hist_rebinned.GetBinError(bin_idx)
 
                         loss = bin_loss(n_signal, err_signal, n_bg, err_bg, region, rescale_factor)
-                        base_losses.append(loss)
-                        losses.append(loss / signal_hist_rebinned.GetBinWidth(bin_idx))
+                        base_losses.append(loss) # relative uncertainty
+                        losses.append(loss / signal_hist_rebinned.GetBinWidth(bin_idx)) # heuristic to optimize
                     return losses, base_losses
 
                 widths = starting_widths[:]
@@ -211,6 +218,7 @@ class OptimizeBinning(AnalysisTask):
 
                 merged_edges = np.cumsum(best_widths)
                 bin_edge_values = np.round(merged_edges * signal_hist.GetBinWidth(1), 3)
-                results[category.name] = bin_edge_values
+                results[category.name] = bin_edge_values.tolist()
 
+        print ",\n".join(['"{}": {}'.format(cat_name, binning) for cat_name, binning in results.items()])
         self.output().dump(results, formatter="json", indent=4)

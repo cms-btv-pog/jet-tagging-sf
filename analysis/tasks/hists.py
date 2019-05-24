@@ -36,6 +36,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         "of variables. If exactly three values are provided, they are interpreted as a tuple of (n_bins, min, max).")
 
     b_tagger = luigi.Parameter(default="deepcsv", description="Name of the b-tagger to use.")
+    optimize_binning = luigi.BoolParameter(description="Use optimized discriminant binning.")
 
     file_merging = "trees"
 
@@ -78,6 +79,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                     shift=shift, fix_normalization=self.final_it,
                     version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
                     for shift in self.shifts}
+            if self.optimize_binning:
+                reqs["binning"] = OptimizeBinning(self, version=self.get_version(OptimizeBinning),
+                    _prefer_cli=["version"])
 
         return reqs
 
@@ -97,6 +101,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                 shift=shift, fix_normalization=self.final_it,
                 version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
                 for shift in self.shifts}
+        if self.optimize_binning:
+            reqs["binning"] = OptimizeBinning(self, version=self.get_version(OptimizeBinning),
+                _prefer_cli=["version"])
         return reqs
 
     def store_parts(self):
@@ -303,6 +310,10 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                         # read in total number of events
                         sum_weights = inp["meta"].load()["event_weights"]["sum"]
 
+                    # get category-dependent binning if optimized binning is used
+                    if self.optimize_binning:
+                        category_binnings = inp["binning"].load()
+
                     for i, (channel, category) in enumerate(categories):
                         self.publish_message("writing histograms in category {} ({}/{})".format(
                             category.name, i + 1, len(categories)))
@@ -381,6 +392,13 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
 
                                         variable.binning = self.binning
 
+                                    # use optimized binning for b-tag discriminants if provided
+                                    if self.optimize_binning and variable.has_aux("b_tagger"):
+                                        binning_category = category.get_aux("binning_category", category)
+                                        # overwrite binning if specialized binning is defined for this category
+                                        variable.binning = category_binnings.get(binning_category.name,
+                                            variable.binning)
+
                                     hist = ROOT.TH1F("{}_{}".format(variable.name, shift),
                                         variable.full_title(root=True), variable.n_bins,
                                         array.array("f", variable.bin_edges))
@@ -418,6 +436,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
     final_it = WriteHistograms.final_it
 
     binning = WriteHistograms.binning
+    optimize_binning = WriteHistograms.optimize_binning
 
     b_tagger = WriteHistograms.b_tagger
     category_tags = WriteHistograms.category_tags
@@ -509,6 +528,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
     file_merging = WriteHistograms.file_merging
 
     b_tagger = WriteHistograms.b_tagger
+    optimize_binning = WriteHistograms.optimize_binning
     category_tags = WriteHistograms.category_tags
 
     normalize_cerrs = luigi.BoolParameter()
@@ -745,6 +765,7 @@ class MergeScaleFactorWeights(AnalysisTask):
     normalize_cerrs = GetScaleFactorWeights.normalize_cerrs
 
     b_tagger = GetScaleFactorWeights.b_tagger
+    optimize_binning = GetScaleFactorWeights.optimize_binning
 
     def requires(self):
         return {dataset.name: GetScaleFactorWeights.req(self, dataset=dataset.name,

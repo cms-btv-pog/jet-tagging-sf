@@ -7,6 +7,7 @@ Definition of the analysis for extracting jet tagging scale factors
 
 
 import re
+import os
 
 import numpy as np
 import order as od
@@ -62,6 +63,16 @@ jes_sources = [
     "RelativeStatFSR", "RelativeStatEC", "RelativeStatHF", "PileUpDataMC", "PileUpPtRef",
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
 ]
+jes_total_shifts = {"jesTotal_up", "jesTotal_down"}
+
+# jes sources are required for ShiftTasks already on class level to define list of shift
+# however, no information about the config instance is available at that point
+if os.environ.get("JTSF_CAMPAIGN", None) is None:
+    raise Exception("JTSF campaign has to be defined.")
+if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19":
+    jes_sources.insert(0, "AbsoluteSample")
+
+cfg.set_aux("jes_sources", jes_sources)
 
 # add auxiliary info to base config
 cfg.set_aux("jes_levels", {
@@ -314,11 +325,11 @@ def add_btag_variables(cfg):
             elif region == "hf":
                 binning = cfg.get_aux("binning")["hf"]["deepcsv"]["plotting"]
                 tags = {"skip_lf", "basic"}
-                postfix = "_HF"
+                postfix = "_hf"
             elif region == "lf":
                 binning = cfg.get_aux("binning")["lf"]["deepcsv"]["plotting"]
                 tags = {"skip_hf", "basic"}
-                postfix = "_LF"
+                postfix = "_lf"
 
             if jet_idx <= 2:
                 tags = tags | {"measurement", "main"}
@@ -373,6 +384,7 @@ def add_categories(cfg, b_tagger):
                 if rg_name == "lf" and ch == ch_emu:
                     continue
 
+                # categories to perform overall normalization of each channel
                 rg_cat_combined = ch.add_category(
                     name="{}__{}__{}__{}__{}".format(ch.name, ps_name, rg_name, b_tagger, cfg.name),
                     label="{}, {}, {}".format(ch.name, ps_name, rg_name),
@@ -430,7 +442,9 @@ def add_categories(cfg, b_tagger):
                         )
 
                         # pt loop
-                        for pt_name, pt_sel, pt_range in get_axis_info(cfg, i_probe_jet, "pt", "jet{}_pt{{jec_identifier}}")[rg_name]:
+                        for pt_idx, (pt_name, pt_sel, pt_range) in enumerate(
+                            get_axis_info(cfg, i_probe_jet, "pt", "jet{}_pt{{jec_identifier}}")[rg_name]):
+
                             pt_cat = fl_cat.add_category(
                                 name="{}__pt{}".format(fl_cat.name, pt_name),
                                 label="{}, pt {}".format(fl_cat.label, pt_name),
@@ -439,7 +453,9 @@ def add_categories(cfg, b_tagger):
                             )
 
                             # eta loop
-                            for eta_name, eta_sel, eta_range in get_axis_info(cfg, i_probe_jet, "abs(eta)", fmt="abs(jet{}_eta{{jec_identifier}})")[rg_name]:
+                            for eta_idx, (eta_name, eta_sel, eta_range) in enumerate(
+                                get_axis_info(cfg, i_probe_jet, "abs(eta)", fmt="abs(jet{}_eta{{jec_identifier}})")[rg_name]):
+
                                 eta_cat = pt_cat.add_category(
                                     name="{}__eta{}".format(pt_cat.name, eta_name),
                                     label="{}, eta {}".format(pt_cat.label, eta_name),
@@ -459,12 +475,20 @@ def add_categories(cfg, b_tagger):
                                 # merged category for both jets and all flavors
                                 merged_vars = (ps_name, rg_name, pt_name, eta_name, b_tagger)
                                 merged_name = "{}__{}__pt{}__eta{}__{}".format(*merged_vars)
+
+                                # define categories for testing
+                                merged_tags = {"merged", b_tagger}
+                                if rg_name == "hf" and (pt_idx == 1 and eta_idx == 0):
+                                    merged_tags = merged_tags | {"test"}
+                                if rg_name == "lf" and (pt_idx == 2 and eta_idx == 0):
+                                    merged_tags = merged_tags | {"test"}
+
                                 if not cfg.has_category(merged_name):
                                     label = "{}, {} region, pt {}, eta {}".format(*merged_vars)
                                     merged_cat = cfg.add_category(
                                         name=merged_name,
                                         label=label,
-                                        tags={"merged", b_tagger},
+                                        tags=merged_tags,
                                         aux={
                                             "phase_space": ps_name,
                                             "region": rg_name,
@@ -478,7 +502,7 @@ def add_categories(cfg, b_tagger):
                                         c_vars = (ps_name, "c", pt_name, eta_name, b_tagger)
                                         c_name = "{}__{}__pt{}__eta{}__{}".format(*c_vars)
                                         label = "{}, {} region, pt {}, eta {}".format(*c_vars)
-                                        cfg.add_category(
+                                        c_cat = cfg.add_category(
                                             name=c_name,
                                             label=label,
                                             tags={"c", b_tagger},
@@ -490,9 +514,14 @@ def add_categories(cfg, b_tagger):
                                             },
                                             context=cfg.name,
                                         )
+                                        c_cat.set_aux("binning_category", merged_cat)
+
                                 else:
                                     merged_cat = cfg.get_category(merged_name)
                                 merged_cat.add_category(eta_cat)
+                                # Specialized b-tag discriminant binnings are defined on
+                                # the merged categories, but needed when writing leaf categories
+                                eta_cat.set_aux("binning_category", merged_cat)
 
 def get_file_merging(cfg, key, dataset):
     dataset_name = dataset if isinstance(dataset, six.string_types) else dataset.name
@@ -512,13 +541,13 @@ config_Moriond19 = create_config_Moriond19(cfg)
 add_btag_variables(config_Moriond19)
 add_categories(config_Moriond19, "deepcsv")
 add_categories(config_Moriond19, "deepjet")
-config_Moriond19.get_aux("binning")["lf"]["deepcsv"]["measurement"] = [
-                -2.01, 0.0, 0.0254, 0.0508, 0.0762, 0.1016, 0.127, 0.1522, 0.2205, 0.2889, 0.3573,
-                0.4257, 1.01,
-            ]
+config_Moriond19.get_aux("jes_sources").insert(0, "AbsoluteSample")
 
 from analysis.config.config_Moriond19_legacy import create_config as create_config_Moriond19_legacy
 config_Moriond19_legacy = create_config_Moriond19_legacy(cfg)
 add_btag_variables(config_Moriond19_legacy)
 add_categories(config_Moriond19_legacy, "deepcsv")
 add_categories(config_Moriond19_legacy, "deepjet")
+config_Moriond19_legacy.get_aux("binning")["lf"]["abs(eta)"] = [0., 0.8, 1.6, 2.4]
+config_Moriond19_legacy.get_aux("binning")["hf"]["abs(eta)"] = [0., 2.4]
+config_Moriond19_legacy.get_aux("binning")["c"]["abs(eta)"] = [0., 2.4]

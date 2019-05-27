@@ -119,12 +119,13 @@ def create_config(base_cfg):
         "data": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
-            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_eeBadScFilter",
+            "Flag_BadPFMuonFilter", #"Flag_BadChargedCandidateFilter",
+            "Flag_eeBadScFilter",
         ],
         "mc": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
-            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter",
+            "Flag_BadPFMuonFilter", #"Flag_BadChargedCandidateFilter",
         ],
     })
 
@@ -145,7 +146,7 @@ def create_config(base_cfg):
             rr["H"] + ("Summer16_07Aug2017GH_V11_DATA",),
         ],
         "mc": [
-            (1, int(1e9), "Summer16_07Aug2017_V11_MC"), # TODO: Or Summer16_23Sep2016V4_MC? (no formula evaluator bug)
+            (1, int(1e9), "Summer16_07Aug2017_V11_MC"),
         ],
     })
 

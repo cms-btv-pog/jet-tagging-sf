@@ -6,6 +6,7 @@ import uuid
 import shutil
 import subprocess
 import collections
+import tarfile
 
 import law
 import luigi
@@ -55,7 +56,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         self.source_files = self.get_source_files()
 
     def single_output(self):
-        h = law.util.create_hash(law.util.flatten(self.source_files))
+        h = law.util.create_hash(law.util.flatten(law.util.map_struct(self.create_path_hash, self.source_files)))
         return self.wlcg_target("{}.tgz".format(h))
 
     @classmethod
@@ -65,19 +66,36 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         elif not path.startswith("http") and not path.startswith("/"):
             return None
         else:
+            if "luigi-tmp-" in path: # to prevent randomized hashing
+                path = os.path.basename(path)
             return "{}_{}".format(law.util.create_hash(path), os.path.basename(path))
 
     def get_source_files(self):
         # prepare JES files
-        jes_url = lambda version, level: "https://raw.githubusercontent.com/cms-jet/JECDatabase" \
-            "/master/textFiles/{0}/{0}_{1}_AK4PFchs.txt".format(version, level)
+        jes_url = lambda version: "https://github.com/cms-jet/JECDatabase/raw/master/tarballs/{}.tar.gz".format(version)
+        jes_file_name = lambda version, level: "{0}_{1}_AK4PFchs.txt".format(version, level)
+
+        self.jes_tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
+        self.jes_tmp_dir.touch()
+
         jes_files = collections.defaultdict(lambda: collections.defaultdict(dict))
         for src in ("mc", "data"):
             for _, _, version in self.config_inst.get_aux("jes_version")[src]:
+                # get tarball of all jes corrections
+                jes_tarball = jes_url(version)
+                jes_tarball_dst = os.path.join(self.jes_tmp_dir.path, os.path.basename(jes_tarball))
+                wget(jes_tarball, jes_tarball_dst)
+                tar = tarfile.open(jes_tarball_dst, "r:gz")
+                tar.extractall(path=self.jes_tmp_dir.path)
+                tar.close()
+                # select the ones we need
                 for level in self.config_inst.get_aux("jes_levels")[src] + ["Uncertainty"]:
-                    jes_files[src][version][level] = jes_url(version, level)
-        jes_unc_src_file = jes_url(self.config_inst.get_aux("jes_version")["mc"][0][2],
-            "UncertaintySources")
+                    jes_files[src][version][level] = os.path.join(
+                        self.jes_tmp_dir.path, jes_file_name(version, level)
+                    )
+        jes_unc_src_file = os.path.join(
+            self.jes_tmp_dir.path, jes_file_name(self.config_inst.get_aux("jes_version")["mc"][0][2], "UncertaintySources")
+        )
 
         # prepare JER files
         jer_url = lambda version, src: "https://raw.githubusercontent.com/cms-jet/JRDatabase" \

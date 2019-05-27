@@ -5,9 +5,9 @@ action() {
     local scram_cores="$SCRAM_CORES"
     [ -z "$scram_cores" ] && scram_cores="1"
 
-    export SCRAM_ARCH="slc6_amd64_gcc630"
+    export SCRAM_ARCH="slc${JTSF_DIST_VERSION}_amd64_gcc630"
     export CMSSW_VERSION="CMSSW_9_4_9"
-    export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
+    export CMSSW_BASE="$JTSF_DATA/cmssw/$SCRAM_ARCH/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
 
@@ -37,6 +37,9 @@ action() {
         # Updated MET filter
         # https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2#Moriond%202018
         git cms-addpkg RecoMET/METFilters
+
+        # MET EE fix
+        git cms-merge-topic cms-met:METFixEE2017_949_v2
 
         scram b -j "$scram_cores"
 

@@ -15,6 +15,9 @@ action() {
     [ ! -z "$( hostname | grep vispa )" ] && JTSF_ON_VISPA="1" || JTSF_ON_VISPA="0"
     export JTSF_ON_VISPA
 
+    # figure out distribution version
+    export JTSF_DIST_VERSION="$( lsb_release -rs | head -c 1 )"
+
     # default data directory
     if [ -z "$JTSF_DATA" ]; then
         if [ "$JTSF_ON_LXPLUS" = "1" ]; then
@@ -41,7 +44,7 @@ action() {
     [ "$JTSF_ON_VISPA" = "1" ] && export JTSF_CMSSW_SETUP="NONE"
 
     # other defaults
-    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/software/$( whoami )"
+    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/$JTSF_SANDBOX/software/$( whoami )"
     [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
     [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
     [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="Moriond19"
@@ -123,7 +126,7 @@ action() {
 
         jtsf_install_pip slackclient
         jtsf_install_pip docutils
-        jtsf_install_pip git+https://github.com/riga/order.git@dev
+        jtsf_install_pip git+https://github.com/riga/order.git@4b78ad6c06caee65f42e470a3c88fb61bba2d8f8
         jtsf_install_pip git+https://github.com/spotify/luigi.git
         LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip --no-dependencies git+https://github.com/riga/law.git
 

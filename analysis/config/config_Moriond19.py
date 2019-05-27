@@ -18,8 +18,15 @@ def create_config(base_cfg):
         "tt_dl", "tt_sl",
         "dy_lep_10To50",
         "dy_lep_50ToInf",
+        #"dy_lep_4To50_Ht70To100",
+        #"dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
+        #"dy_lep_4To50_Ht400To600", "dy_lep_4To50_Ht600ToInf",
+        #"dy_lep_50ToInf_Ht70To100", "dy_lep_50ToInf_Ht100To200",
+        #"dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
+        #"dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
+        #"dy_lep_50ToInf_Ht2500ToInf",
         "st_s_lep",
-        #"st_t_t", "st_t_tbar",
+        "st_t_t", "st_t_tbar",
         "st_tW_t", "st_tW_tbar",
         "WW", "WZ", "ZZ",
         "W_lep",
@@ -73,8 +80,8 @@ def create_config(base_cfg):
     # global tags
     # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVAnalysisSummaryTable
     cfg.set_aux("global_tag", {
-        "data": "102X_dataRun2_Sep2018Rereco_v1", # 102X_dataRun2_Prompt_v11
-        "mc": "102X_upgrade2018_realistic_v12",
+        "data": "102X_dataRun2_Sep2018ABC_v2", # 102X_dataRun2_Prompt_v13
+        "mc": "102X_upgrade2018_realistic_v18",
     })
 
     # lumi, normtag and pileup file
@@ -116,32 +123,32 @@ def create_config(base_cfg):
         "data": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
-            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter", "Flag_eeBadScFilter",
-            "Flag_ecalBadCalibReducedMINIAODFilter",
+            "Flag_BadPFMuonFilter", #"Flag_BadChargedCandidateFilter",
+            "Flag_eeBadScFilter", "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
         "mc": [
             "Flag_goodVertices", "Flag_globalSuperTightHalo2016Filter", "Flag_HBHENoiseFilter",
             "Flag_HBHENoiseIsoFilter", "Flag_EcalDeadCellTriggerPrimitiveFilter",
-            "Flag_BadPFMuonFilter", "Flag_BadChargedCandidateFilter",
+            "Flag_BadPFMuonFilter", #"Flag_BadChargedCandidateFilter",
             "Flag_ecalBadCalibReducedMINIAODFilter",
         ],
     })
 
     # JER
     # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution
-    cfg.set_aux("jer_version", "Fall17_V3")
+    cfg.set_aux("jer_version", "Autumn18_V1") # temporary, will be superseeded
 
     # JES
     # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC
     cfg.set_aux("jes_version", {
         "data": [
-            rr["A"] + ("Fall17_09May2018F_V3_DATA",),
-            rr["B"] + ("Fall17_09May2018F_V3_DATA",),
-            rr["C"] + ("Fall17_09May2018F_V3_DATA",),
-            rr["D"] + ("Fall17_09May2018F_V3_DATA",),
+            rr["A"] + ("Autumn18_RunA_V8_DATA",),
+            rr["B"] + ("Autumn18_RunB_V8_DATA",),
+            rr["C"] + ("Autumn18_RunC_V8_DATA",),
+            rr["D"] + ("Autumn18_RunD_V8_DATA",),
         ],
         "mc": [
-            (1, int(1e9), "Fall17_17Nov2017_V32_MC"),
+            (1, int(1e9), "Autumn18_V8_MC"),
         ],
     })
 
@@ -178,6 +185,16 @@ def create_config(base_cfg):
             "tt_dl": 194,
             "tt_sl": 3,
             "dy_lep_50ToInf": 38,
+            "dy_lep_4To50_Ht70To100": 14,
+            "dy_lep_4To50_Ht100To200": 2,
+            "dy_lep_50ToInf_Ht70To100": 15,
+            "dy_lep_50ToInf_Ht100To200": 26,
+            "dy_lep_50ToInf_Ht200To400": 39,
+            "dy_lep_50ToInf_Ht400To600": 42,
+            "dy_lep_50ToInf_Ht600To800": 38,
+            "dy_lep_50ToInf_Ht800To1200": 14,
+            "dy_lep_50ToInf_Ht1200To2500": 3,
+            "dy_lep_50ToInf_Ht2500ToInf": 2,
             "st_tW_t": 3,
             "st_tW_tbar": 2,
             "ttH_bb": 5,
@@ -189,16 +206,17 @@ def create_config(base_cfg):
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod2",
-        "MergeTrees": "prod2",
-        "MergeMetaData": "prod1",
-        "WriteHistograms": "prod1",
-        "MergeHistograms": "prod1",
-        "MeasureCScaleFactors": "prod1",
-        "MeasureScaleFactors": "prod1",
-        "FitScaleFactors": "prod1",
-        "GetScaleFactorWeights": "prod2",
-        "MergeScaleFactorWeights": "prod2",
+        "WriteTrees": "prod4",
+        "MergeTrees": "prod4",
+        "MergeMetaData": "prod4",
+        "WriteHistograms": "prod5",
+        "MergeHistograms": "prod5",
+        "MeasureCScaleFactors": "prod5",
+        "MeasureScaleFactors": "prod5",
+        "FitScaleFactors": "prod5",
+        "GetScaleFactorWeights": "prod5",
+        "MergeScaleFactorWeights": "prod5",
+        "OptimizeBinning": "prod1",
     })
 
     return cfg

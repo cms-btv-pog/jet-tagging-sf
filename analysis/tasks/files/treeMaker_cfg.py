@@ -211,35 +211,23 @@ try:
 
     # electron ID on uncorrected electrons
     # no option to configure the electron collection available here
+    # https://twiki.cern.ch/twiki/bin/view/CMS/EgammaPostRecoRecipes
     from RecoEgamma.EgammaTools.EgammaPostRecoTools import setupEgammaPostRecoSeq
+    params = {
+            "isMiniAOD": True,
+            "applyEnergyCorrections": False,
+            "applyVIDOnCorrectedEgamma": False,
+    }
     if options.campaign == "2018_Run2_pp_13TeV_MORIOND19":
-        setupEgammaPostRecoSeq(
-            process,
-            isMiniAOD=True,
-            runEnergyCorrections=False,
-            applyEnergyCorrections=False,
-            applyVIDOnCorrectedEgamma=False,
-            era="2018-Prompt",
-        )
+        params["era"] = "2018-Prompt"
     elif options.campaign == "2017_Run2_pp_13TeV_ICHEP18":
-        setupEgammaPostRecoSeq(
-            process,
-            isMiniAOD=True,
-            applyEnergyCorrections=False,
-            applyVIDOnCorrectedEgamma=False,
-            era="2017-Nov17ReReco",
-        )
+        params["era"] = "2017-Nov17ReReco"
     elif options.campaign == "2018_Run2_pp_13TeV_MORIOND19legacy":
-        setupEgammaPostRecoSeq(
-            process,
-            isMiniAOD=True,
-            runEnergyCorrections=False,
-            applyEnergyCorrections=False,
-            applyVIDOnCorrectedEgamma=False,
-            era="2016-Legacy",
-        )
+        params["runEnergyCorrections"] = False
+        params["era"] = "2016-Legacy"
     else:
         raise ValueError("Unknown campaign {}".format(options.campaign))
+    setupEgammaPostRecoSeq(process, **params)
 
     seq += process.egammaScaleSmearSeq
     seq += process.egammaPostRecoSeq
@@ -283,13 +271,18 @@ try:
 
     # MET correction
     from PhysicsTools.PatUtils.tools.runMETCorrectionsAndUncertainties import runMetCorAndUncFromMiniAOD
-    runMetCorAndUncFromMiniAOD(process,
-        isData           = options.isData,
-        jecUncFile       = os.path.basename(options.jesUncFiles[0]),
-        electronColl     = electronCollection.value(),
-        muonColl         = muonCollection.value(),
-        jetCollUnskimmed = jetCollection.value(),
-    )
+    params = {
+        "isData" : options.isData,
+        "jecUncFile" : os.path.basename(options.jesUncFiles[0]),
+        "electronColl" : electronCollection.value(),
+        "muonColl" : muonCollection.value(),
+        "jetCollUnskimmed" : jetCollection.value(),
+    }
+    if options.campaign == "2017_Run2_pp_13TeV_ICHEP18":
+        params["fixEE2017"] = True,
+        params["fixEE2017Params"] = {"userawPt": True, "ptThreshold": 50.0, "minEtaThreshold": 2.65, "maxEtaThreshold": 3.139},
+
+    runMetCorAndUncFromMiniAOD(process, **params)
     seq += process.fullPatMetSequence
     metCollection = cms.InputTag("slimmedMETs", "", process.name_())
 

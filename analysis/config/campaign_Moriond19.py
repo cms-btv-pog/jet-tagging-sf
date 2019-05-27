@@ -95,7 +95,7 @@ dataset_data_D_emu = od.Dataset(
     n_files=1373,
     keys=["/MuonEG/Run2018D-PromptReco-v2/MINIAOD"],
     context=campaign_name,
-    aux={"global_tag": "102X_dataRun2_Prompt_v11"},
+    aux={"global_tag": "102X_dataRun2_Prompt_v13"},
 )
 
 datasets_data_emu = [
@@ -136,7 +136,7 @@ dataset_data_D_mumu = od.Dataset(
     n_files=2353,
     keys=["/DoubleMuon/Run2018D-PromptReco-v2/MINIAOD"],
     context=campaign_name,
-    aux={"global_tag": "102X_dataRun2_Prompt_v11"},
+    aux={"global_tag": "102X_dataRun2_Prompt_v13"},
 )
 
 datasets_data_mumu = [
@@ -189,6 +189,137 @@ dataset_dy_lep_50ToInf = od.Dataset(
     context=campaign_name,
 )
 
+# DY, HT-binned
+
+dataset_dy_lep_4To50_Ht70To100 = od.Dataset(
+    "dy_lep_4To50_Ht70To100", 2211,
+    campaign=campaign,
+    n_files=240,
+    keys=[
+        "/DYJetsToLL_M-4to50_HT-70to100_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+)
+
+dataset_dy_lep_4To50_Ht100To200 = od.Dataset(
+    "dy_lep_4To50_Ht100To200", 2212,
+    campaign=campaign,
+    n_files=216,
+    keys=[
+        "/DYJetsToLL_M-4to50_HT-100to200_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_4To50_Ht200To400 = od.Dataset(
+    "dy_lep_4To50_Ht200To400", 2213,
+    campaign=campaign,
+    n_files=76,
+    keys=[
+        "/DYJetsToLL_M-4to50_HT-200to400_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_4To50_Ht400To600 = od.Dataset(
+    "dy_lep_4To50_Ht400To600", 2214,
+    campaign=campaign,
+    n_files=95,
+    keys=[
+        "/DYJetsToLL_M-4to50_HT-400to600_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_4To50_Ht600ToInf = od.Dataset(
+    "dy_lep_4To50_Ht600ToInf", 2215,
+    campaign=campaign,
+    n_files=102,
+    keys=[
+        "/DYJetsToLL_M-4to50_HT-600toInf_TuneCP5_PSWeights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_50ToInf_Ht70To100 = od.Dataset(
+    "dy_lep_50ToInf_Ht70To100", 2221,
+    campaign=campaign,
+    n_files=237,
+    keys=[
+        "/DYJetsToLL_M-50_HT-70to100_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_50ToInf_Ht100To200 = od.Dataset(
+    "dy_lep_50ToInf_Ht100To200", 2222,
+    campaign=campaign,
+    n_files=232,
+    keys=[
+        "/DYJetsToLL_M-50_HT-100to200_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_50ToInf_Ht200To400 = od.Dataset(
+    "dy_lep_50ToInf_Ht200To400", 2223,
+    campaign=campaign,
+    n_files=311,
+    keys=[
+        "/DYJetsToLL_M-50_HT-200to400_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_50ToInf_Ht400To600 = od.Dataset(
+    "dy_lep_50ToInf_Ht400To600", 2224,
+    campaign=campaign,
+    n_files=249,
+    keys=[
+        "/DYJetsToLL_M-50_HT-400to600_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v7/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_50ToInf_Ht600To800 = od.Dataset(
+    "dy_lep_50ToInf_Ht600To800", 2225,
+    campaign=campaign,
+    n_files=264,
+    keys=[
+        "/DYJetsToLL_M-50_HT-600to800_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_50ToInf_Ht800To1200 = od.Dataset(
+    "dy_lep_50ToInf_Ht800To1200", 2226,
+    campaign=campaign,
+    n_files=109,
+    keys=[
+        "/DYJetsToLL_M-50_HT-800to1200_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_50ToInf_Ht1200To2500 = od.Dataset(
+    "dy_lep_50ToInf_Ht1200To2500", 2227,
+    campaign=campaign,
+    n_files=23,
+    keys=[
+        "/DYJetsToLL_M-50_HT-1200to2500_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_50ToInf_Ht2500ToInf = od.Dataset(
+    "dy_lep_50ToInf_Ht2500ToInf", 2228,
+    campaign=campaign,
+    n_files=23,
+    keys=[
+        "/DYJetsToLL_M-50_HT-2500toInf_TuneCP5_PSweights_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
 # single top
 
 # s-channel
@@ -202,21 +333,23 @@ dataset_st_s_lep = od.Dataset(
 )
 
 # t-channel
-#dataset_st_t_t = od.Dataset(
-#    "st_t_t", 301,
-#    campaign=campaign,
-#    n_files=,
-#    keys= [
-#    ],
-#)
-#
-#dataset_st_t_tbar = od.Dataset(
-#    "st_t_tbar", 302,
-#    campaign=campaign,
-#    n_files=,
-#    keys= [
-#    ],
-#)
+dataset_st_t_t = od.Dataset(
+    "st_t_t", 301,
+    campaign=campaign,
+    n_files=2395,
+    keys= [
+        "/ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+)
+
+dataset_st_t_tbar = od.Dataset(
+    "st_t_tbar", 302,
+    campaign=campaign,
+    n_files=1319,
+    keys= [
+        "/ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+)
 
 
 # tW-channel
@@ -274,12 +407,12 @@ dataset_ZZ = od.Dataset(
 
 # W + jets
 
-dataset_W_lep = od.Dataset( # TODO: v15/autumn dataset
+dataset_W_lep = od.Dataset(
     "W_lep", 500,
     campaign=campaign,
-    n_files=841,
+    n_files=990,
     keys=[
-        "/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall18MiniAOD-102X_upgrade2018_realistic_v12-v1/MINIAODSIM",
+        "/WJetsToLNu_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v2/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -339,9 +472,24 @@ dataset_tt_dl.add_process(process_tt_dl)
 dataset_tt_sl.add_process(process_tt_sl)
 dataset_dy_lep_10To50.add_process(process_dy_lep_10To50)
 dataset_dy_lep_50ToInf.add_process(process_dy_lep_50ToInf)
+
+dataset_dy_lep_4To50_Ht70To100.add_process(process_dy_lep_5To50_Ht70To100)  # TODO: 5To50 okay?
+dataset_dy_lep_4To50_Ht100To200.add_process(process_dy_lep_5To50_Ht100To200)  # TODO: 5To50 okay?
+dataset_dy_lep_4To50_Ht200To400.add_process(process_dy_lep_5To50_Ht200To400)  # TODO: 5To50 okay?
+dataset_dy_lep_4To50_Ht400To600.add_process(process_dy_lep_5To50_Ht400To600)  # TODO: 5To50 okay?
+dataset_dy_lep_4To50_Ht600ToInf.add_process(process_dy_lep_5To50_Ht600ToInf)  # TODO: 5To50 okay?
+dataset_dy_lep_50ToInf_Ht70To100.add_process(process_dy_lep_50ToInf_Ht70To100)
+dataset_dy_lep_50ToInf_Ht100To200.add_process(process_dy_lep_50ToInf_Ht100To200)
+dataset_dy_lep_50ToInf_Ht200To400.add_process(process_dy_lep_50ToInf_Ht200To400)
+dataset_dy_lep_50ToInf_Ht400To600.add_process(process_dy_lep_50ToInf_Ht400To600)
+dataset_dy_lep_50ToInf_Ht600To800.add_process(process_dy_lep_50ToInf_Ht600To800)
+dataset_dy_lep_50ToInf_Ht800To1200.add_process(process_dy_lep_50ToInf_Ht800To1200)
+dataset_dy_lep_50ToInf_Ht1200To2500.add_process(process_dy_lep_50ToInf_Ht1200To2500)
+dataset_dy_lep_50ToInf_Ht2500ToInf.add_process(process_dy_lep_50ToInf_Ht2500ToInf)
+
 dataset_st_s_lep.add_process(process_st_s_lep)
-#dataset_st_t_t.add_process(process_st_t_t)
-#dataset_st_t_tbar.add_process(process_st_t_tbar)
+dataset_st_t_t.add_process(process_st_t_t)
+dataset_st_t_tbar.add_process(process_st_t_tbar)
 dataset_st_tW_t.add_process(process_st_tW_t)
 dataset_st_tW_tbar.add_process(process_st_tW_tbar)
 dataset_WW.add_process(process_WW)

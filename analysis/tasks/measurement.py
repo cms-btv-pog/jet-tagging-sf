@@ -9,15 +9,18 @@ import numpy as np
 
 from collections import defaultdict
 
-from analysis.config.jet_tagging_sf import jes_sources
+from analysis.config.jet_tagging_sf import jes_sources, jes_total_shifts
 from analysis.tasks.base import AnalysisTask, ShiftTask, WrapperTask
 from analysis.tasks.hists import MergeHistograms, GetScaleFactorWeights, MergeScaleFactorWeights
+from analysis.tasks.util import OptimizeBinning
 
 
 class MeasureScaleFactors(ShiftTask):
 
     iteration = MergeHistograms.iteration
     b_tagger = MergeHistograms.b_tagger
+    optimize_binning = MergeHistograms.optimize_binning
+    category_tags = MergeHistograms.category_tags
 
     shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
                 jes_sources, ["up", "down"])} | {"{}_{}".format(shift, direction) for shift, direction in
@@ -31,6 +34,9 @@ class MeasureScaleFactors(ShiftTask):
         if self.iteration > 0 or self.effective_shift != "nominal":
             reqs["scale"] = MeasureScaleFactors.req(self, iteration=0, shift="nominal",
                 version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
+        if self.optimize_binning:
+            reqs["binning"] = OptimizeBinning.req(self, version=self.get_version(OptimizeBinning),
+                _prefer_cli=["version"])
         return reqs
 
     def store_parts(self):
@@ -68,6 +74,8 @@ class MeasureScaleFactors(ShiftTask):
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
             if category.has_tag(("merged", self.b_tagger), mode=all) and category.get_aux("phase_space") == "measure":
+                if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                    continue
                 categories.append(category)
 
         # get categories from which to determine the rate scaling of MC to data
@@ -78,30 +86,22 @@ class MeasureScaleFactors(ShiftTask):
                 scale_categories[channel] = {}
                 for category, _, children in channel.walk_categories():
                     if category.has_tag(("scales", self.b_tagger), mode=all) and category.get_aux("phase_space") == "closure":
+                        if category.get_aux("config", None) != self.config_inst.name:
+                            continue
+
                         region = category.get_aux("region")
                         scale_categories[channel][region] = category
 
         btagger_cfg = self.config_inst.get_aux("btaggers")[self.b_tagger]
 
+        # get category-dependent binning if optimized binning is used
+        if self.optimize_binning:
+            category_binnings = inp["binning"].load()
+
         # category -> component (heavy/light) -> histogram
         hist_dict = {}
         # category -> histogram
         sf_dict = {}
-
-        # create n-d histograms to hold all scale factors for lf/hf jets
-        binning = self.config_inst.get_aux("binning")
-        sf_hists_nd = {}
-        for region in ["lf", "hf"]:
-            eta_edges = array.array("d", binning[region]["abs(eta)"])
-            pt_edges = array.array("d", binning[region]["pt"])
-            btag_edges = array.array("d", binning[region][self.b_tagger]["measurement"])
-            sf_hist = ROOT.TH3F(
-                "scale_factors_{}".format(region), "Scale factors {}".format(region),
-                len(eta_edges) - 1, eta_edges,
-                len(pt_edges) - 1, pt_edges,
-                len(btag_edges) - 1, btag_edges,
-            )
-            sf_hists_nd[region] = sf_hist
 
         with inp["hist"].load("r") as input_file:
             # get scale factor to scale MC (withouts b-tag SFs) to data per channel
@@ -117,7 +117,7 @@ class MeasureScaleFactors(ShiftTask):
                         for process_key in category_dir.GetListOfKeys():
                             process = self.config_inst.get_process(process_key.GetName())
                             process_dir = category_dir.GetDirectory(process.name)
-                            hist = process_dir.Get("{}_{}_{}".format(variable_name, region.upper(), self.shift))
+                            hist = process_dir.Get("{}_{}_{}".format(variable_name, region, self.shift))
                             if process.is_data:
                                 data_yield += hist_integral(hist)
                             else:
@@ -133,6 +133,12 @@ class MeasureScaleFactors(ShiftTask):
                 for leaf_cat, _, children in category.walk_categories():
                     # we are only interested in leaves
                     if children:
+                        continue
+                    # only use categories with at least one given tag if specified
+                    if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                        if len(hist_dict) > 0:
+                            raise Exception("category {} has no required tag, but other "
+                                "child categories of {} do.".format(leaf_cat, category))
                         continue
 
                     flavor = leaf_cat.get_aux("flavor")
@@ -151,7 +157,7 @@ class MeasureScaleFactors(ShiftTask):
                             hist_shift = "nominal"
                         else:  # TODO: make nicer
                             hist_shift = self.effective_shift if not (self.iteration == 0 and not self.effective_shift.startswith("jes")) else "nominal"
-                        variable_name = "jet{}_{}_{}_{}".format(i_probe_jet, btag_variable, region.upper(), hist_shift)
+                        variable_name = "jet{}_{}_{}_{}".format(i_probe_jet, btag_variable, region, hist_shift)
 
                         # we cannot distinguish flavors in data
                         if process.is_data and flavor != "inclusive":
@@ -171,7 +177,12 @@ class MeasureScaleFactors(ShiftTask):
                         hist = process_dir.Get(variable_name)
 
                         # rebin
-                        btag_edges = array.array("d", binning[region][self.b_tagger]["measurement"])
+                        btag_edges = array.array("d", self.config_inst.get_aux("binning")[region][self.b_tagger]["measurement"])
+                        if self.optimize_binning:
+                            binning_category = leaf_cat.get_aux("binning_category", leaf_cat)
+                            btag_edges = category_binnings.get(binning_category.name,
+                                btag_edges)
+
                         n_bins = len(btag_edges) - 1
                         hist_rebinned = hist.Rebin(n_bins, "rebinned_{}".format(category.name), btag_edges)
 
@@ -247,13 +258,6 @@ class MeasureScaleFactors(ShiftTask):
                 # store the corrected sf hist
                 sf_dict[category] = sf_hist
 
-                # write to nd histograms
-                eta_val = np.mean(category.get_aux("eta"))
-                pt_val = np.mean(category.get_aux("pt"))
-                for bin_idx in range(1, sf_hist.GetNbinsX() + 1):  # TODO: Add over- and underflow bin
-                    sf_hists_nd[region].Fill(eta_val, pt_val, sf_hist.GetBinCenter(bin_idx),
-                        sf_hist.GetBinContent(bin_idx))
-
             # open the output file
             with outp["scale_factors"].localize("w") as tmp:
                 with tmp.dump("RECREATE") as output_file:
@@ -261,10 +265,6 @@ class MeasureScaleFactors(ShiftTask):
                         category_dir = output_file.mkdir(category.name)
                         category_dir.cd()
                         sf_dict[category].Write("sf")
-                    for region in sf_hists_nd:
-                        region_dir = output_file.mkdir(region)
-                        region_dir.cd()
-                        sf_hists_nd[region].Write("sf")
 
             # for the first iteration, also save the channel rate scale factors
             if self.iteration == 0 and self.shift == "nominal":
@@ -278,7 +278,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
     def requires(self):
         skip_shifts = {"{}_{}".format(shift, direction) for shift, direction in
             itertools.product(["hf", "lf_stats1", "lf_stats2"], ["up", "down"])}
-        skip_shifts = skip_shifts | {"jesTotal_up", "jesTotal_down"}
+        skip_shifts = skip_shifts | jes_total_shifts
 
         reqs = {}
         reqs["scale_factors"] = {
@@ -288,6 +288,9 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         }
         reqs["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=False,
                 version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
+        if self.optimize_binning:
+            reqs["binning"] = OptimizeBinning.req(self, version=self.get_version(OptimizeBinning),
+                _prefer_cli=["version"])
         return reqs
 
     def output(self):
@@ -304,20 +307,31 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
             if category.has_tag(("c", self.b_tagger), mode=all):
+                if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                    continue
                 categories.append(category)
 
-        # create histogram for c flavour nominal, and up and down shifts
         btagger_cfg = self.config_inst.get_aux("btaggers")[self.b_tagger]
+        # get category-dependent binning if optimized binning is used
+        if self.optimize_binning:
+            category_binnings = inp["binning"].load()
+
         binning = self.config_inst.get_aux("binning")
         btag_edges = array.array("d", binning["hf"][self.b_tagger]["measurement"])
         n_bins = len(btag_edges) - 1
 
+        # create histogram for c flavour nominal, and up and down shifts
         sf_dict = {}
         for category in categories:
+            if self.optimize_binning:
+                binning_category = category.get_aux("binning_category", category)
+                cat_btag_edges = category_binnings.get(binning_category.name,
+                    btag_edges)
+
             nominal_hist = ROOT.TH1F("sf {}".format(category.name), "Scale factors c",
-                len(btag_edges) - 1, btag_edges
+                len(cat_btag_edges) - 1, cat_btag_edges
             )
-            for bin_idx in range(1, len(btag_edges)):
+            for bin_idx in range(1, len(cat_btag_edges)):
                 nominal_hist.SetBinContent(bin_idx, 1.)
             sf_dict[category] = nominal_hist
 
@@ -471,7 +485,7 @@ class FitScaleFactors(MeasureScaleFactors):
         interpolation_type = ROOT.Math.Interpolation.kAKIMA
         interpolation_bins = 1000
 
-        def fit_func_pol6(x_min=0.0, x_max=0.5):
+        def fit_func_pol6(x_min=0.0, x_max=1.0):
             # 6th degree polynomial for LF region
             func = ROOT.TF1("f_pol6", "[0] + x*([1] + x*([2] + x*([3] + x*([4] + x*([5] + x*[6])))))", x_min, x_max)
             for i_param in range(func.GetNpar()):
@@ -490,6 +504,8 @@ class FitScaleFactors(MeasureScaleFactors):
         # get categories in which to fit the scale factors
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
+            if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
+                continue
             if self.has_c_shift:
                 if category.get_aux("region") == "c":
                     if category.has_tag(self.b_tagger):
@@ -525,28 +541,16 @@ class FitScaleFactors(MeasureScaleFactors):
                 x_axis = hist.GetXaxis()
                 interpolation_hist = ROOT.TH1D(hist.GetName() + "_fine", hist.GetTitle(),
                     interpolation_bins, x_axis.GetXmin(), x_axis.GetXmax())
-                if region == "lf" and self.b_tagger != "deepjet": # deepjet fit too oscillating -> use interpolation
-                    fit_function = fit_func_pol6()
-                    # perform fit
-                    hist.Fit(fit_function, "+mrNQ0S")
-                    interpolator = fit_function
-                    # define region in which to use the function values to create the histogram
-                    # (centers of second and second to last bin)
-                    first_point = hist.GetBinCenter(2)
-                    last_point = hist.GetBinCenter(nbins - 1)
-                elif region in ("hf", "c") or (region == "lf" and self.b_tagger == "deepjet"):
-                    x_values = ROOT.vector("double")()
-                    y_values = ROOT.vector("double")()
-                    for bin_idx in range(1, nbins + 1):
-                        if hist.GetBinCenter(bin_idx) < 0:
-                            continue
-                        x_values.push_back(hist.GetBinCenter(bin_idx))
-                        y_values.push_back(hist.GetBinContent(bin_idx))
-                    interpolator = ROOT.Math.Interpolator(x_values, y_values, interpolation_type)
-                    # define region in which to use interpolation
-                    first_point, last_point = min(x_values), max(x_values)
-                else:
-                    raise ValueError("Unknown region %s" % region)
+                x_values = ROOT.vector("double")()
+                y_values = ROOT.vector("double")()
+                for bin_idx in range(1, nbins + 1):
+                    if hist.GetBinCenter(bin_idx) < 0:
+                        continue
+                    x_values.push_back(hist.GetBinCenter(bin_idx))
+                    y_values.push_back(hist.GetBinContent(bin_idx))
+                interpolator = ROOT.Math.Interpolator(x_values, y_values, interpolation_type)
+                # define region in which to use interpolation
+                first_point, last_point = min(x_values), max(x_values)
 
                 # create finely binned histogram from either TF1 or interpolator
                 for bin_idx in range(interpolation_bins + 2):
@@ -590,25 +594,19 @@ class FitScaleFactors(MeasureScaleFactors):
                         interpolator.Eval(first_point)))
 
                     # intermediate functions
-                    if region == "lf" and self.b_tagger != "deepjet":
-                        fit_results.append(fit_results_tpl + ", {}, {}, {}".format(first_point,
-                            last_point, str(interpolator.GetExpFormula("p"))))
-                    elif region in ("hf", "c") or (region == "lf" and self.b_tagger == "deepjet"):  # piecewise linear function
-                        for bin_idx in range(1, nbins):
-                            if hist.GetBinCenter(bin_idx) < first_point:
-                                continue
-                            x_min = hist.GetBinCenter(bin_idx)
-                            x_max = hist.GetBinCenter(bin_idx + 1)
-                            y_start = hist.GetBinContent(bin_idx)
-                            y_end = hist.GetBinContent(bin_idx + 1)
-                            slope = (y_end - y_start) / (x_max - x_min)
-                            intercept = y_start - x_min * slope
-                            func = fit_func_pol1(x_min, x_max, [intercept, slope])
+                    for bin_idx in range(1, nbins):
+                        if hist.GetBinCenter(bin_idx) < first_point:
+                            continue
+                        x_min = hist.GetBinCenter(bin_idx)
+                        x_max = hist.GetBinCenter(bin_idx + 1)
+                        y_start = hist.GetBinContent(bin_idx)
+                        y_end = hist.GetBinContent(bin_idx + 1)
+                        slope = (y_end - y_start) / (x_max - x_min)
+                        intercept = y_start - x_min * slope
+                        func = fit_func_pol1(x_min, x_max, [intercept, slope])
 
-                            fit_results.append(fit_results_tpl + ", {}, {}, {}".format(x_min,
-                                x_max, str(func.GetExpFormula("p"))))
-                    else:
-                        raise ValueError("Unknown region %s" % region)
+                        fit_results.append(fit_results_tpl + ", {}, {}, {}".format(x_min,
+                            x_max, str(func.GetExpFormula("p"))))
 
                     fit_results.append(fit_results_tpl + ", {}, 1.1, {}".format(last_point,
                         interpolator.Eval(last_point)))
@@ -693,7 +691,7 @@ class CreateScaleFactorResults(AnalysisTask):
         inp = self.input()
         outp = self.output()
 
-        csv_results = ["3, iterativefit, central, 1, 0.0, 2.5, 20.0, 10000, -15, 1.1, 1.0\n"]
+        csv_results = ["3, iterativefit, central, 1, {}, {}, 20.0, 10000, -15, 1.1, 1.0\n".format(*self.config_inst.get_aux("binning")["c"]["abs(eta)"])]
         hf_hists = []
         lf_hists = []
 
@@ -703,6 +701,7 @@ class CreateScaleFactorResults(AnalysisTask):
                 for line in csv_file.readlines():
                     if not line.endswith("\n"):
                         line += "\n"
+                    line = line.replace("jesTotal", "jes")
                     csv_results.append(line)
 
 

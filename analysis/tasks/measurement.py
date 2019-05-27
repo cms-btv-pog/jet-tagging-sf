@@ -12,6 +12,7 @@ from collections import defaultdict
 from analysis.config.jet_tagging_sf import jes_sources, jes_total_shifts
 from analysis.tasks.base import AnalysisTask, ShiftTask, WrapperTask
 from analysis.tasks.hists import MergeHistograms, GetScaleFactorWeights, MergeScaleFactorWeights
+from analysis.tasks.util import OptimizeBinning
 
 
 class MeasureScaleFactors(ShiftTask):
@@ -34,7 +35,7 @@ class MeasureScaleFactors(ShiftTask):
             reqs["scale"] = MeasureScaleFactors.req(self, iteration=0, shift="nominal",
                 version=self.get_version(MeasureScaleFactors), _prefer_cli=["version"])
         if self.optimize_binning:
-            reqs["binning"] = OptimizeBinning(self, version=self.get_version(OptimizeBinning),
+            reqs["binning"] = OptimizeBinning.req(self, version=self.get_version(OptimizeBinning),
                 _prefer_cli=["version"])
         return reqs
 
@@ -176,7 +177,7 @@ class MeasureScaleFactors(ShiftTask):
                         hist = process_dir.Get(variable_name)
 
                         # rebin
-                        btag_edges = array.array("d", binning[region][self.b_tagger]["measurement"])
+                        btag_edges = array.array("d", self.config_inst.get_aux("binning")[region][self.b_tagger]["measurement"])
                         if self.optimize_binning:
                             binning_category = leaf_cat.get_aux("binning_category", leaf_cat)
                             btag_edges = category_binnings.get(binning_category.name,
@@ -288,7 +289,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         reqs["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=False,
                 version=self.get_version(MergeScaleFactorWeights), _prefer_cli=["version"])
         if self.optimize_binning:
-            reqs["binning"] = OptimizeBinning(self, version=self.get_version(OptimizeBinning),
+            reqs["binning"] = OptimizeBinning.req(self, version=self.get_version(OptimizeBinning),
                 _prefer_cli=["version"])
         return reqs
 

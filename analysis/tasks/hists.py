@@ -80,7 +80,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                     version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
                     for shift in self.shifts}
             if self.optimize_binning:
-                reqs["binning"] = OptimizeBinning(self, version=self.get_version(OptimizeBinning),
+                from analysis.tasks.util import OptimizeBinning # prevent circular import
+                reqs["binning"] = OptimizeBinning.req(self, version=self.get_version(OptimizeBinning),
                     _prefer_cli=["version"])
 
         return reqs
@@ -102,7 +103,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                 version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
                 for shift in self.shifts}
         if self.optimize_binning:
-            reqs["binning"] = OptimizeBinning(self, version=self.get_version(OptimizeBinning),
+            from analysis.tasks.util import OptimizeBinning # prevent circular import
+            reqs["binning"] = OptimizeBinning.req(self, version=self.get_version(OptimizeBinning),
                 _prefer_cli=["version"])
         return reqs
 

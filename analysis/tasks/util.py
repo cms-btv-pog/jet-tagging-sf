@@ -12,7 +12,6 @@ from analysis.tasks.base import AnalysisTask
 from analysis.tasks.hists import MergeHistograms
 
 class OptimizeBinning(AnalysisTask):
-
     category_tags = MergeHistograms.category_tags
 
     b_tagger = MergeHistograms.b_tagger
@@ -25,8 +24,6 @@ class OptimizeBinning(AnalysisTask):
 
     def __init__(self, *args, **kwargs):
         super(OptimizeBinning, self).__init__(*args, **kwargs)
-        if not self.is_configured:
-            raise Exception("Cannot run OptimizeBinning task if not run with 'is_configured'")
 
     def requires(self):
         return MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
@@ -39,6 +36,8 @@ class OptimizeBinning(AnalysisTask):
         return self.wlcg_target("binning.json")
 
     def run(self):
+        if not self.is_configured:
+            raise Exception("Cannot run OptimizeBinning task if not run with 'is_configured'")
         import ROOT
 
         inp = self.input()

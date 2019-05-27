@@ -302,6 +302,13 @@ cfg.add_variable(
     x_title="dR(ll)",
 )
 cfg.add_variable(
+    name="m_ll",
+    expression="m_ll",
+    binning=(20, 80., 100.),
+    tags={"contamination"},
+    x_title="M(ll)",
+)
+cfg.add_variable(
     name="n_jets",
     expression="n_jets",
     binning=(10, 0., 10.,),

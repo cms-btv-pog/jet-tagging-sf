@@ -177,11 +177,12 @@ class MeasureScaleFactors(ShiftTask):
                         hist = process_dir.Get(variable_name)
 
                         # rebin
-                        btag_edges = array.array("d", self.config_inst.get_aux("binning")[region][self.b_tagger]["measurement"])
+                        btag_edges = self.config_inst.get_aux("binning")[region][self.b_tagger]["measurement"]
                         if self.optimize_binning:
                             binning_category = leaf_cat.get_aux("binning_category", leaf_cat)
                             btag_edges = category_binnings.get(binning_category.name,
                                 btag_edges)
+                        btag_edges = array.array("d", btag_edges)
 
                         n_bins = len(btag_edges) - 1
                         hist_rebinned = hist.Rebin(n_bins, "rebinned_{}".format(category.name), btag_edges)

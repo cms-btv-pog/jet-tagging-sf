@@ -217,7 +217,7 @@ class OptimizeBinning(AnalysisTask):
 
                 merged_edges = np.cumsum(best_widths)
                 bin_edge_values = np.round(merged_edges * signal_hist.GetBinWidth(1), 3)
-                results[category.name] = bin_edge_values.tolist()
+                results[category.name] = [-2.01, 0.0] + bin_edge_values.tolist()[:-1] + [1.01]
 
         print ",\n".join(['"{}": {}'.format(cat_name, binning) for cat_name, binning in results.items()])
         self.output().dump(results, formatter="json", indent=4)

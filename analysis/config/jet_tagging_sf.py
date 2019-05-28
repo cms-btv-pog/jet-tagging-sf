@@ -302,8 +302,8 @@ cfg.add_variable(
     x_title="dR(ll)",
 )
 cfg.add_variable(
-    name="m_ll",
-    expression="m_ll",
+    name="mll",
+    expression="mll",
     binning=(20, 80., 100.),
     tags={"contamination"},
     x_title="M(ll)",
@@ -562,7 +562,7 @@ def add_categories(cfg, b_tagger):
                     name="{}__{}__{}__{}__{}".format(ch.name, ps_name, rg_name, b_tagger, cfg.name),
                     label="{}, {}, {}".format(ch.name, ps_name, rg_name),
                     selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
-                    tags={"contamination", b_tagger},
+                    tags={b_tagger},
                     aux={
                         "channel": ch,
                         "phase_space": ps_name,

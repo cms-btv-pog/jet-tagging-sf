@@ -170,36 +170,59 @@ def get_phasespace_info():
         ("closure", join_root_selection(["n_jets{jec_identifier} >= 2", "mll > 12", "dr_ll > 0.2"])),
     ]
 
-def get_region_info(cfg, idx, channel, et_miss=30., z_window=10., add_btag_cut=True, b_tagger="deepcsv"):
+def get_btag_info(cfg, idx, working_point, b_tagger="deepcsv", operator=">"):
     btag_cfg = cfg.get_aux("btaggers")[b_tagger]
     btag_variable = cfg.get_variable("jet{}_{}".format(idx, btag_cfg["variable"]))
+    btag_wp = cfg.get_aux("working_points")[b_tagger][working_point]
 
-    csv_medium = cfg.get_aux("working_points")[b_tagger]["medium"]
-    csv_loose = cfg.get_aux("working_points")[b_tagger]["loose"]
+    return "({}) {} {}".format(btag_variable.expression, operator, btag_wp)
 
+def get_z_window_info(cfg, flavour, et_miss=30.0, z_window=10.):
+    cuts = []
+    # ET-miss requirement
+    et_miss_expr = "(met_px{jec_identifier}**2 + met_py{jec_identifier}**2)**0.5"
+    if flavour == "hf":
+        cuts.append("{} > {}".format(et_miss_expr, et_miss))
+    elif flavour == "lf":
+        cuts.append("{} < {}".format(et_miss_expr, et_miss))
+    else:
+        raise ValueError("Unrecognized flavour {}".format(flavour))
+
+    # z-mass window
+    if flavour == "hf":
+        cuts.append("abs(mll - {}) > {}".format(Z_MASS.nominal, z_window))
+    else:
+        cuts.append("abs(mll - {}) < {}".format(Z_MASS.nominal, z_window))
+
+    # z peak diamond
+    if flavour == "lf":
+        cuts.append("pass_z_mask{jec_identifier} == 0")
+    return cuts
+
+def get_region_info(cfg, idx, channel, et_miss=30., z_window=10., add_btag_cut=True, b_tagger="deepcsv"):
     hf_cuts, lf_cuts = [], []
-    if add_btag_cut:
-        # jet tagging requirement
-        hf_cuts.append("({}) > {}".format(btag_variable.expression, csv_medium))
-        lf_cuts.append("({}) < {}".format(btag_variable.expression, csv_loose))
+    hf_cuts.append(get_btag_info(cfg, idx, "medium", b_tagger, ">"))
+    lf_cuts.append(get_btag_info(cfg, idx, "loose", b_tagger, "<"))
 
-    # the following cuts do not apply for emu
     if channel != "emu":
-        # ET-miss requirement
-        et_miss_expr = "(met_px{jec_identifier}**2 + met_py{jec_identifier}**2)**0.5"
-        hf_cuts.append("{} > {}".format(et_miss_expr, et_miss))
-        lf_cuts.append("{} < {}".format(et_miss_expr, et_miss))
-
-        # z-mass window
-        hf_cuts.append("abs(mll - {}) > {}".format(Z_MASS.nominal, z_window))
-        lf_cuts.append("abs(mll - {}) < {}".format(Z_MASS.nominal, z_window))
-
-        # z peak diamond
-        lf_cuts.append("pass_z_mask{jec_identifier} == 0")
+        lf_cuts.extend(get_z_window_info(cfg, "lf", et_miss=et_miss, z_window=z_window))
+        hf_cuts.extend(get_z_window_info(cfg, "hf", et_miss=et_miss, z_window=z_window))
 
     return [
         ("hf", join_root_selection(hf_cuts)),
         ("lf", join_root_selection(lf_cuts)),
+    ]
+
+def get_contamination_region_info(cfg, channel, et_miss=30.0, z_window=10.0, b_tagger="deepcsv"):
+    cuts = []
+    cuts.append(get_btag_info(cfg, 1, "tight", b_tagger, ">"))
+    cuts.append(get_btag_info(cfg, 2, "tight", b_tagger, ">"))
+
+    if channel != "emu":
+        cuts.extend(get_z_window_info(cfg, "lf", et_miss=et_miss, z_window=z_window))
+
+    return [
+        ("cont", join_root_selection(cuts)),
     ]
 
 def get_flavor_info(idx):
@@ -277,6 +300,13 @@ cfg.add_variable(
     expression="dr_ll",
     binning=(25, 0., 5.,),
     x_title="dR(ll)",
+)
+cfg.add_variable(
+    name="mll",
+    expression="mll",
+    binning=(20, 80., 100.),
+    tags={"contamination"},
+    x_title="M(ll)",
 )
 cfg.add_variable(
     name="n_jets",
@@ -522,6 +552,40 @@ def add_categories(cfg, b_tagger):
                                 # Specialized b-tag discriminant binnings are defined on
                                 # the merged categories, but needed when writing leaf categories
                                 eta_cat.set_aux("binning_category", merged_cat)
+
+            # add categories to measure light flavour contamination uncertainty
+            for rg_name, rg_sel in get_contamination_region_info(cfg, ch, b_tagger=b_tagger):
+                if ch == ch_emu:
+                    continue
+
+                contamination_cat = ch.add_category(
+                    name="{}__{}__{}__{}__{}".format(ch.name, ps_name, rg_name, b_tagger, cfg.name),
+                    label="{}, {}, {}".format(ch.name, ps_name, rg_name),
+                    selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
+                    tags={b_tagger},
+                    aux={
+                        "channel": ch,
+                        "phase_space": ps_name,
+                        "region": rg_name,
+                        "config": cfg.name,
+                    },
+                )
+                # combine contamination regions over all channels
+                cont_merged_name = "{}__{}__{}".format(ps_name, rg_name, b_tagger)
+                if not cfg.has_category(cont_merged_name):
+                    cont_merged_cat = cfg.add_category(
+                        name=cont_merged_name,
+                        label="{}, {}".format(ps_name, rg_name),
+                        tags={"contamination", b_tagger},
+                        aux={
+                            "phase_space": ps_name,
+                            "region": rg_name,
+                        },
+                        context=cfg.name,
+                    )
+                else:
+                    cont_merged_cat = cfg.get_category(cont_merged_name)
+                cont_merged_cat.add_category(contamination_cat)
 
 def get_file_merging(cfg, key, dataset):
     dataset_name = dataset if isinstance(dataset, six.string_types) else dataset.name

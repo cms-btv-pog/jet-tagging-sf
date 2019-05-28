@@ -61,7 +61,7 @@ class PlotVariable(PlotTask):
     variable = CSVParameter(default=["jet{i_probe_jet}_{b_tag_var}_{region}_nominal"],
         description="Variable to plot, or multiple variables that are filled into one histogram. "
         "{} accesses auxiliary category information.")
-    mc_split = luigi.ChoiceParameter(choices=["process", "flavor"])
+    mc_split = luigi.ChoiceParameter(choices=["process", "flavor"], default="process")
     normalize = luigi.BoolParameter(description="Normalize MC histogram to data histogram")
     truncate = luigi.BoolParameter(description="Truncate the bin below zero, to be used "
         "for b-tag variable plots.")
@@ -69,6 +69,11 @@ class PlotVariable(PlotTask):
     compare_iteration = luigi.IntParameter(default=-1, description="Secondary iteration to compare to. Can"
         "not be the final iteration.")
     logarithmic = luigi.BoolParameter(description="Plot y axis with logarithmic scale.")
+    draw_stacked = luigi.BoolParameter(description="Plot MC processes separated by *mc_split*, "
+        "combined in a stack.")
+
+    mc_key = "mc"
+    data_key = "data"
 
     def requires(self):
         reqs = {"hists": OrderedDict()}
@@ -89,12 +94,21 @@ class PlotVariable(PlotTask):
 
         return reqs
 
+    def associate_process(self, process):
+        # associate process either to data or monte carlo
+        # returns *add_to_data*, *sign* (1. or -1.)
+        if process.is_data:
+            return True, 1.
+        else:
+            return False, 1.
+
     def run(self):
-        def add_hist(hist, new_hist):
+        def add_hist(hist, new_hist, sign=1.):
             if hist is None:
                 hist = new_hist.Clone()
+                hist.Scale(sign)
             else:
-                hist.Add(new_hist)
+                hist.Add(new_hist, sign)
             return hist
 
         import ROOT
@@ -159,14 +173,16 @@ class PlotVariable(PlotTask):
                                 hist = process_dir.Get(variable)
                                 if self.truncate:
                                     hist = self.rebin_hist(hist, region, binning_type="measurement")
-                                if process.is_data:
-                                    data_hist = add_hist(data_hist, hist)
+
+                                add_to_data, sign = self.associate_process(process)
+                                if add_to_data:
+                                    data_hist = add_hist(data_hist, hist, sign=sign)
                                 else:
                                     if self.normalize:  # apply "trigger" sfs as part of the normalization
                                         hist.Scale(scales[channel.name][region])
 
                                     key = process.name if self.mc_split == "process" else flavor
-                                    mc_hists[key] = add_hist(mc_hists[key], hist)
+                                    mc_hists[key] = add_hist(mc_hists[key], hist, sign=sign)
 
                     if self.normalize:  # normalize mc yield to data in this category
                         mc_yield = sum(hist.Integral() for hist in mc_hists.values())
@@ -177,14 +193,18 @@ class PlotVariable(PlotTask):
 
                     # get maximum value of hists/ stacks drawn to set axis ranges
                     mc_hist_sum = mc_hists.values()[0].Clone()
+
                     for mc_hist in mc_hists.values()[1:]:
                         mc_hist_sum.Add(mc_hist)
                     hist_maximum = max([mc_hist_sum.GetMaximum(), data_hist.GetMaximum()])
                     plot = plot_dict[category]
                     # data and mc histograms
                     plot.cd(target_idx, 1)
-                    plot.draw(mc_hists, stacked=True, stack_maximum=1.5*hist_maximum)
-                    plot.draw({"data": data_hist})
+                    if self.draw_stacked:
+                        plot.draw(mc_hists, stacked=True, stack_maximum=1.5*hist_maximum)
+                    else:
+                        plot.draw({self.mc_key: mc_hist_sum}, line_color=None)
+                    plot.draw({self.data_key: data_hist})
 
                     # ratio of data to mc below the main plot TODO: Error propagation
                     plot.cd(target_idx, 0)
@@ -210,6 +230,20 @@ class PlotVariable(PlotTask):
             with tarfile.open(tmp.path, "w:gz") as tar:
                 for plot_file in os.listdir(local_tmp.path):
                     tar.add(os.path.join(local_tmp.path, plot_file), arcname=plot_file)
+
+
+class PlotContaminationEstimation(PlotVariable):
+    data_key = "Data - nonZJets"
+    mc_key = "ZJets"
+
+    def associate_process(self, process):
+        if process.is_data:
+            return True, 1.
+
+        if process.has_parent_process("dy"):
+            return False, 1.
+        else: # subtract non-ZJets from data
+            return True, -1.
 
 
 class PlotScaleFactor(PlotTask):

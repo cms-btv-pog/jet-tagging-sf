@@ -10,13 +10,6 @@ import numpy as np
 import array
 import itertools
 
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-from matplotlib import rcParams
-rcParams.update({"figure.autolayout": True})
-plt.style.use("ggplot")
-
 from law.parameter import CSVParameter
 from law.target.local import LocalDirectoryTarget
 
@@ -28,23 +21,30 @@ from analysis.tasks.measurement import MeasureScaleFactors, MeasureCScaleFactors
 
 
 class PlotTask(AnalysisTask):
-    def rebin_hist(self, hist, region, binning_type="plotting", b_tagger=None):
+    def rebin_hist(self, hist, region, binning_type=None, b_tagger=None, truncate=False):
         if b_tagger is None:
             b_tagger = self.b_tagger
 
-        # truncate < 0 bin
-        binning = self.config_inst.get_aux("binning")
-        btagger_cfg = self.config_inst.get_aux("btaggers")[b_tagger]
+        if binning_type is None:
+            bin_edges = [hist.GetBinLowEdge(idx) for idx in range(1, hist.GetNbinsX() + 2)]
+        else:
+            binning = self.config_inst.get_aux("binning")
+            btagger_cfg = self.config_inst.get_aux("btaggers")[b_tagger]
 
-        bin_edges = array.array("d", binning[region][b_tagger][binning_type])
+            bin_edges = binning[region][b_tagger][binning_type]
 
-        bin_edges[0] = -0.1
+        if truncate:
+            # truncate < 0 bin
+            bin_edges[0] = -0.1
+
+        bin_edges = array.array("d", bin_edges)
         n_bins = len(bin_edges) - 1
         hist_rebinned = hist.Rebin(n_bins, "rebinned_{}".format(hist.GetName()), bin_edges)
 
-        # because of the truncation, the first bin content is filled into the underflow bin, fix this
-        hist_rebinned.SetBinContent(1, hist.GetBinContent(1))
-        hist_rebinned.SetBinError(1, hist.GetBinError(1))
+        if truncate:
+            # because of the truncation, the first bin content is filled into the underflow bin, fix this
+            hist_rebinned.SetBinContent(1, hist.GetBinContent(1))
+            hist_rebinned.SetBinError(1, hist.GetBinError(1))
         return hist_rebinned
 
     def output(self):
@@ -65,6 +65,8 @@ class PlotVariable(PlotTask):
     normalize = luigi.BoolParameter(description="Normalize MC histogram to data histogram")
     truncate = luigi.BoolParameter(description="Truncate the bin below zero, to be used "
         "for b-tag variable plots.")
+    rebin = luigi.BoolParameter(description="Rebin variable to 'measurement' binning, only "
+        "for b-tag variable plots. Not usable with category-optimized binning.")
 
     compare_iteration = luigi.IntParameter(default=-1, description="Secondary iteration to compare to. Can"
         "not be the final iteration.")
@@ -171,8 +173,9 @@ class PlotVariable(PlotTask):
                                 variable = variable.format(**aux)
 
                                 hist = process_dir.Get(variable)
-                                if self.truncate:
-                                    hist = self.rebin_hist(hist, region, binning_type="measurement")
+
+                                binning_type = "measurement" if self.rebin else None
+                                hist = self.rebin_hist(hist, region, binning_type=binning_type, truncate=self.truncate)
 
                                 add_to_data, sign = self.associate_process(process)
                                 if add_to_data:
@@ -363,7 +366,8 @@ class PlotScaleFactor(PlotTask):
                         if shift == "nominal":
                             hist_category_dir = hist_file.Get(category_name)
                             hist = hist_category_dir.Get(self.hist_name)
-                            hist = self.rebin_hist(hist, region, binning_type="measurement", b_tagger=b_tagger)
+                            # truncate first bin
+                            hist = self.rebin_hist(hist, region, b_tagger=b_tagger, truncate=True)
 
                             # make sure histograms are not cleaned up when the file is closed
                             nominal_fit_hists[plot_category] = fit_hist.Clone()

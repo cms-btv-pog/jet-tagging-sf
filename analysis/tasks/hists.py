@@ -54,6 +54,10 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
             if self.iteration > 0:
                 shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
                     ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
+                if self.final_it: # add c shifts
+                    shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
+                        ["c_stats1", "c_stats2"], ["up", "down"])}
+
         if len(self.used_shifts) == 0:
             self.shifts = shifts
         elif any([shift not in shifts for shift in self.used_shifts]):
@@ -144,16 +148,25 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
 
         return add_branch, add_value
 
-    def get_scale_factor_weighter(self, inp, shift):
-        with inp.load() as sfs:
-            sf_hists = {}
-            for category in sfs.GetListOfKeys():
-                category_dir = sfs.Get(category.GetName())
-                hist = category_dir.Get("sf")
-                # decouple from open file
-                hist.SetDirectory(0)
+    def get_scale_factor_weighter(self, inp, shift, nominal_sfs=None):
+        sf_hists = {}
+        input_files = [inp]
+        if nominal_sfs is not None: # c scale factor files have no histograms for hf/lf, so use nominal ones
+            input_files.append(nominal_sfs)
 
-                sf_hists[category.GetName()] = hist
+        for input_file in input_files:
+            with input_file.load() as sfs:
+                for category in sfs.GetListOfKeys():
+                    category_dir = sfs.Get(category.GetName())
+                    hist = category_dir.Get("sf")
+                    # decouple from open file
+                    hist.SetDirectory(0)
+
+                    if category.GetName() not in sf_hists:
+                        sf_hists[category.GetName()] = hist
+                    else:
+                        raise KeyError("Duplicate category {} in scale factor "
+                            "weighter.".format(category.GetName()))
 
         btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
         identifier = self.get_jec_identifier(shift)
@@ -184,7 +197,16 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                     break
 
                 # find category in which the scale factor of the jet was computed to get correct histogram
-                region = "hf" if abs(jet_flavor) in (4, 5) else "lf"
+                if abs(jet_flavor) == 5:
+                    region = "hf"
+                elif abs(jet_flavor) == 4:
+                    region = "c"
+                else:
+                    region = "lf"
+
+                if region == "c" and not shift.startswith("c_stat"): # nominal c scale factors are 1
+                    continue
+
                 category = get_category(self.config_inst, jet_pt, abs(jet_eta),
                     region, self.b_tagger, phase_space="measure")
 
@@ -196,7 +218,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                 if abs(jet_flavor) == 5:
                     scale_factor_hf *= scale_factor
                 elif abs(jet_flavor) == 4:
-                    scale_factor_c *= 1. # TODO: shifted scale factor if *final_it* is True
+                    scale_factor_c *= scale_factor
                 else:
                     scale_factor_lf *= scale_factor
 
@@ -296,8 +318,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                             if self.iteration > 0:
                                 # b-tagging scale factors
                                 for shift in self.shifts:
+                                    nominal_sfs = inp["sf"]["nominal"]["sf"] if shift.startswith("c_stat") \
+                                        else None
                                     weighters.append(self.get_scale_factor_weighter(
-                                        inp["sf"][shift]["sf"], shift))
+                                        inp["sf"][shift]["sf"], shift,
+                                        nominal_sfs=nominal_sfs))
 
                             input_file.cd()
                             with TreeExtender(tree) as te:

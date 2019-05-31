@@ -196,7 +196,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                 if abs(jet_flavor) == 5:
                     scale_factor_hf *= scale_factor
                 elif abs(jet_flavor) == 4:
-                    scale_factor_c *= 1.
+                    scale_factor_c *= 1. # TODO: shifted scale factor if *final_it* is True
                 else:
                     scale_factor_lf *= scale_factor
 
@@ -358,6 +358,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                                             if region == "hf":
                                                 weights.append("scale_factor_lf_{}".format(shift))
                                             elif region == "lf":
+                                                weights.append("scale_factor_hf_{}".format(shift))
+                                            elif region == "cont":
+                                                weights.append("scale_factor_lf_{}".format(shift))
                                                 weights.append("scale_factor_hf_{}".format(shift))
                                             else:
                                                 raise ValueError("Unexpected region {}".format(region))

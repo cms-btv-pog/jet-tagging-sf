@@ -411,7 +411,8 @@ class PlotScaleFactor(PlotTask):
                         y_min = 0.6 if self.norm_to_nominal else 0.
                         y_max = 1.4 if self.norm_to_nominal else 2.
                         fit_hist.GetYaxis().SetRangeUser(y_min, y_max)
-                        fit_hist.GetXaxis().SetTitle("DeepCSV")
+                        title = b_tagger.upper() if len(self.b_taggers) == 1 else "B-Tag Discriminant"
+                        fit_hist.GetXaxis().SetTitle(title)
                         fit_hist.GetXaxis().SetTitleSize(.045)
                         fit_hist.GetYaxis().SetTitle("SF")
                         fit_hist.GetYaxis().SetTitleSize(.045)

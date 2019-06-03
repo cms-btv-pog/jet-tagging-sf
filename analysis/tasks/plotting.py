@@ -10,12 +10,13 @@ import numpy as np
 import array
 import itertools
 
+import law
 from law.parameter import CSVParameter
 from law.target.local import LocalDirectoryTarget
 
 from analysis.config.jet_tagging_sf import jes_total_shifts
 from analysis.root import ROOTPlot
-from analysis.tasks.base import AnalysisTask
+from analysis.tasks.base import AnalysisTask, WrapperTask
 from analysis.tasks.hists import MergeHistograms
 from analysis.tasks.measurement import MeasureScaleFactors, MeasureCScaleFactors, FitScaleFactors
 
@@ -435,7 +436,7 @@ class PlotScaleFactor(PlotTask):
                             plot.draw({shift: fit_hist})
 
                         if shift == "nominal" and not self.norm_to_nominal:
-                            plot.draw({config_id + ", nominal": hist}, line_color=None)
+                            plot.draw({config_id + ", nominal": hist}, line_color=1)
 
             if self.multiple_shifts:
                 for plot_category in plots:
@@ -502,3 +503,25 @@ class PlotScaleFactor(PlotTask):
             with tarfile.open(tmp.path, "w:gz") as tar:
                 for plot_file in os.listdir(local_tmp.path):
                     tar.add(os.path.join(local_tmp.path, plot_file), arcname=plot_file)
+
+
+class PlotShiftedScaleFactorWrapper(AnalysisTask, law.WrapperTask):
+    shifts = law.CSVParameter(default=[], description="shifts to require")
+    skip_shifts = law.CSVParameter(default=[], description="shifts to skip, supports patterns")
+
+    wrapped_task = PlotScaleFactor
+
+    def __init__(self, *args, **kwargs):
+        super(PlotShiftedScaleFactorWrapper, self).__init__(*args, **kwargs)
+
+        if not self.shifts:
+            self.shifts = FitScaleFactors.shifts
+        if self.skip_shifts:
+            filter_fn = lambda d: not law.util.multi_match(d, self.skip_shifts)
+            self.shifts = filter(filter_fn, self.shifts)
+
+    def requires(self):
+        def req(shift):
+            return self.wrapped_task.req(self, shifts=[shift])
+
+        return OrderedDict([(shift, req(shift)) for shift in self.shifts])

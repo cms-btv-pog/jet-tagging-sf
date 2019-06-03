@@ -434,7 +434,7 @@ class PlotScaleFactor(PlotTask):
                                     (pt_range[0], eta_range[0], eta_range[1])
                             plot.draw_text(text, .7, .2, size=0.04)
                         elif not self.multiple_shifts:
-                            plot.draw({shift: fit_hist})
+                            plot.draw({shift: fit_hist}, line_color=None)
 
                         if shift == "nominal" and not self.norm_to_nominal:
                             plot.draw({config_id + ", nominal": hist}, line_color=1)
@@ -516,7 +516,9 @@ class PlotShiftedScaleFactorWrapper(AnalysisTask, law.WrapperTask):
         super(PlotShiftedScaleFactorWrapper, self).__init__(*args, **kwargs)
 
         if not self.shifts:
-            self.shifts = FitScaleFactors.shifts
+            # strip up/down direction from shifts, remove nominal variation
+            shifts = MeasureScaleFactors.shifts
+            self.shifts = list(set([shift.rsplit("_", 1)[0] for shift in shifts if not shift == "nominal"]))
         if self.skip_shifts:
             filter_fn = lambda d: not law.util.multi_match(d, self.skip_shifts)
             self.shifts = filter(filter_fn, self.shifts)

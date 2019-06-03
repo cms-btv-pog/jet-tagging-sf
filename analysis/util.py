@@ -4,12 +4,13 @@
 __all__ = [
     "calc_checksum", "wget", "call_thread", "determine_xrd_redirector", "parse_leaf_list",
     "get_tree_names", "get_trees", "copy_trees", "TreeExtender", "TreeInFileExtender",
-    "walk_categories",
+    "walk_categories", "format_shifts"
 ]
 
 
 import os
 import array
+import itertools
 import collections
 import subprocess
 import threading
@@ -438,6 +439,11 @@ def walk_categories(category):
 
         yield category, children
         categories.extend(children)
+
+
+def format_shifts(shifts, prefix=""):
+    return {"{}{}_{}".format(prefix, shift, direction) for shift, direction in itertools.product(
+        shifts, ["up", "down"])}
 
 
 class TreeInFileExtender(TreeExtender):

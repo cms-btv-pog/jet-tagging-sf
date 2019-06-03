@@ -13,6 +13,7 @@ from analysis.config.jet_tagging_sf import jes_sources, jes_total_shifts
 from analysis.tasks.base import AnalysisTask, ShiftTask, WrapperTask
 from analysis.tasks.hists import MergeHistograms, GetScaleFactorWeights, MergeScaleFactorWeights
 from analysis.tasks.util import OptimizeBinning
+from analysis.util import format_shifts
 
 
 class MeasureScaleFactors(ShiftTask):
@@ -22,9 +23,8 @@ class MeasureScaleFactors(ShiftTask):
     optimize_binning = MergeHistograms.optimize_binning
     category_tags = MergeHistograms.category_tags
 
-    shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                jes_sources, ["up", "down"])} | {"{}_{}".format(shift, direction) for shift, direction in
-                itertools.product(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
+    shifts = {"nominal"} | format_shifts(jes_sources, prefix="jes") | \
+        format_shifts(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"])
 
     def requires(self):
         reqs = {
@@ -273,12 +273,10 @@ class MeasureScaleFactors(ShiftTask):
 
 
 class MeasureCScaleFactors(MeasureScaleFactors):
-    shifts = {"{}_{}".format(shift, direction) for shift, direction in
-        itertools.product(["c_stats1", "c_stats2"], ["up", "down"])}
+    shifts = format_shifts(["c_stats1", "c_stats2"])
 
     def requires(self):
-        skip_shifts = {"{}_{}".format(shift, direction) for shift, direction in
-            itertools.product(["hf", "lf_stats1", "lf_stats2"], ["up", "down"])}
+        skip_shifts = format_shifts(["hf", "lf_stats1", "lf_stats2"])
         skip_shifts = skip_shifts | jes_total_shifts
 
         reqs = {}

@@ -18,7 +18,7 @@ from analysis.config.jet_tagging_sf import get_category
 from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow, HTCondorWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
-from analysis.util import TreeExtender, walk_categories
+from analysis.util import TreeExtender, walk_categories, format_shifts
 
 
 class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow):
@@ -49,14 +49,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
             shifts = {"nominal"}
         else:
             jes_sources = self.config_inst.get_aux("jes_sources")
-            shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                jes_sources, ["up", "down"])}
+            shifts = {"nominal"} | format_shifts(jes_sources, prefix="jes")
             if self.iteration > 0:
-                shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                    ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
+                shifts = shifts | format_shifts(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"])
                 if self.final_it: # add c shifts
-                    shifts = shifts | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                        ["c_stats1", "c_stats2"], ["up", "down"])}
+                    shifts = shifts | format_shifts(["c_stats1", "c_stats2"])
 
         if len(self.used_shifts) == 0:
             self.shifts = shifts
@@ -570,13 +567,11 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
             raise Exception("GetScaleFactorWeights task should only run for MC.")
 
         if self.normalize_cerrs:
-            self.shifts = {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                ["c_stats1", "c_stats2"], ["up", "down"])}
+            self.shifts = format_shifts(["c_stats1", "c_stats2"])
         else:
             jes_sources = self.config_inst.get_aux("jes_sources")
-            self.shifts = {"nominal"} | {"jes{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                jes_sources, ["up", "down"])} | {"{}_{}".format(shift, direction) for shift, direction in itertools.product(
-                ["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"], ["up", "down"])}
+            self.shifts = {"nominal"} | format_shifts(jes_sources, prefix="jes")  | \
+                format_shifts(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"])
 
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors

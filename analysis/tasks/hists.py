@@ -587,8 +587,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
 
             reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration,
-                shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
-                for shift in self.shifts}
+                shift=shift, fix_normalization=False, version=self.get_version(FitScaleFactors),
+                _prefer_cli=["version"]) for shift in self.shifts}
 
         return reqs
 
@@ -603,8 +603,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         }
         reqs["pu"] = CalculatePileupWeights.req(self)
         reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration,
-            shift=shift, version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
-            for shift in self.shifts}
+            shift=shift, fix_normalization=False, version=self.get_version(FitScaleFactors),
+            _prefer_cli=["version"]) for shift in self.shifts}
         return reqs
 
     def store_parts(self):

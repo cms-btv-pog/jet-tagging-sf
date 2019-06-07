@@ -686,7 +686,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
             if self.dataset_inst.is_data else self.config_inst.channels.values()
 
-        for category in self.config_inst.categories():
+        for category in self.config_inst.categories:
             # only consider top-level categories with at least one given tag if specified
             if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
                 continue

@@ -316,7 +316,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
             category_binnings = inp["binning"].load()
 
         binning = self.config_inst.get_aux("binning")
-        btag_edges = array.array("d", binning["hf"][self.b_tagger]["measurement"])
+        btag_edges = binning["hf"][self.b_tagger]["measurement"]
         n_bins = len(btag_edges) - 1
 
         # create histogram for c flavour nominal, and up and down shifts
@@ -326,6 +326,9 @@ class MeasureCScaleFactors(MeasureScaleFactors):
                 binning_category = category.get_aux("binning_category", category)
                 cat_btag_edges = category_binnings.get(binning_category.name,
                     btag_edges)
+            else:
+                cat_btag_edges = btag_edges
+            cat_btag_edges = array.array("d", cat_btag_edges)
 
             nominal_hist = ROOT.TH1F("sf {}".format(category.name), "Scale factors c",
                 len(cat_btag_edges) - 1, cat_btag_edges

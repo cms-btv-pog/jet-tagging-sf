@@ -17,7 +17,7 @@ from law.target.local import LocalDirectoryTarget
 from analysis.config.jet_tagging_sf import jes_total_shifts
 from analysis.root import ROOTPlot
 from analysis.tasks.base import AnalysisTask, WrapperTask
-from analysis.tasks.hists import MergeHistograms
+from analysis.tasks.hists import MergeHistograms, MergeScaleFactorWeights
 from analysis.tasks.measurement import MeasureScaleFactors, MeasureCScaleFactors, FitScaleFactors
 
 
@@ -309,6 +309,10 @@ class PlotScaleFactor(PlotTask):
                     "hist": measure_task.req(self, shift=shift, b_tagger=b_tagger, iteration=iteration,
                         version=self.get_version(measure_task), _prefer_cli=["version"])
                     }
+            if self.fix_normalization and not self.is_c_flavour:
+                reqs[config]["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=False,
+                    b_tagger=b_tagger, iteration=iteration, version=self.get_version(MergeScaleFactorWeights),
+                    _prefer_cli=["version"])
         return reqs
 
     def output(self):
@@ -335,6 +339,10 @@ class PlotScaleFactor(PlotTask):
         for config, config_input in inp.items():
             b_tagger, iteration = config
             config_id = "{}, iteration {}".format(b_tagger, iteration)
+
+            # get scaling factors for normalization
+            if self.fix_normalization:
+                norm_factors = config_input.pop("norm").load()["nominal"]
 
             nominal_hists = {}
             nominal_fit_hists = {}
@@ -369,6 +377,10 @@ class PlotScaleFactor(PlotTask):
                             hist = hist_category_dir.Get(self.hist_name)
                             # truncate first bin
                             hist = self.rebin_hist(hist, region, b_tagger=b_tagger, truncate=True)
+
+                            # normalize histogram if required
+                            if self.fix_normalization:
+                                hist.Scale(norm_factors[category_name])
 
                             # make sure histograms are not cleaned up when the file is closed
                             nominal_fit_hists[plot_category] = fit_hist.Clone()

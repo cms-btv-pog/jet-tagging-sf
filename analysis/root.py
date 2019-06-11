@@ -43,7 +43,7 @@ class ROOTPad(object):
 
 
     def draw_base_legend(self):
-        self.legend = ROOT.TLegend(0.5, 0.7, 0.88, 0.88)
+        self.legend = ROOT.TLegend(0.2, 0.12, 0.68, 0.38)
         self.legend.SetNColumns(2)
 
     def draw_text(self, text, xpos, ypos, size=0.04):

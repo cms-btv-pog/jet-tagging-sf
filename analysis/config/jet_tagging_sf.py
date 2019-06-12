@@ -83,9 +83,11 @@ cfg.set_aux("jes_levels", {
 cfg.set_aux("btaggers", {
     "deepcsv": {
         "variable": "deepcsv_bcomb",
+        "label": "DeepCSV",
     },
     "deepjet": {
         "variable": "deepjet_bcomb",
+        "label": "DeepJet",
     },
 })
 
@@ -382,7 +384,7 @@ def add_btag_variables(cfg):
                 name="jet{}_deepcsv_bcomb{}".format(jet_idx, postfix),
                 expression="jet{0}_deepcsv_b{{jec_identifier}} + jet{0}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} deepcsv".format(jet_idx),
+                x_title="Jet_{} DeepCSV".format(jet_idx),
                 tags=tags,
                 aux={"b_tagger": "deepcsv"}, # to filter required b-tagger in histogram writer
                 context=cfg.name,
@@ -396,7 +398,7 @@ def add_btag_variables(cfg):
                 expression="jet{0}_deepjet_b{{jec_identifier}} + jet{0}_deepjet_bb{{jec_identifier}} + "\
                     "jet{0}_deepjet_lepb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} deepjet".format(jet_idx),
+                x_title="Jet_{} DeepJet".format(jet_idx),
                 tags=tags,
                 aux={"b_tagger": "deepjet"}, # to filter required b-tagger in histogram writer
                 context=cfg.name,

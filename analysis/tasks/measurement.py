@@ -634,6 +634,7 @@ class CreateScaleFactorResults(AnalysisTask):
 
     iteration = MeasureScaleFactors.iteration
     b_tagger = MeasureScaleFactors.b_tagger
+    optimize_binning = MeasureScaleFactors.optimize_binning
 
     def requires(self):
         reqs = {shift: FitScaleFactors.req(self, shift=shift, fix_normalization=True,
@@ -653,7 +654,7 @@ class CreateScaleFactorResults(AnalysisTask):
 
     def run(self):
         def get_hist_name(category, shift):
-            _, region, pt_range, eta_range = category.split("__")
+            _, region, pt_range, eta_range, _ = category.split("__")
             name = "c_csv" if region == "c" else "csv"
             name += "_ratio"
 

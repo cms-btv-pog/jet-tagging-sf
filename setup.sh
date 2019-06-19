@@ -131,17 +131,23 @@ action() {
         LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip --no-dependencies git+https://github.com/riga/law.git
 
         # gfal2
-        cd "$JTSF_SOFTWARE"
-        wget https://www.dropbox.com/s/3nylghi0xtqaiyy/gfal2.tgz
-        tar -xzf gfal2.tgz
-        rm gfal2.tgz
-        cd "$origin"
+        if [ $JTSF_DIST_VERSION -eq 6 ]; then
+            cd "$JTSF_SOFTWARE"
+            wget https://www.dropbox.com/s/3nylghi0xtqaiyy/gfal2.tgz
+            tar -xzf gfal2.tgz
+            rm gfal2.tgz
+            cd "$origin"
+        fi
     }
     export -f jtsf_install_software
     jtsf_install_software silent
 
     # setup gfal2 separately
-    source "$JTSF_SOFTWARE/gfal2/setup.sh" || return "$?"
+    if [ $JTSF_DIST_VERSION -eq 6 ]; then
+        source "$JTSF_SOFTWARE/gfal2/setup.sh" || return "$?"
+    else
+        export LD_LIBRARY_PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib:$LD_LIBRARY_PATH"
+    fi
 
     # add _this_ repo
     _addpy "$JTSF_BASE"

@@ -56,6 +56,10 @@ class AnalysisTask(law.Task):
             parts += (self.version,)
         return parts
 
+    @classmethod
+    def modify_param_values(cls, params):
+        return params
+
     def local_path(self, *path):
         parts = [str(p) for p in self.store_parts() + path]
         return os.path.join(os.environ["JTSF_STORE"], *parts)
@@ -369,7 +373,7 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
 
     force_upload = luigi.BoolParameter(default=False, description="force uploading")
 
-    # settings for BunddleCMSSW
+    # settings for BundleCMSSW
     cmssw_path = os.getenv("CMSSW_BASE")
 
     # settings for TransferLocalFile
@@ -383,6 +387,9 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
 
         self.has_run = False
 
+    def get_cmssw_path(self):
+        return self.cmssw_path
+
     def complete(self):
         if self.force_upload and not self.has_run:
             return False
@@ -390,7 +397,7 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
             return super(UploadCMSSW, self).complete()
 
     def single_output(self):
-        path = "{}.tgz".format(os.path.basename(self.cmssw_path))
+        path = "{}.tgz".format(os.path.basename(self.get_cmssw_path()))
         return self.wlcg_target(path, fs="wlcg_fs_software")
 
     def output(self):
@@ -436,8 +443,11 @@ class UploadRepo(AnalysisTask, law.BundleGitRepository, law.TransferLocalFile):
     version = None
     task_namespace = None
 
+    def get_repo_path(self):
+        return self.repo_path
+
     def single_output(self):
-        path = "{}.{}.tgz".format(os.path.basename(self.repo_path), self.checksum)
+        path = "{}.{}.tgz".format(os.path.basename(self.get_repo_path()), self.checksum)
         return self.wlcg_target(path, fs="wlcg_fs_software")
 
     def output(self):

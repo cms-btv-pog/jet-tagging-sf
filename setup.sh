@@ -146,6 +146,7 @@ action() {
     if [ $JTSF_DIST_VERSION -eq 6 ]; then
         source "$JTSF_SOFTWARE/gfal2/setup.sh" || return "$?"
     else
+        export GLOBUS_THREAD_MODEL="none"
         export LD_LIBRARY_PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib:$LD_LIBRARY_PATH"
     fi
 

@@ -261,6 +261,8 @@ class PlotScaleFactor(PlotTask):
 
     b_taggers = CSVParameter(default=["deepcsv"])
     iterations = CSVParameter(default=[0])
+    versions = CSVParameter(default=[None], description="Scale factor versions to compare."
+        "The same version is used for all required tasks.")
 
     def __init__(self, *args, **kwargs):
         super(PlotScaleFactor, self).__init__(*args, **kwargs)
@@ -298,20 +300,23 @@ class PlotScaleFactor(PlotTask):
     def requires(self):
         reqs = OrderedDict()
         measure_task = MeasureCScaleFactors if self.is_c_flavour else MeasureScaleFactors
-        for config in itertools.product(self.b_taggers, self.iterations):
-            b_tagger, iteration = config
+        for config in itertools.product(self.b_taggers, self.iterations, self.versions):
+            b_tagger, iteration, version = config
 
             reqs[config] = OrderedDict()
             for shift in self.shifts:
                 reqs[config][shift] = {
                     "fit": FitScaleFactors.req(self, shift=shift, b_tagger=b_tagger, iteration=iteration,
-                        version=self.get_version(FitScaleFactors), _prefer_cli=["version"]),
+                        version=version if version is not None else self.get_version(FitScaleFactors),
+                        _prefer_cli=["version"]),
                     "hist": measure_task.req(self, shift=shift, b_tagger=b_tagger, iteration=iteration,
-                        version=self.get_version(measure_task), _prefer_cli=["version"])
+                        version=version if version is not None else self.get_version(measure_task),
+                        _prefer_cli=["version"])
                     }
             if self.fix_normalization and not self.is_c_flavour:
                 reqs[config]["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=False,
-                    b_tagger=b_tagger, iteration=iteration, version=self.get_version(MergeScaleFactorWeights),
+                    b_tagger=b_tagger, iteration=iteration,
+                    version=version if version is not None else self.get_version(MergeScaleFactorWeights),
                     _prefer_cli=["version"])
         return reqs
 

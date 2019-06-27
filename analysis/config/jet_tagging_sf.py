@@ -65,14 +65,13 @@ jes_sources = [
 ]
 jes_total_shifts = {"jesTotal_up", "jesTotal_down"}
 
+cfg.set_aux("jes_sources", jes_sources[:])
 # jes sources are required for ShiftTasks already on class level to define list of shift
 # however, no information about the config instance is available at that point
 if os.environ.get("JTSF_CAMPAIGN", None) is None:
     raise Exception("JTSF campaign has to be defined.")
 if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19":
     jes_sources.insert(0, "AbsoluteSample")
-
-cfg.set_aux("jes_sources", jes_sources)
 
 # add auxiliary info to base config
 cfg.set_aux("jes_levels", {

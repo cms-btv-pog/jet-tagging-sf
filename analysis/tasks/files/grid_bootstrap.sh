@@ -5,13 +5,13 @@ load_replica() {
     local bundle_re="$2"
     local arc_path="$3"
 
-    local arc="$( srmls "$remote_base" | grep -Po "$bundle_re" | shuf -n 1 )"
+    local arc="$( gfal-ls "$remote_base" | grep -Po "$bundle_re" | shuf -n 1 )"
     if [ -z "$arc" ]; then
         >&2 echo "could not determine archive to load from $remote_base"
         return "1"
     fi
 
-    srmcp "$remote_base/$arc" "$arc_path"
+    gfal-copy "$remote_base/$arc" "$arc_path"
     if [ "$?" != "0" ]; then
         >&2 echo "could not load archive $arc from $remote_base"
         return "1"
@@ -20,7 +20,7 @@ load_replica() {
 
 action() {
     # figure out distribution version
-    export JTSF_DIST_VERSION="$( lsb_release -rs | head -c 1 )"
+    export JTSF_DIST_VERSION="slc$( lsb_release -rs | head -c 1 )"
 
     #
     # set env variables
@@ -45,7 +45,7 @@ action() {
 
     mkdir -p "$JTSF_DATA"
 
-    if [ $JTSF_DIST_VERSION -eq 7 ]; then # need to fix gfal before anything is downloaded
+    if [ $JTSF_DIST_VERSION == "slc7" ]; then # need to fix gfal before anything is downloaded
         export PYTHONPATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64/python2.7/site-packages:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib/python2.7/site-packages:$PYTHONPATH"
         export PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/bin/:$PATH"
         export GLOBUS_THREAD_MODEL="none"

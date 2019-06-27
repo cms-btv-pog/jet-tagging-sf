@@ -16,7 +16,7 @@ action() {
     export JTSF_ON_VISPA
 
     # figure out distribution version
-    export JTSF_DIST_VERSION="$( lsb_release -rs | head -c 1 )"
+    export JTSF_DIST_VERSION="slc$( lsb_release -rs | head -c 1 )"
 
     # default data directory
     if [ -z "$JTSF_DATA" ]; then
@@ -44,7 +44,7 @@ action() {
     [ "$JTSF_ON_VISPA" = "1" ] && export JTSF_CMSSW_SETUP="NONE"
 
     # other defaults
-    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/$JTSF_SANDBOX/software/$( whoami )"
+    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/$JTSF_DIST_VERSION/software/$( whoami )"
     [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
     [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
     [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="Moriond19"
@@ -131,7 +131,7 @@ action() {
         LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip --no-dependencies git+https://github.com/riga/law.git
 
         # gfal2
-        if [ $JTSF_DIST_VERSION -eq 6 ]; then
+        if [ $JTSF_DIST_VERSION == "slc6" ]; then
             cd "$JTSF_SOFTWARE"
             wget https://www.dropbox.com/s/3nylghi0xtqaiyy/gfal2.tgz
             tar -xzf gfal2.tgz
@@ -143,7 +143,7 @@ action() {
     jtsf_install_software silent
 
     # setup gfal2 separately
-    if [ $JTSF_DIST_VERSION -eq 6 ]; then
+    if [ $JTSF_DIST_VERSION == "slc6" ]; then
         source "$JTSF_SOFTWARE/gfal2/setup.sh" || return "$?"
     else
         export GLOBUS_THREAD_MODEL="none"

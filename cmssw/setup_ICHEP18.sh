@@ -5,7 +5,7 @@ action() {
     local scram_cores="$SCRAM_CORES"
     [ -z "$scram_cores" ] && scram_cores="1"
 
-    export SCRAM_ARCH="slc${JTSF_DIST_VERSION}_amd64_gcc630"
+    export SCRAM_ARCH="${JTSF_DIST_VERSION}_amd64_gcc630"
     export CMSSW_VERSION="CMSSW_9_4_9"
     export CMSSW_BASE="$JTSF_DATA/cmssw/$SCRAM_ARCH/$CMSSW_VERSION"
 

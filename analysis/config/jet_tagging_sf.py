@@ -56,6 +56,7 @@ ch_mumu = cfg.add_channel("mumu", 3)
 #ch_mu = cfg.add_channel("mu", 5)
 
 # define configurations that are not part of a config
+
 jes_sources = [
     "AbsoluteStat", "AbsoluteScale", "AbsoluteMPFBias", "Fragmentation", "SinglePionECAL",
     "SinglePionHCAL", "FlavorQCD", "TimePtEta", "RelativeJEREC1", "RelativeJEREC2", "RelativeJERHF",
@@ -74,6 +75,10 @@ if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19":
     jes_sources.insert(0, "AbsoluteSample")
 
 # add auxiliary info to base config
+cfg.set_aux("sandboxes", {
+    "slc6": "singularity::/cvmfs/singularity.opensciencegrid.org/bbockelm/cms:rhel6",
+})
+
 cfg.set_aux("jes_levels", {
     "data": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
     "mc": ["L1FastJet", "L2Relative", "L3Absolute"],

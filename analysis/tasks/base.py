@@ -11,10 +11,13 @@ import shutil
 import random
 import itertools
 import collections
+import subprocess
 
 import law
 import luigi
 import six
+
+from law.util import make_list, tmp_file, interruptable_popen
 
 from analysis.config.jet_tagging_sf import analysis
 from analysis.util import calc_checksum
@@ -41,7 +44,7 @@ class AnalysisTask(law.Task):
         super(AnalysisTask, self).__init__(*args, **kwargs)
 
         if self.config is None:
-            self.config = os.environ["JTSF_CAMPAIGN"] # TODO: Change to self.env once SandboxTask is implemented
+            self.config = os.environ["JTSF_CAMPAIGN"]
 
         self.analysis_inst = analysis
         self.config_inst = self.analysis_inst.get_config(self.config)
@@ -231,6 +234,9 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
         "KIT": ["arc-{}-kit.gridka.de".format(i) for i in range(1, 6 + 1)],
     }
 
+    sl_distribution_map = collections.defaultdict(lambda: "slc7", {"RWTH": "slc6"})
+    req_sandbox = None
+
     grid_ce = law.CSVParameter(default=["RWTH"], significant=False, description="target computing "
         "element(s)")
 
@@ -250,15 +256,32 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
         return params
 
     def _setup_workflow_requires(self, reqs):
-        reqs["cmssw"] = UploadCMSSW.req(self, replicas=10, _prefer_cli=["replicas"])
-        reqs["software"] = UploadSoftware.req(self, replicas=10, _prefer_cli=["replicas"])
+        # figure out if the CE runs the same operating system as we are
+        # if not, upload the software and cmssw from an appropriate sandbox
+        self.sl_dist_version = os.getenv("JTSF_DIST_VERSION")
+
+        if not len(set([self.sl_distribution_map[ce] for ce in self.grid_ce])) == 1:
+            raise Exception("Cannot submit to multiple CEs running different distributions.")
+
+        if self.sl_distribution_map[self.grid_ce[0]] != self.sl_dist_version:
+            self.req_sandbox = self.sl_distribution_map[self.grid_ce[0]]
+
+        reqs["cmssw"] = UploadCMSSW.req(self, replicas=10, _prefer_cli=["replicas"],
+            sandbox=self.config_inst.get_aux("sandboxes")[self.req_sandbox])
+        reqs["software"] = UploadSoftware.req(self, replicas=10, _prefer_cli=["replicas"],
+            sandbox=self.config_inst.get_aux("sandboxes")[self.req_sandbox])
         reqs["repo"] = UploadRepo.req(self, replicas=10, _prefer_cli=["replicas"])
 
     def _setup_render_variables(self, config, reqs):
         config.render_variables["jtsf_grid_user"] = os.getenv("JTSF_GRID_USER")
         config.render_variables["jtsf_cmssw_setup"] = os.getenv("JTSF_CMSSW_SETUP")
-        config.render_variables["scram_arch"] = os.getenv("SCRAM_ARCH")
         config.render_variables["cmssw_base_url"] = reqs["cmssw"].output().dir.url()
+
+        scram_arch = os.getenv("SCRAM_ARCH")
+        if self.req_sandbox is not None:
+            scram_arch = scram_arch.replace(self.sl_dist_version, self.req_sandbox)
+        config.render_variables["scram_arch"] = scram_arch
+
         config.render_variables["cmssw_version"] = os.getenv("CMSSW_VERSION")
         config.render_variables["software_base_url"] = reqs["software"].output().dir.url()
         config.render_variables["repo_checksum"] = reqs["repo"].checksum
@@ -369,7 +392,76 @@ class InstallCMSSWCode(AnalysisTask):
         output.touch(self.checksum)
 
 
-class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
+class SingularitySandbox(law.sandbox.base.Sandbox):
+    sandbox_type = "singularity"
+    default_singularity_args = []
+
+    # env cache per image
+    _envs = {}
+
+    binds_allowed = False
+
+    @property
+    def image(self):
+        return self.name
+
+    @property
+    def env(self):
+        # strategy: create a tempfile, forward it to a container, let python dump its full env,
+        # close the container and load the env file
+        if self.image not in self._envs:
+            with tmp_file() as tmp:
+                tmp_path = os.path.realpath(tmp[1])
+                env_path = os.path.join("/tmp", str(hash(tmp_path))[-8:])
+
+                bind_cmd = "" if not self.binds_allowed else "-B {}:{}".format(tmp_path, env_path)
+                target_path = tmp_path if self.binds_allowed else env_path
+
+                cmd = "env -i singularity exec {1} {0} bash -l -c '{2}; python -c \"" \
+                    "import os,pickle;pickle.dump(os.environ,open(\\\"{3}\\\",\\\"w\\\"))\"'"
+                cmd = cmd.format(self.image, bind_cmd, self.pre_cmd(), env_path)
+
+                returncode, out, _ = interruptable_popen(cmd, shell=True, executable="/bin/bash",
+                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
+                if returncode != 0:
+                    raise Exception("singularity sandbox env loading failed: " + str(out))
+
+                with open(target_path, "r") as f:
+                    env = six.moves.cPickle.load(f)
+
+            # cache
+            self._envs[self.image] = env
+
+        return self._envs[self.image]
+
+    def pre_cmd(self):
+        #"; ".join(pre_cmds)
+        pre_cmds = []
+        pre_cmds.append('export JTSF_CMSSW_SETUP="{}"'.format(os.environ["JTSF_CMSSW_SETUP"]))
+        pre_cmds.append("source {}".format(os.path.join(os.environ["JTSF_BASE"], "setup.sh")))
+        return "; ".join(pre_cmds)
+
+    def cmd(self, proxy_cmd):
+        cfg = Config.instance()
+
+        # get args for the singularity command as configured in the task
+        args = make_list(getattr(self.task, "singularity_args",
+            self.default_singularity_args))
+
+        # handle scheduling within the container
+        ls_flag = "--local-scheduler"
+        if self.force_local_scheduler() and ls_flag not in proxy_cmd:
+            proxy_cmd.append(ls_flag)
+
+        # build the final command
+        cmd = "env -i singularity exec {args} {image} bash -l -c '{pre_cmd}; {proxy_cmd}'".format(
+            args=" ".join(args), image=self.image, pre_cmd=self.pre_cmd(),
+            proxy_cmd=" ".join(proxy_cmd))
+
+        return cmd
+
+
+class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, law.SandboxTask):
 
     force_upload = luigi.BoolParameter(default=False, description="force uploading")
 
@@ -411,11 +503,15 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile):
         self.has_run = True
 
 
-class UploadSoftware(AnalysisTask, law.TransferLocalFile):
+class UploadSoftware(AnalysisTask, law.TransferLocalFile, law.SandboxTask):
 
     version = None
 
-    source_path = os.environ["JTSF_SOFTWARE"] + ".tgz"
+    source_path = os.environ["JTSF_SOFTWARE"] + ".tgz" # TODO: from self.env
+
+    def store_parts(self):
+        self.sl_dist_version = self.env["JTSF_DIST_VERSION"]
+        return super(UploadSoftware, self).store_parts() + (self.sl_dist_version,)
 
     def single_output(self):
         return self.wlcg_target("software.tgz", fs="wlcg_fs_software")

@@ -23,10 +23,11 @@ from law.target.local import LocalDirectoryTarget
 dirname = os.path.abspath(os.path.dirname(__file__))
 
 class PlotFromCSV(AnalysisTask):
-    shift = luigi.Parameter()
+    shift = luigi.Parameter(default="ALL")
     flavor = luigi.ChoiceParameter(choices=["lf", "c", "hf"])
-    csv_file = os.path.join(dirname, "DeepCSV_94XSF_V3_B_F.csv")
-    compare_file = os.path.join(dirname, "DeepCSV_94XSF_V4_B_F.csv")
+    csv_file = os.path.join(dirname, "SFs_deepcsv_prod2.csv")
+    compare_file = os.path.join(dirname, "SFs_deepcsv_prod1.csv")
+    norm_to_nominal = luigi.BoolParameter()
 
     def output(self):
         return self.local_target("plots.tgz")
@@ -41,9 +42,24 @@ class PlotFromCSV(AnalysisTask):
         local_tmp = LocalDirectoryTarget(is_tmp=True)
         local_tmp.touch()
 
+        jes_sources = self.config_inst.get_aux("jes_sources")
+        shifts = []
+        if self.shift == "ALL":
+            if self.flavor == "c":
+                shifts.extend(["cferr1", "cferr2"])
+            else:
+                shifts.extend(["jes{}".format(jes_source) for jes_source in jes_sources if jes_source != "Total"])
+                shifts.extend(["{}{}".format(region, type) for region, type in
+                    itertools.product(["lf", "hf"], ["", "stats1", "stats2"])])
+        elif self.shift == "NONE":
+            shifts = []
+        else:
+            shifts = [self.shift]
+
         v_sys = getattr(ROOT, 'vector<string>')()
-        v_sys.push_back("up_" + self.shift)
-        v_sys.push_back("down_" + self.shift)
+        for shift in shifts:
+            v_sys.push_back("up_" + shift)
+            v_sys.push_back("down_" + shift)
 
         readers = {}
         for input_file, id in zip([self.csv_file, self.compare_file], ["first", "compare"]):
@@ -77,20 +93,55 @@ class PlotFromCSV(AnalysisTask):
                 pt_val = np.mean(pt_range)
                 eta_val = np.mean(eta_range)
 
-                for sys_type in ["central", "up_" + self.shift, "down_" + self.shift]:
-                    for id, reader in readers.items():
-                        x_values = np.linspace(0., 1., 10000)
-                        y_values = []
-                        for csv_value in x_values:
-                            sf = reader.eval_auto_bounds(
-                                sys_type,      # systematic (here also 'up'/'down' possible)
-                                flavor_ids[self.flavor],              # jet flavor
-                                eta_val,            # absolute value of eta
-                                pt_val,             # pt
-                                csv_value
-                            )
-                            y_values.append(sf)
-                        ax.plot(x_values, y_values, label="{}, {}".format(id, sys_type))
+                def get_values(reader, sys_type):
+                    x_values = np.linspace(0., 1., 10000)
+                    y_values = []
+                    for csv_value in x_values:
+                        sf = reader.eval_auto_bounds(
+                            sys_type,      # systematic (here also 'up'/'down' possible)
+                            flavor_ids[self.flavor],              # jet flavor
+                            eta_val,            # absolute value of eta
+                            pt_val,             # pt
+                            csv_value
+                        )
+                        y_values.append(sf)
+                    return np.array(x_values), np.array(y_values)
+
+                for id, reader in readers.items():
+                    x_values, nominal_values = get_values(reader, "central")
+                    if not self.norm_to_nominal:
+                        ax.plot(x_values, nominal_values, label="{}, {}".format(id, "nominal"))
+                    if self.shift == "NONE":
+                        continue
+
+                    total_errors_up = np.zeros(nominal_values.shape)
+                    total_errors_down = np.zeros(nominal_values.shape)
+                    for shift in shifts:
+                        _, up_values = get_values(reader, "up_" + shift)
+                        _, down_values = get_values(reader, "down_" + shift)
+
+                        if len(shifts) > 1: # build envelope
+                            diff_up = up_values - nominal_values
+                            diff_down = down_values - nominal_values
+
+                            # shift with effect in up/down direction
+                            errors_up = np.max([diff_up, diff_down, np.zeros(nominal_values.shape)], axis=0)
+                            errors_down = np.min([diff_up, diff_down, np.zeros(nominal_values.shape)], axis=0)
+
+                            # add in quadrature
+                            total_errors_up += errors_up**2
+                            total_errors_down += errors_down**2
+                    total_errors_up = total_errors_up**0.5
+                    total_errors_down = total_errors_down**0.5
+
+                    if len(shifts) > 1:
+                        up_values = nominal_values + total_errors_up
+                        down_values = nominal_values - total_errors_down
+                    if self.norm_to_nominal:
+                        up_values /= nominal_values
+                        down_values /= nominal_values
+                    ax.plot(x_values, up_values, label="{}, {}".format(id, "up_" + self.shift))
+                    ax.plot(x_values, down_values, label="{}, {}".format(id, "down" + self.shift))
 
                 ax.legend()
                 fig.savefig(os.path.join(local_tmp.path, "SF_%s_%s_Pt%sto%s_eta%.1fTo%.1f.pdf" % ((self.flavor, self.shift) + pt_range + eta_range)))

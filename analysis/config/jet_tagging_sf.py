@@ -77,6 +77,7 @@ if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19":
 # add auxiliary info to base config
 cfg.set_aux("sandboxes", {
     "slc6": "singularity::/cvmfs/singularity.opensciencegrid.org/bbockelm/cms:rhel6",
+    "NO_SANDBOX": "singularity::None",
 })
 
 cfg.set_aux("jes_levels", {

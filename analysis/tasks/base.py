@@ -17,6 +17,7 @@ import law
 import luigi
 import six
 
+from law.workflow.base import BaseWorkflow
 from law.util import make_list, tmp_file, interruptable_popen
 
 from analysis.config.jet_tagging_sf import analysis
@@ -235,7 +236,7 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
     }
 
     sl_distribution_map = collections.defaultdict(lambda: "slc7", {"RWTH": "slc6"})
-    req_sandbox = None
+    req_sandbox = "NO_SANDBOX"
 
     grid_ce = law.CSVParameter(default=["RWTH"], significant=False, description="target computing "
         "element(s)")
@@ -412,21 +413,17 @@ class SingularitySandbox(law.sandbox.base.Sandbox):
         if self.image not in self._envs:
             with tmp_file() as tmp:
                 tmp_path = os.path.realpath(tmp[1])
-                env_path = os.path.join("/tmp", str(hash(tmp_path))[-8:])
 
-                bind_cmd = "" if not self.binds_allowed else "-B {}:{}".format(tmp_path, env_path)
-                target_path = tmp_path if self.binds_allowed else env_path
-
-                cmd = "env -i singularity exec {1} {0} bash -l -c '{2}; python -c \"" \
-                    "import os,pickle;pickle.dump(os.environ,open(\\\"{3}\\\",\\\"w\\\"))\"'"
-                cmd = cmd.format(self.image, bind_cmd, self.pre_cmd(), env_path)
+                cmd = "env -i singularity exec {0} bash -l -c '{1}; python -c \"" \
+                    "import os,pickle;pickle.dump(os.environ,open(\\\"{2}\\\",\\\"w\\\"))\"'"
+                cmd = cmd.format(self.image, self.pre_cmd(), tmp_path)
 
                 returncode, out, _ = interruptable_popen(cmd, shell=True, executable="/bin/bash",
                     stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
                 if returncode != 0:
                     raise Exception("singularity sandbox env loading failed: " + str(out))
 
-                with open(target_path, "r") as f:
+                with open(tmp_path, "r") as f:
                     env = six.moves.cPickle.load(f)
 
             # cache
@@ -461,12 +458,24 @@ class SingularitySandbox(law.sandbox.base.Sandbox):
         return cmd
 
 
-class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, law.SandboxTask):
+class OptionalSandboxTask(law.SandboxTask):
+
+    @property
+    def env(self):
+        if self.sandbox_inst.name == "None":
+            return os.environ
+        else:
+            return super(OptionalSandboxTask, self).env
+
+    def __getattribute__(self, attr, proxy=True):
+        if attr in ["run", "input", "output"] and self.sandbox_inst.name == "None":
+            return super(OptionalSandboxTask, self).__getattribute__(attr, proxy=False)
+        return super(OptionalSandboxTask, self).__getattribute__(attr)
+
+
+class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, OptionalSandboxTask):
 
     force_upload = luigi.BoolParameter(default=False, description="force uploading")
-
-    # settings for BundleCMSSW
-    cmssw_path = os.getenv("CMSSW_BASE")
 
     # settings for TransferLocalFile
     source_path = None
@@ -480,7 +489,7 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, law.Sand
         self.has_run = False
 
     def get_cmssw_path(self):
-        return self.cmssw_path
+        return self.env["CMSSW_BASE"]
 
     def complete(self):
         if self.force_upload and not self.has_run:
@@ -503,11 +512,13 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, law.Sand
         self.has_run = True
 
 
-class UploadSoftware(AnalysisTask, law.TransferLocalFile, law.SandboxTask):
+class UploadSoftware(AnalysisTask, law.TransferLocalFile, OptionalSandboxTask):
 
     version = None
 
-    source_path = os.environ["JTSF_SOFTWARE"] + ".tgz" # TODO: from self.env
+    def __init__(self, *args, **kwargs):
+        super(UploadSoftware, self).__init__(*args, **kwargs)
+        self.source_path = self.env["JTSF_SOFTWARE"] + ".tgz"
 
     def store_parts(self):
         self.sl_dist_version = self.env["JTSF_DIST_VERSION"]

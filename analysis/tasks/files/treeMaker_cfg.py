@@ -85,20 +85,20 @@ try:
         VarParsing.varType.string,
         "mumu triggers to use",
     )
-    #options.register(
-    #    "eTriggers",
-    #    [],
-    #    VarParsing.multiplicity.list,
-    #    VarParsing.varType.string,
-    #    "e triggers to use",
-    #)
-    #options.register(
-    #    "muTriggers",
-    #    [],
-    #    VarParsing.multiplicity.list,
-    #    VarParsing.varType.string,
-    #    "mu triggers to use",
-    #)
+    options.register(
+        "eTriggers",
+        [],
+        VarParsing.multiplicity.list,
+        VarParsing.varType.string,
+        "e triggers to use",
+    )
+    options.register(
+        "muTriggers",
+        [],
+        VarParsing.multiplicity.list,
+        VarParsing.varType.string,
+        "mu triggers to use",
+    )
     options.register(
         "metFilters",
         [],
@@ -333,8 +333,8 @@ try:
     process.treeMaker.eeTriggers = cms.vstring(options.eeTriggers)
     process.treeMaker.emuTriggers = cms.vstring(options.emuTriggers)
     process.treeMaker.mumuTriggers = cms.vstring(options.mumuTriggers)
-    #process.treeMaker.eTriggers = cms.vstring(options.eTriggers)
-    #process.treeMaker.muTriggers = cms.vstring(options.muTriggers)
+    process.treeMaker.eTriggers = cms.vstring(options.eTriggers)
+    process.treeMaker.muTriggers = cms.vstring(options.muTriggers)
     process.treeMaker.metFilters = cms.vstring(options.metFilters)
     process.treeMaker.jesFiles = cms.vstring(options.jesFiles)
     process.treeMaker.jesRanges = cms.vint32(options.jesRanges)

@@ -13,8 +13,8 @@ def create_config(base_cfg):
         "data_A_ee", "data_B_ee", "data_C_ee", "data_D_ee",
         "data_A_emu", "data_B_emu", "data_C_emu", "data_D_emu",
         "data_A_mumu", "data_B_mumu", "data_C_mumu", "data_D_mumu",
-        #"data_B_e", "data_C_e", "data_D_e",
-        #"data_B_mu", "data_C_mu", "data_D_mu",
+        "data_A_e", "data_B_e", "data_C_e", "data_D_e",
+        "data_A_mu", "data_B_mu", "data_C_mu", "data_D_mu",
         "tt_dl", "tt_sl",
         "dy_lep_10To50",
         "dy_lep_50ToInf",
@@ -64,8 +64,8 @@ def create_config(base_cfg):
         ch_ee: 59966.1613198,
         ch_emu: 59966.1613198,
         ch_mumu: 59966.1613198,
-        #ch_e: 59966.1613198,
-        #ch_mu: 59966.1613198,
+        ch_e: 59966.1613198,
+        ch_mu: 59966.1613198,
     })
 
     # run ranges
@@ -109,10 +109,13 @@ def create_config(base_cfg):
             "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*",
             "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*",
         ],
-        #ch_e: [
-        #],
-        #ch_mu: [
-        #],
+        ch_e: [
+            "HLT_Ele35_WPTight_Gsf_v*",
+            "HLT_Ele28_eta2p1_WPTight_Gsf_HT150_v*",
+        ],
+        ch_mu: [
+            "HLT_IsoMu24_v*",
+        ],
     })
     # special triggers per real dataset
     cfg.set_aux("data_triggers", {})

@@ -1007,7 +1007,7 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     {
         if ((leptonChannel_ == "ee" && channel != C_EE) ||
             (leptonChannel_ == "emu" && channel != C_EMU) ||
-            (leptonChannel_ == "mumu" && channel != C_MUMU))
+            (leptonChannel_ == "mumu" && channel != C_MUMU) ||
             (leptonChannel_ == "e" && channel != C_E) ||
             (leptonChannel_ == "mu" && channel != C_MU))
         {

@@ -207,7 +207,6 @@ dataset_data_C_e = od.Dataset(
     "data_C_e", 42,
     campaign=campaign,
     is_data=True,
-    n_files=2179,
     n_files=dataset_data_C_ee.n_files,
     keys=dataset_data_C_ee.keys,
     context=campaign_name,

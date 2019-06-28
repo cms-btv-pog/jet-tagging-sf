@@ -5,7 +5,7 @@ import scinum as sn
 def create_config(base_cfg):
     # setup the config for Moriond 2019 (2018 data)
     from analysis.config.campaign_Moriond19 import campaign as campaign_Moriond19
-    from analysis.config.jet_tagging_sf import ch_ee, ch_emu, ch_mumu
+    from analysis.config.jet_tagging_sf import ch_ee, ch_emu, ch_mumu, ch_e, ch_mu
     cfg = base_cfg.copy(campaign=campaign_Moriond19)
 
     # add datasets

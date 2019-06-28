@@ -432,15 +432,22 @@ class SingularitySandbox(law.sandbox.base.Sandbox):
         return self._envs[self.image]
 
     def pre_cmd(self):
-        #"; ".join(pre_cmds)
         pre_cmds = []
+
+        # environment variables to set
+        env = self._get_env()
+        for tpl in env.items():
+            pre_cmds.append("export {}=\"{}\"".format(*tpl))
+
         pre_cmds.append('export JTSF_CMSSW_SETUP="{}"'.format(os.environ["JTSF_CMSSW_SETUP"]))
         pre_cmds.append("source {}".format(os.path.join(os.environ["JTSF_BASE"], "setup.sh")))
+        pre_cmds.append("source {}".format(os.path.join(
+            os.environ["JTSF_BASE"], "singularity", "setup_$JTSF_DIST_VERSION.sh"))
+        )
+
         return "; ".join(pre_cmds)
 
     def cmd(self, proxy_cmd):
-        cfg = Config.instance()
-
         # get args for the singularity command as configured in the task
         args = make_list(getattr(self.task, "singularity_args",
             self.default_singularity_args))
@@ -457,20 +464,23 @@ class SingularitySandbox(law.sandbox.base.Sandbox):
 
         return cmd
 
-
 class OptionalSandboxTask(law.SandboxTask):
 
     @property
     def env(self):
-        if self.sandbox_inst.name == "None":
+        if self.sandbox_inst is not None and self.sandbox_inst.name == "None":
             return os.environ
         else:
             return super(OptionalSandboxTask, self).env
 
+    def is_sandboxed(self):
+        _current_sandbox = os.getenv("LAW_SANDBOX", "").split(",")
+        return self.effective_sandbox in _current_sandbox
+
     def __getattribute__(self, attr, proxy=True):
-        if attr in ["run", "input", "output"] and self.sandbox_inst.name == "None":
+        if attr in ["run", "input", "output"] and self.sandbox_inst is not None and self.sandbox_inst.name == "None":
             return super(OptionalSandboxTask, self).__getattribute__(attr, proxy=False)
-        return super(OptionalSandboxTask, self).__getattribute__(attr)
+        return super(OptionalSandboxTask, self).__getattribute__(attr, proxy=proxy)
 
 
 class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, OptionalSandboxTask):

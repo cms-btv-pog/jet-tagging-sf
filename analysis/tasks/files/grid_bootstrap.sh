@@ -30,7 +30,7 @@ action() {
     export PYTHONPATH_ORIG="$PYTHONPATH"
     export LD_LIBRARY_PATH_ORIG="$LD_LIBRARY_PATH"
 
-    export JTSF_DATA="$HOME/jtsf_data"
+    export JTSF_DATA="$TMP/jtsf_data"
     export JTSF_SOFTWARE="$JTSF_DATA/software"
     export JTSF_STORE="$JTSF_DATA/store"
     export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
@@ -67,7 +67,7 @@ action() {
     cd src
     eval `scramv1 runtime -sh`
     scram build
-    cd "$HOME"
+    cd "$TMP"
 
     #
     # load the software bundle
@@ -78,7 +78,7 @@ action() {
     load_replica "{{software_base_url}}" "software\.\d+\.tgz" "software.tgz"
     tar -xzf "software.tgz"
     rm "software.tgz"
-    cd "$HOME"
+    cd "$TMP"
 
     #
     # load the repo bundle

@@ -34,7 +34,7 @@ action() {
         # E-gamma
         git cms-addpkg EgammaAnalysis/ElectronTools  #check out the package otherwise code accessing it will crash
         rm EgammaAnalysis/ElectronTools/data -rf   #delete the data directory so we can populate it ourselves
-        git clone git@github.com:cms-egamma/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
+        git clone git@github.com:cms-data/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
 
         # MET
         git cms-addpkg RecoMET/METFilters

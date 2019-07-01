@@ -498,6 +498,10 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, Optional
 
         self.has_run = False
 
+    def store_parts(self):
+        sl_dist_version = self.env["JTSF_DIST_VERSION"]
+        return super(UploadCMSSW, self).store_parts() + (sl_dist_version,)
+
     def get_cmssw_path(self):
         return self.env["CMSSW_BASE"]
 
@@ -531,8 +535,8 @@ class UploadSoftware(AnalysisTask, law.TransferLocalFile, OptionalSandboxTask):
         self.source_path = self.env["JTSF_SOFTWARE"] + ".tgz"
 
     def store_parts(self):
-        self.sl_dist_version = self.env["JTSF_DIST_VERSION"]
-        return super(UploadSoftware, self).store_parts() + (self.sl_dist_version,)
+        sl_dist_version = self.env["JTSF_DIST_VERSION"]
+        return super(UploadSoftware, self).store_parts() + (sl_dist_version,)
 
     def single_output(self):
         return self.wlcg_target("software.tgz", fs="wlcg_fs_software")

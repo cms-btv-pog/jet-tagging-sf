@@ -442,7 +442,7 @@ process_ttWJets_had = process_ttWJets.add_process(
 )
 
 process_ttWJets.xsecs = {
-    13: sn.Number.add(process_ttWJets_lep.get_xsec(13), process_ttWJets_had.get_xsec(13), rho=1)
+    13: sn.Number.add(process_ttWJets_lep.get_xsec(13), process_ttWJets_had.get_xsec(13), rho=1, inplace=False)
 }
 
 
@@ -472,10 +472,10 @@ process_ttZJets_had = process_ttZJets.add_process(
 )
 
 process_ttZJets.xsecs = {
-    13: sn.Number.add(process_ttZJets_lep.get_xsec(13), process_ttZJets_had.get_xsec(13), rho=1)
+    13: sn.Number.add(process_ttZJets_lep.get_xsec(13), process_ttZJets_had.get_xsec(13), rho=1, inplace=False)
 }
 
 
 process_ttVJets.xsecs = {
-    13: sn.Number.add(process_ttWJets.get_xsec(13), process_ttZJets.get_xsec(13), rho=1)
+    13: sn.Number.add(process_ttWJets.get_xsec(13), process_ttZJets.get_xsec(13), rho=1, inplace=False)
 }

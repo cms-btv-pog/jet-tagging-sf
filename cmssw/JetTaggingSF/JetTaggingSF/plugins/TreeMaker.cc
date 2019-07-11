@@ -955,7 +955,7 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     size_t nLeptons = nElectrons + nMuons;
     size_t nTightLeptons = nTightElectrons + nTightMuons;
 
-    if (nLeptons != 2 || nTightLeptons < 1)
+    if (nLeptons > 2 || nTightLeptons < 1)
     {
         return false;
     }

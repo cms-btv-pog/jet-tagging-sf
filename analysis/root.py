@@ -210,7 +210,7 @@ class ROOTPlot(object):
     def draw_text(self, *args, **kwargs):
         self.open_pad.draw_text(*args, **kwargs)
 
-    def save(self, path, lumi=-1., **kwargs):
+    def save(self, path, lumi=-1., add_cms_label=True, **kwargs):
         for pad in self.pads.values():
             pad.save(**kwargs)
 
@@ -218,7 +218,18 @@ class ROOTPlot(object):
             self.canvas.cd()
             self.lumi = ROOT.TLatex()
             self.lumi.SetTextSize(0.03)
-            self.lumi.DrawLatexNDC(.8, .94, "%.1f fb^{-1}(13 TeV)" % lumi)
+            self.lumi.DrawLatexNDC(.73, .93, "%.1f fb^{-1}(13 TeV)" % lumi)
+
+        if add_cms_label:
+            self.cms_label = ROOT.TLatex()
+            self.cms_label.SetTextSize(0.05)
+            self.cms_label.SetTextFont(61)
+            self.cms_label.DrawLatexNDC(.73, .84, "CMS")
+
+            self.preliminary_label = ROOT.TLatex()
+            self.preliminary_label.SetTextSize(0.04)
+            self.preliminary_label.SetTextFont(52)
+            self.preliminary_label.DrawLatexNDC(.73, .79, "Preliminary")
 
         self.canvas.Update()
         self.canvas.SaveAs(path)

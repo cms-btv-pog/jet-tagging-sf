@@ -342,14 +342,19 @@ class PlotScaleFactor(PlotTask):
             raise KeyError("'norm_to_nominal' is set to true, but no nominal values found.")
 
         for config, config_input in inp.items():
-            b_tagger, iteration = config
-            config_id = "{}, iteration {}".format(b_tagger, iteration)
+            b_tagger, iteration, version = config
+
+            config_ids = [b_tagger]
+            if len(self.iterations) > 1:
+                config_ids.append("iteration {}".format(iteration))
+            if len(self.versions) > 1:
+                config_ids.append("version {}".format(version))
+            config_id = ", ".join(config_ids)
 
             # get scaling factors for normalization
             if self.fix_normalization:
                 norm_factors = config_input.pop("norm").load()["nominal"]
 
-            nominal_hists = {}
             nominal_fit_hists = {}
             # combined errors for multiple shifts
             up_shifted_fit_hists = defaultdict(dict)

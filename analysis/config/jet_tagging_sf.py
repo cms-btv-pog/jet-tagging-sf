@@ -469,6 +469,23 @@ def add_categories(cfg, b_tagger):
                         tags={b_tagger},
                     )
 
+                    # combined region categories, with tag jet cut applied
+                    # used to determine e.g. sample composition in measurement regions
+                    rg_btag_merged_name = "{}__{}__{}__{}__btag".format(ps_name, rg_name, b_tagger, cfg.name)
+                    if not cfg.has_category(rg_btag_merged_name):
+                        rg_btag_merged_cat = cfg.add_category(
+                            name=rg_btag_merged_name,
+                            label="{}, {}".format(ps_name, rg_name, b_tagger),
+                            tags={"combined", b_tagger},
+                            aux={
+                                "phase_space": ps_name,
+                                "region": rg_name,
+                            },
+                            context=cfg.name,
+                        )
+                    else:
+                        rg_btag_merged_cat = cfg.get_category(rg_btag_merged_name)
+
                     # flavor loop (b, c, udsg, ...)
                     for fl_name, fl_sel in get_flavor_info(i_probe_jet):
                         fl_cat = rg_cat.add_category(
@@ -556,6 +573,8 @@ def add_categories(cfg, b_tagger):
                                 else:
                                     merged_cat = cfg.get_category(merged_name)
                                 merged_cat.add_category(eta_cat)
+                                rg_btag_merged_cat.add_category(eta_cat)
+
                                 # Specialized b-tag discriminant binnings are defined on
                                 # the merged categories, but needed when writing leaf categories
                                 eta_cat.set_aux("binning_category", merged_cat)

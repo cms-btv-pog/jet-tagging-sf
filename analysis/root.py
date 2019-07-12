@@ -3,6 +3,7 @@
 import ROOT
 
 from array import array
+from collections import OrderedDict
 
 tcolors = {
     "data": ROOT.kBlack,
@@ -32,14 +33,19 @@ tcolors = {
 
 
 class ROOTPad(object):
-    def __init__(self, *args, **kwargs):
-        self.pad = ROOT.TPad(*args, **kwargs)
+    def __init__(self, name, title, x_min, y_min, x_max, y_max, *args, **kwargs):
+        self.pad = ROOT.TPad(name, title, x_min, y_min, x_max, y_max, *args, **kwargs)
         self.pad.Draw()
 
         self.left_margin = self.pad.GetLeftMargin()
         self.top_margin = self.pad.GetTopMargin()
         self.right_margin = self.pad.GetRightMargin()
         self.bottom_margin = self.pad.GetBottomMargin()
+        self.width = self.pad.GetWw()
+        self.height = self.pad.GetWh()
+
+        # font size is expressed as percentage of pad height, so scale up if desired
+        self.scale_factor = 1. / (y_max - y_min)
 
         self.objects = []
         self.missing_key = False # Legend contains key not found in tcolors dict
@@ -47,8 +53,14 @@ class ROOTPad(object):
         self.has_drawn_object = False # To automatically set option 'SAME' if needed
 
 
-    def draw_base_legend(self):
-        self.legend = ROOT.TLegend(0.5, 1.2 * self.bottom_margin, 1. - 1.2 * self.right_margin, 0.4)
+    def draw_base_legend(self, location="lower"):
+        if location == "lower":
+            coords = (0.5, 1.2 * self.bottom_margin, 1. - 1.2 * self.right_margin, 0.4)
+        elif location == "upper":
+            coords = (0.5, 0.6, 1. - 1.2 * self.right_margin, 1 - 1.2 * self.top_margin)
+        else:
+            raise KeyError("Unknown legend location {}.".format(location))
+        self.legend = ROOT.TLegend(*coords)
         self.legend.SetNColumns(2)
 
     def draw_text(self, text, xpos=None, ypos=None, size=None):
@@ -91,7 +103,8 @@ class ROOTPad(object):
         return line_color
 
     def draw(self, obj_dict, stacked=False, invis=False, line_color=1, fill_color=1,
-        stack_maximum=None, options=None, add_same_option=True, add_to_legend=True):
+        stack_maximum=None, options=None, add_same_option=True, add_to_legend=True,
+        y_title=None):
         self.cd()
         line_color = self.get_line_color(line_color)
 
@@ -139,6 +152,8 @@ class ROOTPad(object):
         for obj in draw_objs:
             self.add_object(obj)
             obj.Draw(" ".join(options))
+        if y_title is not None:
+            draw_objs[0].GetYaxis().SetTitle(y_title)
 
     def draw_as_graph(self, hist, options=None, add_same_option=True):
         self.cd()
@@ -194,22 +209,28 @@ class ROOTPlot(object):
 
         self.set_style()
 
-    def create_pads(self, n_pads_x=1, n_pads_y=1, limits_x=None, limits_y=None):
+    def create_pads(self, n_pads_x=1, n_pads_y=1, limits_x=None, limits_y=None, legend_loc="lower"):
         if limits_x is None:
             limits_x = [idx / float(n_pads_x) for idx in range(n_pads_x + 1)]
         if limits_y is None:
             limits_y = [idx / float(n_pads_y) for idx in range(n_pads_y + 1)]
 
-        self.pads = {}
+        self.pads = OrderedDict()
         for idx_x in xrange(n_pads_x):
             for idx_y in xrange(n_pads_y):
                 self.canvas.cd()
                 name = "{}_{}_{}".format(hash(self), idx_x, idx_y)
                 pad = ROOTPad(name, name, limits_x[idx_x], limits_y[idx_y],
                     limits_x[idx_x + 1], limits_y[idx_y + 1])
-                pad.draw_base_legend()
+                pad.draw_base_legend(location=legend_loc)
                 self.pads[(idx_x, idx_y)] = pad
                 self.open_pad = pad
+
+                if idx_y < n_pads_y - 1:
+                    pad.pad.SetTopMargin(0)
+                if idx_y > 0:
+                    pad.pad.SetBottomMargin(0)
+        self.n_pads_y = n_pads_y
 
     def cd(self, idx_x, idx_y):
         self.canvas.cd()
@@ -225,13 +246,20 @@ class ROOTPlot(object):
     def draw_text(self, *args, **kwargs):
         self.open_pad.draw_text(*args, **kwargs)
 
-    def save(self, path, lumi=-1., add_cms_label=True, **kwargs):
-        for pad in self.pads.values():
-            pad.save(**kwargs)
+    def save(self, path, lumi=-1., add_cms_label=True, draw_legend=False, **kwargs):
+        for pad_idx, pad in enumerate(self.pads.values()):
+            draw_pad_legend = draw_legend[pad_idx] if isinstance(draw_legend, (tuple, list)) else draw_legend
+            pad.save(draw_legend=draw_pad_legend, **kwargs)
 
-        left_margin = self.canvas.GetLeftMargin()
-        top_margin = self.canvas.GetTopMargin()
-        right_margin = self.canvas.GetRightMargin()
+        if len(self.pads) > 1:
+            first_pad = self.pads[(0, self.n_pads_y - 1)]
+            left_margin = first_pad.left_margin * first_pad.width / self.canvas.GetWw()
+            right_margin = first_pad.right_margin * first_pad.width / self.canvas.GetWw()
+            top_margin = 0.8 * first_pad.top_margin * first_pad.height / self.canvas.GetWh()
+        else:
+            left_margin = self.canvas.GetLeftMargin()
+            right_margin = self.canvas.GetRightMargin()
+            top_margin = self.canvas.GetTopMargin()
 
         # see https://twiki.cern.ch/twiki/bin/view/CMS/Internal/FigGuidelines
         if lumi > 0:
@@ -266,7 +294,7 @@ class ROOTPlot(object):
     def set_style(self):
         # set plot style
         # adapted from https://twiki.cern.ch/twiki/bin/view/CMS/Internal/FigGuidelines
-        style = ROOT.TStyle("plot style","Style for jtsf plots.")
+        style = ROOT.TStyle("plot style", "Style for jtsf plots.")
 
         style.SetOptStat(0)
         style.SetOptTitle(0)

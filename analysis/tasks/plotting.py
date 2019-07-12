@@ -138,7 +138,8 @@ class PlotVariable(PlotTask):
         limits_x = np.linspace(0., 1., len(inp["hists"]) + 1)
         for category in categories:
             plot = ROOTPlot(category.name, category.name)
-            plot.create_pads(n_pads_x=len(inp["hists"]), n_pads_y=2, limits_x=limits_x, limits_y=[0., 0.3, 1.0])
+            plot.create_pads(n_pads_x=len(inp["hists"]), n_pads_y=2, limits_x=limits_x,
+                limits_y=[0., 0.3, 1.0], legend_loc="upper")
             plot_dict[category] = plot
 
         for target_idx, inp_target in enumerate(inp["hists"].values()):
@@ -205,7 +206,7 @@ class PlotVariable(PlotTask):
                     # data and mc histograms
                     plot.cd(target_idx, 1)
                     if self.draw_stacked:
-                        plot.draw(mc_hists, stacked=True, stack_maximum=1.5*hist_maximum)
+                        plot.draw(mc_hists, stacked=True, stack_maximum=1.5*hist_maximum, y_title="Entries")
                     else:
                         plot.draw({self.mc_key: mc_hist_sum}, line_color=None)
                     plot.draw({self.data_key: data_hist})
@@ -218,7 +219,19 @@ class PlotVariable(PlotTask):
                     # ratio
                     ratio_hist = data_hist.Clone()
                     ratio_hist.Divide(mc_hist_sum)
-                    ratio_hist.GetYaxis().SetRangeUser(0.5, 1.5)
+
+                    y_axis = ratio_hist.GetYaxis()
+                    y_axis.SetRangeUser(0.5, 1.5)
+                    y_axis.SetTitle("data/MC")
+                    y_axis.SetTitleSize(y_axis.GetTitleSize() * plot.open_pad.scale_factor)
+                    y_axis.SetLabelSize(y_axis.GetLabelSize() * plot.open_pad.scale_factor)
+                    y_axis.SetNdivisions(505)
+                    y_axis.SetTitleOffset(0.65)
+
+                    x_axis = ratio_hist.GetXaxis()
+                    x_axis.SetTitleSize(x_axis.GetTitleSize() * plot.open_pad.scale_factor)
+                    x_axis.SetLabelSize(x_axis.GetLabelSize() * plot.open_pad.scale_factor)
+
                     plot.draw({"invis": ratio_hist}, invis=True)
                     plot.draw_as_graph(ratio_mcerr_hist, options="2")
                     plot.draw({"data/mc": ratio_hist})
@@ -226,7 +239,7 @@ class PlotVariable(PlotTask):
         for category, plot in plot_dict.items():
             plot.save(os.path.join(local_tmp.path,
                 "{}_{}.pdf".format(category.name, self.variable)),
-                draw_legend=True, log_y=self.logarithmic,
+                draw_legend=(False, True), log_y=self.logarithmic,
                 lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
             del plot
 
@@ -438,11 +451,9 @@ class PlotScaleFactor(PlotTask):
                             title = self.config_inst.get_aux("btaggers")[b_tagger]["label"]
                         else:
                             title = "B-Tag Discriminant"
-                        fit_hist.GetXaxis().SetTitle(title)
 
-                        fit_hist.GetXaxis().SetTitleSize(.045)
+                        fit_hist.GetXaxis().SetTitle(title)
                         fit_hist.GetYaxis().SetTitle("SF")
-                        fit_hist.GetYaxis().SetTitleSize(.045)
 
                         if shift_idx == 0:
                             if not self.multiple_shifts or shift == "nominal":

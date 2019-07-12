@@ -459,7 +459,7 @@ class PlotScaleFactor(PlotTask):
                             else:
                                 text = r"#splitline{p_{T} > %d}{%.1f < |#eta| < %.1f}" % \
                                     (pt_range[0], eta_range[0], eta_range[1])
-                            plot.draw_text(text, .7, .2, size=0.04)
+                            plot.draw_text(text)
                         elif not self.multiple_shifts:
                             plot.draw({shift: fit_hist}, line_color=None)
 

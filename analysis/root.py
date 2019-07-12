@@ -36,6 +36,11 @@ class ROOTPad(object):
         self.pad = ROOT.TPad(*args, **kwargs)
         self.pad.Draw()
 
+        self.left_margin = self.pad.GetLeftMargin()
+        self.top_margin = self.pad.GetTopMargin()
+        self.right_margin = self.pad.GetRightMargin()
+        self.bottom_margin = self.pad.GetBottomMargin()
+
         self.objects = []
         self.missing_key = False # Legend contains key not found in tcolors dict
         self.line_colors = [2, 4, 3, 90, 6, 8]
@@ -43,13 +48,23 @@ class ROOTPad(object):
 
 
     def draw_base_legend(self):
-        self.legend = ROOT.TLegend(0.2, 0.12, 0.68, 0.38)
+        self.legend = ROOT.TLegend(0.5, 1.2 * self.bottom_margin, 1. - 1.2 * self.right_margin, 0.4)
         self.legend.SetNColumns(2)
 
-    def draw_text(self, text, xpos, ypos, size=0.04):
+    def draw_text(self, text, xpos=None, ypos=None, size=None):
+        self.cd()
+        if xpos is None:
+            xpos = 1. - 1.2 * self.right_margin
+        if ypos is None:
+            ypos = 2. - 1.2 * self.top_margin
+        if size is None:
+            size = 0.75 * self.top_margin
+
         root_text = ROOT.TLatex()
         root_text.SetTextSize(size)
-        root_text.DrawLatexNDC(xpos, ypos, text)
+        root_text.SetTextAlign(33)
+        root_text.SetTextFont(42)
+        root_text.DrawLatex(xpos, ypos, text)
         self.objects.append(root_text)
 
     def add_object(self, obj):
@@ -77,6 +92,7 @@ class ROOTPad(object):
 
     def draw(self, obj_dict, stacked=False, invis=False, line_color=1, fill_color=1,
         stack_maximum=None, options=None, add_same_option=True, add_to_legend=True):
+        self.cd()
         line_color = self.get_line_color(line_color)
 
         options = self.update_options(options, add_same_option)
@@ -125,6 +141,7 @@ class ROOTPad(object):
             obj.Draw(" ".join(options))
 
     def draw_as_graph(self, hist, options=None, add_same_option=True):
+        self.cd()
         options = self.update_options(options, add_same_option)
 
         x, y = [], []
@@ -170,14 +187,12 @@ class ROOTPad(object):
 class ROOTPlot(object):
 
     def __init__(self, *args, **kwargs):
-        ROOT.gStyle.SetOptStat(0)
-        ROOT.gStyle.SetOptTitle(0)
-        ROOT.gStyle.SetLegendBorderSize(0)
-
         self.canvas = ROOT.TCanvas(*args, **kwargs)
 
         # store all used ROOT object to make sure they are not cleaned up
         self.objects = []
+
+        self.set_style()
 
     def create_pads(self, n_pads_x=1, n_pads_y=1, limits_x=None, limits_y=None):
         if limits_x is None:
@@ -214,22 +229,32 @@ class ROOTPlot(object):
         for pad in self.pads.values():
             pad.save(**kwargs)
 
+        left_margin = self.canvas.GetLeftMargin()
+        top_margin = self.canvas.GetTopMargin()
+        right_margin = self.canvas.GetRightMargin()
+
+        # see https://twiki.cern.ch/twiki/bin/view/CMS/Internal/FigGuidelines
         if lumi > 0:
             self.canvas.cd()
             self.lumi = ROOT.TLatex()
-            self.lumi.SetTextSize(0.03)
-            self.lumi.DrawLatexNDC(.73, .93, "%.1f fb^{-1}(13 TeV)" % lumi)
+            self.lumi.SetTextSize(0.6*top_margin)
+            self.lumi.SetTextFont(42)
+            self.lumi.SetTextAlign(31)
+            self.lumi.DrawLatex(1 - right_margin, 1 - 0.8*top_margin, "%.2f fb^{-1}(13 TeV)" % lumi)
 
         if add_cms_label:
+            cms_text_size = 0.75 * top_margin
             self.cms_label = ROOT.TLatex()
-            self.cms_label.SetTextSize(0.05)
+            self.cms_label.SetTextSize(cms_text_size)
             self.cms_label.SetTextFont(61)
-            self.cms_label.DrawLatexNDC(.73, .84, "CMS")
+            self.cms_label.SetTextAlign(13)
+            self.cms_label.DrawLatex(1.6 * left_margin, 1 - 1.2 * top_margin, "CMS")
 
             self.preliminary_label = ROOT.TLatex()
-            self.preliminary_label.SetTextSize(0.04)
+            self.preliminary_label.SetTextSize( 0.76 * cms_text_size)
             self.preliminary_label.SetTextFont(52)
-            self.preliminary_label.DrawLatexNDC(.73, .79, "Preliminary")
+            self.preliminary_label.SetTextAlign(13)
+            self.preliminary_label.DrawLatex(1.6 * left_margin, 1 - 1.2 * top_margin - 1.5 * cms_text_size, "Preliminary")
 
         self.canvas.Update()
         self.canvas.SaveAs(path)
@@ -237,3 +262,97 @@ class ROOTPlot(object):
     def __del__(self):
         for pad in self.pads.values():
             pad.close()
+
+    def set_style(self):
+        # set plot style
+        # adapted from https://twiki.cern.ch/twiki/bin/view/CMS/Internal/FigGuidelines
+        style = ROOT.TStyle("plot style","Style for jtsf plots.")
+
+        style.SetOptStat(0)
+        style.SetOptTitle(0)
+        style.SetLegendBorderSize(0)
+
+        #for the canvas:
+        style.SetCanvasBorderMode(0)
+        style.SetCanvasColor(ROOT.kWhite)
+        style.SetCanvasDefH(600) # Height of canvas
+        style.SetCanvasDefW(600) # Width of canvas
+        style.SetCanvasDefX(0) # Position on screen
+        style.SetCanvasDefY(0)
+
+        style.SetPadBorderMode(0)
+        style.SetPadColor(ROOT.kWhite)
+        style.SetPadGridX(False)
+        style.SetPadGridY(False)
+        style.SetGridColor(0)
+        style.SetGridStyle(3)
+        style.SetGridWidth(1)
+
+        #For the frame:
+        style.SetFrameBorderMode(0)
+        style.SetFrameBorderSize(1)
+        style.SetFrameFillColor(0)
+        style.SetFrameFillStyle(0)
+        style.SetFrameLineColor(1)
+        style.SetFrameLineStyle(1)
+        style.SetFrameLineWidth(1)
+
+        #For the histo:
+        style.SetHistLineColor(1)
+        style.SetHistLineStyle(0)
+        style.SetHistLineWidth(1)
+
+        #style.SetEndErrorSize(2)
+        #style.SetMarkerStyle(20)
+
+        #For the fit/function:
+        style.SetOptFit(1)
+        style.SetFitFormat("5.4g")
+        style.SetFuncColor(2)
+        style.SetFuncStyle(1)
+        style.SetFuncWidth(1)
+
+        #For the date:
+        style.SetOptDate(0)
+
+        # Margins:
+        style.SetPadTopMargin(0.05)
+        style.SetPadBottomMargin(0.13)
+        style.SetPadLeftMargin(0.16)
+        style.SetPadRightMargin(0.02)
+
+        # For the axis titles:
+
+        style.SetTitleColor(1, "XYZ")
+        style.SetTitleFont(42, "XYZ")
+        style.SetTitleSize(0.06, "XYZ")
+        style.SetTitleXOffset(0.9)
+        style.SetTitleYOffset(1.25)
+
+        # For the axis labels:
+        style.SetLabelColor(1, "XYZ")
+        style.SetLabelFont(42, "XYZ")
+        style.SetLabelOffset(0.007, "XYZ")
+        style.SetLabelSize(0.05, "XYZ")
+
+        # For the axis:
+        style.SetAxisColor(1, "XYZ")
+        style.SetStripDecimals(True)
+        style.SetTickLength(0.03, "XYZ")
+        style.SetNdivisions(510, "XYZ")
+        #style.SetPadTickX(1)
+        #style.SetPadTickY(1)
+
+        # Change for log plots:
+        style.SetOptLogx(0)
+        style.SetOptLogy(0)
+        style.SetOptLogz(0)
+
+        # Postscript options:
+        style.SetPaperSize(20.,20.)
+
+        style.SetHatchesLineWidth(5)
+        style.SetHatchesSpacing(0.05)
+
+        self.style = style
+        self.style.cd()

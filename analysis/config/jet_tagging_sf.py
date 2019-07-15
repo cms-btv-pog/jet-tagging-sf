@@ -208,8 +208,9 @@ def get_z_window_info(cfg, flavour, et_miss=30.0, z_window=10.):
 
 def get_region_info(cfg, idx, channel, et_miss=30., z_window=10., add_btag_cut=True, b_tagger="deepcsv"):
     hf_cuts, lf_cuts = [], []
-    hf_cuts.append(get_btag_info(cfg, idx, "medium", b_tagger, ">"))
-    lf_cuts.append(get_btag_info(cfg, idx, "loose", b_tagger, "<"))
+    if add_btag_cut:
+        hf_cuts.append(get_btag_info(cfg, idx, "medium", b_tagger, ">"))
+        lf_cuts.append(get_btag_info(cfg, idx, "loose", b_tagger, "<"))
 
     if channel != "emu":
         lf_cuts.extend(get_z_window_info(cfg, "lf", et_miss=et_miss, z_window=z_window))

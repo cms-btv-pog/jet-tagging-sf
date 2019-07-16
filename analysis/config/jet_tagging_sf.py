@@ -329,7 +329,7 @@ for lep_idx in xrange(1, 3):
         binning=(25, 0., 500.,),
         unit="GeV",
         tags={"main"},
-        x_title="Lep_{} p_{{T}}".format(lep_idx),
+        x_title="Lep_{{{}}} p_{{T}}".format(lep_idx),
     )
 
 for jet_idx in xrange(1, 5):
@@ -341,14 +341,14 @@ for jet_idx in xrange(1, 5):
         expression="jet{}_pt{{jec_identifier}}".format(jet_idx),
         binning=(25, 0., 500.,),
         unit="GeV",
-        x_title="Jet_{} p_{{T}}".format(jet_idx),
+        x_title="Jet_{{{}}} p_{{T}}".format(jet_idx),
         tags=tags
     )
     cfg.add_variable(
         name="jet{}_eta".format(jet_idx),
         expression="jet{}_eta{{jec_identifier}}".format(jet_idx),
         binning=(25, -2.5, 2.5),
-        x_title="Jet_{} Eta".format(jet_idx),
+        x_title="Jet_{{{}}} Eta".format(jet_idx),
         tags=tags,
     )
 
@@ -375,14 +375,14 @@ def add_btag_variables(cfg):
                 name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
                 expression="jet{}_deepcsv_b{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} prob_{{b}}".format(jet_idx),
+                x_title="Jet_{{{}}} prob_{{b}}".format(jet_idx),
                 context=cfg.name,
             )
             cfg.add_variable(
                 name="jet{}_deepcsv_bb{}".format(jet_idx, postfix),
                 expression="jet{}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} prob_{{bb}}".format(jet_idx),
+                x_title="Jet_{{{}}} prob_{{bb}}".format(jet_idx),
                 context=cfg.name,
             )
             # deepcsv discriminator
@@ -390,7 +390,7 @@ def add_btag_variables(cfg):
                 name="jet{}_deepcsv_bcomb{}".format(jet_idx, postfix),
                 expression="jet{0}_deepcsv_b{{jec_identifier}} + jet{0}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} DeepCSV".format(jet_idx),
+                x_title="Jet_{{{}}} DeepCSV".format(jet_idx),
                 tags=tags,
                 aux={"b_tagger": "deepcsv"}, # to filter required b-tagger in histogram writer
                 context=cfg.name,
@@ -404,7 +404,7 @@ def add_btag_variables(cfg):
                 expression="jet{0}_deepjet_b{{jec_identifier}} + jet{0}_deepjet_bb{{jec_identifier}} + "\
                     "jet{0}_deepjet_lepb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} DeepJet".format(jet_idx),
+                x_title="Jet_{{{}}} DeepJet".format(jet_idx),
                 tags=tags,
                 aux={"b_tagger": "deepjet"}, # to filter required b-tagger in histogram writer
                 context=cfg.name,

@@ -320,7 +320,7 @@ try:
                              process.pfImpactParameterTagInfosNewDFTraining
                              )
         seq.associate(process.deepFlavour)
-        jetCollection = cms.InputTag("updatedPatJetsTransientCorrectedNewDFTraining", "", process.name_())
+        jetCollection = cms.InputTag("selectedUpdatedPatJetsNewDFTraining", "", process.name_())
 
     # load and configure the tree maker
     process.load("JetTaggingSF.JetTaggingSF.treeMaker_cfi")

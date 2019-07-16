@@ -186,7 +186,7 @@ class PlotVariable(PlotTask):
                                     if self.normalize:  # apply "trigger" sfs as part of the normalization
                                         hist.Scale(scales[channel.name][region])
 
-                                    key = process.name if self.mc_split == "process" else flavor
+                                    key = process if self.mc_split == "process" else flavor
                                     mc_hists[key] = add_hist(mc_hists[key], hist, sign=sign)
 
                     if self.normalize:  # normalize mc yield to data in this category

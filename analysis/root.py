@@ -1,34 +1,34 @@
 # -*- coding: utf-8 -*-
 
 import ROOT
+import order
 
 from array import array
 from collections import OrderedDict
 
 tcolors = {
     "data": ROOT.kBlack,
-    "tt_dl": ROOT.kGray,
-    "dy_lep_5To50_Ht70To100": ROOT.kSpring + 1,
-    "dy_lep_5To50_Ht100To200": ROOT.kSpring + 10,
-    "dy_lep_5To50_Ht200To400": ROOT.kGreen,
-    "dy_lep_5To50_Ht400To600": ROOT.kGreen - 9,
-    "dy_lep_5To50_Ht600ToInf": ROOT.kTeal,
+    "tt": ROOT.TColor.GetColor(220, 220, 220), # light gray
     "dy_lep_10To50": ROOT.kGreen,
-    "dy_lep_50ToInf": ROOT.kTeal - 5,
-    "dy_lep_50ToInf_Ht70To100": ROOT.kYellow,
-    "dy_lep_50ToInf_Ht100To200": ROOT.kOrange - 3,
-    "dy_lep_50ToInf_Ht200To400": ROOT.kOrange + 7,
-    "dy_lep_50ToInf_Ht400To600": ROOT.kRed,
-    "dy_lep_50ToInf_Ht600To800": ROOT.kPink - 3,
-    "dy_lep_50ToInf_Ht800To1200": ROOT.kPink + 7,
-    "dy_lep_50ToInf_Ht1200To2500": ROOT.kMagenta,
-    "dy_lep_50ToInf_Ht2500ToInf": ROOT.kMagenta - 5,
-    "st_tW_t": ROOT.kCyan,
-    "st_tW_tbar": ROOT.kCyan - 10,
-    "WW_sl": ROOT.kGray,
+    "dy_lep_50ToInf": ROOT.TColor.GetColor(40, 160, 120), # dark tea,
+    "st": ROOT.TColor.GetColor(0, 215, 215),
+    "VV": ROOT.kBlue - 1,
     "b": ROOT.kRed,
     "c": ROOT.kOrange,
     "udsg": ROOT.kGreen,
+    #"dy_lep_50ToInf_Ht70To100": ROOT.kYellow,
+    #"dy_lep_50ToInf_Ht100To200": ROOT.kOrange - 3,
+    #"dy_lep_50ToInf_Ht200To400": ROOT.kOrange + 7,
+    #"dy_lep_50ToInf_Ht400To600": ROOT.kRed,
+    #"dy_lep_50ToInf_Ht600To800": ROOT.kPink - 3,
+    #"dy_lep_50ToInf_Ht800To1200": ROOT.kPink + 7,
+    #"dy_lep_50ToInf_Ht1200To2500": ROOT.kMagenta,
+    #"dy_lep_50ToInf_Ht2500ToInf": ROOT.kMagenta - 5,
+    #"dy_lep_5To50_Ht70To100": ROOT.kSpring + 1,
+    #"dy_lep_5To50_Ht100To200": ROOT.kSpring + 10,
+    #"dy_lep_5To50_Ht200To400": ROOT.kGreen,
+    #"dy_lep_5To50_Ht400To600": ROOT.kGreen - 9,
+    #"dy_lep_5To50_Ht600ToInf": ROOT.kTeal,
 }
 
 
@@ -51,6 +51,7 @@ class ROOTPad(object):
         self.missing_key = False # Legend contains key not found in tcolors dict
         self.line_colors = [2, 4, 3, 90, 6, 8]
         self.has_drawn_object = False # To automatically set option 'SAME' if needed
+        self.legend_entries = []
 
 
     def draw_base_legend(self, location="lower"):
@@ -102,6 +103,11 @@ class ROOTPad(object):
             line_color = self.line_colors.pop(0)
         return line_color
 
+    def add_legend_entry(self, obj, key, option):
+        if key not in self.legend_entries:
+            self.legend.AddEntry(obj, key.replace("$", "").replace("\\", "#"), option)
+            self.legend_entries.append(key)
+
     def draw(self, obj_dict, stacked=False, invis=False, line_color=1, fill_color=1,
         stack_maximum=None, options=None, add_same_option=True, add_to_legend=True,
         y_title=None):
@@ -120,6 +126,26 @@ class ROOTPad(object):
                 invis_obj.Draw(" ".join(options))
             return None
 
+        label_dict = {}
+        for key, obj in obj_dict.copy().items():
+            new_key = None
+            # if the key is a process, find out if either the process itself or
+            # a parent process is contained in the plot color dict
+            if isinstance(key, order.process.Process):
+                if key.name in tcolors:
+                    new_key = key.name
+                    label = key.label
+                else:
+                    for process_name in tcolors:
+                        if key.has_parent_process(process_name):
+                            new_key = process_name
+                            label = key.get_parent_process(process_name).label
+                            break
+            if new_key is not None:
+                obj_dict[new_key] = obj
+                obj_dict.pop(key)
+                label_dict[new_key] = label
+
         if stacked:
             from random import randint
             stack = ROOT.THStack("stack_" + str(randint(0, 10**9)), str(randint(0, 10**9)))
@@ -127,10 +153,10 @@ class ROOTPad(object):
                 if key not in tcolors:
                     key = "Other"
                     if add_to_legend and not self.missing_key:
-                        self.legend.AddEntry(obj, key, "f")
+                        self.add_legend_entry(obj, key, "f")
                         self.missing_key = True
                 elif add_to_legend:
-                    self.legend.AddEntry(obj, key, "f")
+                    self.add_legend_entry(obj, label_dict.get(key, key), "f")
 
                 obj.SetFillColor(tcolors.get(key, fill_color))
                 obj.SetLineColor(tcolors.get(key, line_color))
@@ -146,7 +172,7 @@ class ROOTPad(object):
             for key, obj in sorted(obj_dict.items()):
                 obj.SetLineColor(tcolors.get(key, line_color))
                 if add_to_legend:
-                    self.legend.AddEntry(obj, key, "l")
+                    self.add_legend_entry(obj, label_dict.get(key, key), "l")
             draw_objs = obj_dict.values()
 
         for obj in draw_objs:
@@ -230,6 +256,8 @@ class ROOTPlot(object):
                     pad.pad.SetTopMargin(0)
                 if idx_y > 0:
                     pad.pad.SetBottomMargin(0)
+                if idx_y == 0 and n_pads_y > 1:
+                    pad.pad.SetBottomMargin(0.3)
         self.n_pads_y = n_pads_y
 
     def cd(self, idx_x, idx_y):

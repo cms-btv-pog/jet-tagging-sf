@@ -248,7 +248,7 @@ class PlotVariable(PlotTask):
                     else:
                         text = r"#splitline{p_{T} > %d}{%.1f < |#eta| < %.1f}" % \
                             (pt_range[0], eta_range[0], eta_range[1])
-                    plot.draw_text(text, y_loc="middle")
+                    plot.draw_text(text, size=0.05, xpos=0.505, ypos=0.5, align=11)
 
                 # ratio of data to mc below the main plot
                 plot.cd(0, 0)
@@ -535,7 +535,7 @@ class PlotScaleFactor(PlotTask):
 
                     # build shifted histograms
                     fit_hist_down, fit_hist_up = build_hist_envelope(nominal_fit_hists[plot_category],
-                        up_shifted_hists[plot_category], down_shifted_fit_hists[plot_category],
+                        up_shifted_fit_hists[plot_category], down_shifted_fit_hists[plot_category],
                         envelope_as_errors=False)
 
                     if self.norm_to_nominal:

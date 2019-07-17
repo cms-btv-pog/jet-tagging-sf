@@ -63,26 +63,22 @@ class ROOTPad(object):
         self.legend = ROOT.TLegend(*coords)
         self.legend.SetNColumns(2)
 
-    def draw_text(self, text, xpos=None, ypos=None, size=None, y_loc="upper"):
+    def draw_text(self, text, xpos=None, ypos=None, size=None, align=33):
         self.cd()
         if xpos is None:
-            xpos = 1. - 1.2 * self.right_margin
+            xpos = 1. - 1.5 * self.right_margin
         if ypos is None:
-            if y_loc == "upper":
-                y_base = 2.
-            elif y_loc == "middle":
-                y_base = 1.
-            else:
-                raise ValueError("Unknown value for y position: {}".format(y_loc))
-            ypos = y_base - 1.2 * self.top_margin
+            ypos = 1. - 1.5 * self.top_margin
+
         if size is None:
             size = 0.75 * self.top_margin
 
         root_text = ROOT.TLatex()
         root_text.SetTextSize(size)
-        root_text.SetTextAlign(33)
+        root_text.SetTextAlign(align)
         root_text.SetTextFont(42)
-        root_text.DrawLatex(xpos, ypos, text)
+        root_text.DrawLatexNDC(xpos, ypos, text)
+
         self.objects.append(root_text)
 
     def add_object(self, obj):

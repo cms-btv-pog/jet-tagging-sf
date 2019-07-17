@@ -49,6 +49,25 @@ class PlotTask(AnalysisTask):
             hist_rebinned.SetBinError(1, hist.GetBinError(1))
         return hist_rebinned
 
+    def divide_hists(self, hist, denominator_hist):
+        # Divide histogram by *denominator_hist*. To be used if errors on denominator_hist
+        # should not be taken into account
+
+        # check if both histograms have the same binning
+        bin_edges = [hist.GetBinLowEdge(idx) for idx in range(1, hist.GetNbinsX() + 2)]
+        denominator_bin_edges = [denominator_hist.GetBinLowEdge(idx) for idx in
+            range(1, denominator_hist.GetNbinsX() + 2)]
+        if bin_edges != denominator_bin_edges:
+            raise Exception("Cannot divide two histograms if their binning is not identical.")
+
+        # divide histograms
+        for i in range(1, denominator_hist.GetNbinsX() + 2):
+            denominator = denominator_hist.GetBinContent(i)
+            value = 0 if denominator == 0 else hist.GetBinContent(i) / denominator
+            error = 0 if denominator == 0 else hist.GetBinError(i) / denominator
+            hist.SetBinContent(i, value)
+            hist.SetBinError(i, error)
+
     def output(self):
         return self.local_target("plots.tgz")
 
@@ -143,7 +162,7 @@ class PlotVariable(PlotTask):
             plot_dict[category] = plot
 
         with inp["hists"].load("r") as input_file:
-            for cat_i, category in enumerate(categories):
+            for category in enumerate(categories):
                 data_hist = None
                 mc_hists = defaultdict(lambda: defaultdict(lambda: None)) # shift -> key (process/flavor)
 
@@ -256,10 +275,12 @@ class PlotVariable(PlotTask):
                 # ratio histograms
                 # mc error band
                 ratio_mcerr_hist = mc_hist_sum.Clone()
-                ratio_mcerr_hist.Divide(mc_hist_sum)
+                # divide without error propagation
+                self.divide_hists(ratio_mcerr_hist, mc_hist_sum)
+
                 # ratio
                 ratio_hist = data_hist.Clone()
-                ratio_hist.Divide(mc_hist_sum)
+                self.divide_hists(ratio_hist, mc_hist_sum)
 
                 y_axis = ratio_hist.GetYaxis()
                 y_axis.SetRangeUser(0.5, 1.5)
@@ -280,9 +301,9 @@ class PlotVariable(PlotTask):
                 if self.draw_systematics:
                     # build envelope of ratio to nominal hist
                     for hist in up_shifted_mc_hists.values():
-                        hist.Divide(mc_hist_sum)
+                        self.divide_hists(hist, mc_hist_sum)
                     for hist in down_shifted_mc_hists.values():
-                        hist.Divide(mc_hist_sum)
+                        self.divide_hists(hist, mc_hist_sum)
                     scaled_envelope = build_hist_envelope(ratio_mcerr_hist, up_shifted_mc_hists,
                         down_shifted_mc_hists, envelope_as_errors=True)
                     plot.draw_as_graph(scaled_envelope, options="2", hatched=True)

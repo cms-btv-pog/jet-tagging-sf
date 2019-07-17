@@ -48,7 +48,6 @@ class ROOTPad(object):
         self.scale_factor = 1. / (y_max - y_min)
 
         self.objects = []
-        self.missing_key = False # Legend contains key not found in tcolors dict
         self.line_colors = [2, 4, 3, 90, 6, 8]
         self.has_drawn_object = False # To automatically set option 'SAME' if needed
         self.legend_entries = []
@@ -64,12 +63,18 @@ class ROOTPad(object):
         self.legend = ROOT.TLegend(*coords)
         self.legend.SetNColumns(2)
 
-    def draw_text(self, text, xpos=None, ypos=None, size=None):
+    def draw_text(self, text, xpos=None, ypos=None, size=None, y_loc="upper"):
         self.cd()
         if xpos is None:
             xpos = 1. - 1.2 * self.right_margin
         if ypos is None:
-            ypos = 2. - 1.2 * self.top_margin
+            if y_loc == "upper":
+                y_base = 2.
+            elif y_loc == "middle":
+                y_base = 1.
+            else:
+                raise ValueError("Unknown value for y position: {}".format(y_loc))
+            ypos = y_base - 1.2 * self.top_margin
         if size is None:
             size = 0.75 * self.top_margin
 
@@ -127,39 +132,38 @@ class ROOTPad(object):
             return None
 
         label_dict = {}
+        color_dict = {}
         for key, obj in obj_dict.copy().items():
-            new_key = None
+            color_key = None
             # if the key is a process, find out if either the process itself or
             # a parent process is contained in the plot color dict
             if isinstance(key, order.process.Process):
                 if key.name in tcolors:
-                    new_key = key.name
+                    color_key = key.name
                     label = key.label
                 else:
                     for process_name in tcolors:
                         if key.has_parent_process(process_name):
-                            new_key = process_name
+                            color_key = process_name
                             label = key.get_parent_process(process_name).label
                             break
-            if new_key is not None:
-                obj_dict[new_key] = obj
-                obj_dict.pop(key)
-                label_dict[new_key] = label
+            if color_key is not None:
+                color_dict[key] = color_key
+                label_dict[key] = label
 
         if stacked:
             from random import randint
             stack = ROOT.THStack("stack_" + str(randint(0, 10**9)), str(randint(0, 10**9)))
             for key, obj in sorted(obj_dict.items(), reverse=True):
-                if key not in tcolors:
+                color_key = color_dict.get(key, key)
+                if color_key not in tcolors:
+                    color_key = "Other"
                     key = "Other"
-                    if add_to_legend and not self.missing_key:
-                        self.add_legend_entry(obj, key, "f")
-                        self.missing_key = True
-                elif add_to_legend:
+                if add_to_legend:
                     self.add_legend_entry(obj, label_dict.get(key, key), "f")
 
-                obj.SetFillColor(tcolors.get(key, fill_color))
-                obj.SetLineColor(tcolors.get(key, line_color))
+                obj.SetFillColor(tcolors.get(color_key, fill_color))
+                obj.SetLineColor(tcolors.get(color_key, line_color))
                 obj.SetFillStyle(1001)
 
                 stack.Add(obj)
@@ -170,7 +174,8 @@ class ROOTPad(object):
             draw_objs = [stack]
         else:
             for key, obj in sorted(obj_dict.items()):
-                obj.SetLineColor(tcolors.get(key, line_color))
+                color_key = color_dict.get(key, key)
+                obj.SetLineColor(tcolors.get(color_key, line_color))
                 if add_to_legend:
                     self.add_legend_entry(obj, label_dict.get(key, key), "l")
             draw_objs = obj_dict.values()
@@ -181,26 +186,29 @@ class ROOTPad(object):
         if y_title is not None:
             draw_objs[0].GetYaxis().SetTitle(y_title)
 
-    def draw_as_graph(self, hist, options=None, add_same_option=True):
+    def draw_as_graph(self, obj, options=None, add_same_option=True, hatched=False):
         self.cd()
         options = self.update_options(options, add_same_option)
 
-        x, y = [], []
-        xerr_down, xerr_up = [], []
-        yerr_down, yerr_up = [], []
+        if isinstance(obj, ROOT.TGraph):
+            graph = obj
+        else:
+            x, y = [], []
+            xerr_down, xerr_up = [], []
+            yerr_down, yerr_up = [], []
 
-        for i in xrange(1, hist.GetNbinsX() + 1):
-            x.append(hist.GetBinCenter(i))
-            y.append(hist.GetBinContent(i))
-            xerr_down.append(hist.GetBinWidth(i) / 2.)
-            xerr_up.append(hist.GetBinWidth(i) / 2.)
-            yerr_down.append(hist.GetBinErrorLow(i))
-            yerr_up.append(hist.GetBinErrorUp(i))
+            for i in xrange(1, obj.GetNbinsX() + 1):
+                x.append(obj.GetBinCenter(i))
+                y.append(obj.GetBinContent(i))
+                xerr_down.append(obj.GetBinWidth(i) / 2.)
+                xerr_up.append(obj.GetBinWidth(i) / 2.)
+                yerr_down.append(obj.GetBinErrorLow(i))
+                yerr_up.append(obj.GetBinErrorUp(i))
 
-        graph = ROOT.TGraphAsymmErrors(len(x), array("f", x), array("f", y), array("f", xerr_down),
-            array("f", xerr_up), array("f", yerr_down), array("f", yerr_up))
-        graph.SetFillStyle(1001)
-        graph.SetFillColor(16)
+            graph = ROOT.TGraphAsymmErrors(len(x), array("f", x), array("f", y), array("f", xerr_down),
+                array("f", xerr_up), array("f", yerr_down), array("f", yerr_up))
+        graph.SetFillStyle(3004 if hatched else 1001)
+        graph.SetFillColor(ROOT.kGray + 3 if hatched else 16)
         graph.SetLineColor(0)
         graph.SetMarkerColor(0)
 
@@ -228,12 +236,11 @@ class ROOTPad(object):
 class ROOTPlot(object):
 
     def __init__(self, *args, **kwargs):
+        self.set_style()
         self.canvas = ROOT.TCanvas(*args, **kwargs)
 
         # store all used ROOT object to make sure they are not cleaned up
         self.objects = []
-
-        self.set_style()
 
     def create_pads(self, n_pads_x=1, n_pads_y=1, limits_x=None, limits_y=None, legend_loc="lower"):
         if limits_x is None:

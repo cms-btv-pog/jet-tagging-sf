@@ -16,6 +16,7 @@ from law.target.local import LocalDirectoryTarget
 
 from analysis.config.jet_tagging_sf import jes_total_shifts
 from analysis.root import ROOTPlot
+from analysis.util import build_hist_envelope
 from analysis.tasks.base import AnalysisTask, WrapperTask
 from analysis.tasks.hists import MergeHistograms, MergeScaleFactorWeights
 from analysis.tasks.measurement import MeasureScaleFactors, MeasureCScaleFactors, FitScaleFactors
@@ -59,9 +60,9 @@ class PlotVariable(PlotTask):
     final_it = MergeHistograms.final_it
 
     category_tag = luigi.Parameter(default="merged")
-    variable = CSVParameter(default=["jet{i_probe_jet}_{b_tag_var}_{region}_nominal"],
+    variable = CSVParameter(default=["jet{i_probe_jet}_{b_tag_var}_{region}_{shift}"],
         description="Variable to plot, or multiple variables that are filled into one histogram. "
-        "{} accesses auxiliary category information.")
+        "{} accesses auxiliary information.")
     mc_split = luigi.ChoiceParameter(choices=["process", "flavor"], default="process")
     normalize = luigi.BoolParameter(description="Normalize MC histogram to data histogram")
     truncate = luigi.BoolParameter(description="Truncate the bin below zero, to be used "
@@ -69,26 +70,27 @@ class PlotVariable(PlotTask):
     rebin = luigi.BoolParameter(description="Rebin variable to 'measurement' binning, only "
         "for b-tag variable plots. Not usable with category-optimized binning.")
 
-    compare_iteration = luigi.IntParameter(default=-1, description="Secondary iteration to compare to. Can"
-        "not be the final iteration.")
     logarithmic = luigi.BoolParameter(description="Plot y axis with logarithmic scale.")
     draw_stacked = luigi.BoolParameter(description="Plot MC processes separated by *mc_split*, "
         "combined in a stack.")
+    draw_systematics = luigi.BoolParameter(description="Draw envelope of systematic uncertainties.")
 
     mc_key = "mc"
     data_key = "data"
 
+    def __init__(self, *args, **kwargs):
+        super(PlotVariable, self).__init__(*args, **kwargs)
+        if self.draw_systematics:
+            self.shifts = [shift for shift in MeasureScaleFactors.shifts if not shift in jes_total_shifts]
+            if self.final_it:
+                self.shifts += MeasureCScaleFactors.shifts
+        else:
+            self.shifts = ["nominal"]
+
     def requires(self):
-        reqs = {"hists": OrderedDict()}
+        reqs = {}
 
-        if self.compare_iteration >= 0:
-            if self.compare_iteration == self.iteration:
-                raise ValueError("Trying to compare identical iterations {} and {}".format(
-                    self.iteration, self.compare_iteration))
-            reqs["hists"]["secondary"] = MergeHistograms.req(self, branch=0, iteration=self.compare_iteration, final_it=False,
-                version=self.get_version(MergeHistograms), _prefer_cli=["version"])
-
-        reqs["hists"]["primary"] = MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
+        reqs["hists"] = MergeHistograms.req(self, branch=0, version=self.get_version(MergeHistograms),
             _prefer_cli=["version"])
 
         if self.normalize:
@@ -135,43 +137,45 @@ class PlotVariable(PlotTask):
 
         # create plot objects
         plot_dict = {}
-        limits_x = np.linspace(0., 1., len(inp["hists"]) + 1)
         for category in categories:
             plot = ROOTPlot(category.name, category.name)
-            plot.create_pads(n_pads_x=len(inp["hists"]), n_pads_y=2, limits_x=limits_x,
-                limits_y=[0., 0.3, 1.0], legend_loc="upper")
+            plot.create_pads(n_pads_y=2, limits_y=[0., 0.3, 1.0], legend_loc="upper")
             plot_dict[category] = plot
 
-        for target_idx, inp_target in enumerate(inp["hists"].values()):
-            with inp_target.load("r") as input_file:
-                for category in categories:
-                    data_hist = None
-                    mc_hists = defaultdict(lambda: None)
+        with inp["hists"].load("r") as input_file:
+            for cat_i, category in enumerate(categories):
+                data_hist = None
+                mc_hists = defaultdict(lambda: defaultdict(lambda: None)) # shift -> key (process/flavor)
 
-                    for leaf_cat, _, children in category.walk_categories():
-                        # we are only interested in leaves
-                        if children:
-                            continue
+                for leaf_cat, _, children in category.walk_categories():
+                    # we are only interested in leaves
+                    if children:
+                        continue
 
-                        flavor = leaf_cat.get_aux("flavor", None)
-                        channel = leaf_cat.get_aux("channel")
-                        region = leaf_cat.get_aux("region")
+                    flavor = leaf_cat.get_aux("flavor", None)
+                    channel = leaf_cat.get_aux("channel")
+                    region = leaf_cat.get_aux("region")
 
-                        category_dir = input_file.GetDirectory(leaf_cat.name)
-                        for process_key in category_dir.GetListOfKeys():
-                            process = self.config_inst.get_process(process_key.GetName())
-                            process_dir = category_dir.GetDirectory(process.name)
+                    category_dir = input_file.GetDirectory(leaf_cat.name)
+                    for process_key in category_dir.GetListOfKeys():
+                        process = self.config_inst.get_process(process_key.GetName())
+                        process_dir = category_dir.GetDirectory(process.name)
 
-                            # avoid double counting of inclusive and flavor-dependent histograms
-                            if flavor is not None:  # Not needed in case region isn't flavor specific
-                                if process.is_data and flavor != "inclusive":
-                                    continue
-                                elif process.is_mc and flavor == "inclusive":
-                                    continue
+                        # avoid double counting of inclusive and flavor-dependent histograms
+                        if flavor is not None:  # Not needed in case region isn't flavor specific
+                            if process.is_data and flavor != "inclusive":
+                                continue
+                            elif process.is_mc and flavor == "inclusive":
+                                continue
+
+                        for shift in self.shifts:
+                            if process.is_data and shift != "nominal":
+                                continue
                             for variable in self.variable:
                                 # create variable name from template
                                 aux = leaf_cat.aux.copy()
                                 aux["b_tag_var"] = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
+                                aux["shift"] = shift
                                 variable = variable.format(**aux)
 
                                 hist = process_dir.Get(variable)
@@ -181,60 +185,107 @@ class PlotVariable(PlotTask):
 
                                 add_to_data, sign = self.associate_process(process)
                                 if add_to_data:
+                                    if shift != "nominal":
+                                        raise Exception("Cannot add shifted samples to data.")
                                     data_hist = add_hist(data_hist, hist, sign=sign)
                                 else:
                                     if self.normalize:  # apply "trigger" sfs as part of the normalization
                                         hist.Scale(scales[channel.name][region])
 
                                     key = process if self.mc_split == "process" else flavor
-                                    mc_hists[key] = add_hist(mc_hists[key], hist, sign=sign)
+                                    mc_hists[shift][key] = add_hist(mc_hists[shift][key], hist, sign=sign)
 
-                    if self.normalize:  # normalize mc yield to data in this category
-                        mc_yield = sum(hist.Integral() for hist in mc_hists.values())
-                        data_yield = data_hist.Integral()
-                        norm_factor = data_yield / mc_yield
-                        for mc_hist in mc_hists.values():
+                if self.normalize:  # normalize mc yield to data in this category
+                    mc_yield = sum(hist.Integral() for hist in mc_hists["nominal"].values())
+                    data_yield = data_hist.Integral()
+                    norm_factor = data_yield / mc_yield
+                    for shift in self.shifts:
+                        for mc_hist in mc_hists[shift].values():
                             mc_hist.Scale(norm_factor)
 
-                    # get maximum value of hists/ stacks drawn to set axis ranges
-                    mc_hist_sum = mc_hists.values()[0].Clone()
+                # get maximum value of hists/ stacks drawn to set axis ranges
+                mc_hist_sum = mc_hists["nominal"].values()[0].Clone()
 
-                    for mc_hist in mc_hists.values()[1:]:
-                        mc_hist_sum.Add(mc_hist)
-                    hist_maximum = max([mc_hist_sum.GetMaximum(), data_hist.GetMaximum()])
-                    plot = plot_dict[category]
-                    # data and mc histograms
-                    plot.cd(target_idx, 1)
-                    if self.draw_stacked:
-                        plot.draw(mc_hists, stacked=True, stack_maximum=1.5*hist_maximum, y_title="Entries")
+                for mc_hist in mc_hists["nominal"].values()[1:]:
+                    mc_hist_sum.Add(mc_hist)
+                hist_maximum = max([mc_hist_sum.GetMaximum(), data_hist.GetMaximum()])
+
+                plot = plot_dict[category]
+                # data and mc histograms
+                plot.cd(0, 1)
+                if self.draw_stacked:
+                    plot.draw(mc_hists["nominal"], stacked=True, stack_maximum=1.5*hist_maximum, y_title="Entries")
+                else:
+                    plot.draw({self.mc_key: mc_hist_sum}, line_color=None)
+                plot.draw({self.data_key: data_hist})
+
+                if self.draw_systematics:
+                    up_shifted_mc_hists = {}
+                    down_shifted_mc_hists = {}
+                    for shift in self.shifts:
+                        # combine processes/ flavors
+                        shifted_mc_hist_sum = mc_hists[shift].values()[0].Clone()
+                        for mc_hist in mc_hists[shift].values()[1:]:
+                            shifted_mc_hist_sum.Add(mc_hist)
+
+                        if shift.endswith("_down"):
+                            down_shifted_mc_hists[shift[:-5]] = shifted_mc_hist_sum.Clone()
+                        elif shift.endswith("_up"):
+                            up_shifted_mc_hists[shift[:-3]] = shifted_mc_hist_sum.Clone()
+
+                    envelope = build_hist_envelope(mc_hist_sum, up_shifted_mc_hists,
+                        down_shifted_mc_hists, envelope_as_errors=True)
+
+                    plot.draw_as_graph(envelope, options="2", hatched=True)
+
+                # add category information to plot
+                pt_range = category.get_aux("pt", None)
+                eta_range = category.get_aux("eta", None)
+                if pt_range is not None and eta_range is not None:
+                    if not np.isinf(pt_range[1]):
+                        text = r"#splitline{%d < p_{T} < %d}{%.1f < |#eta| < %.1f}" % \
+                            (pt_range[0], pt_range[1], eta_range[0], eta_range[1])
                     else:
-                        plot.draw({self.mc_key: mc_hist_sum}, line_color=None)
-                    plot.draw({self.data_key: data_hist})
+                        text = r"#splitline{p_{T} > %d}{%.1f < |#eta| < %.1f}" % \
+                            (pt_range[0], eta_range[0], eta_range[1])
+                    plot.draw_text(text, y_loc="middle")
 
-                    # ratio of data to mc below the main plot TODO: Error propagation
-                    plot.cd(target_idx, 0)
-                    # mc error band
-                    ratio_mcerr_hist = mc_hist_sum.Clone()
-                    ratio_mcerr_hist.Divide(mc_hist_sum)
-                    # ratio
-                    ratio_hist = data_hist.Clone()
-                    ratio_hist.Divide(mc_hist_sum)
+                # ratio of data to mc below the main plot
+                plot.cd(0, 0)
 
-                    y_axis = ratio_hist.GetYaxis()
-                    y_axis.SetRangeUser(0.5, 1.5)
-                    y_axis.SetTitle("data/MC")
-                    y_axis.SetTitleSize(y_axis.GetTitleSize() * plot.open_pad.scale_factor)
-                    y_axis.SetLabelSize(y_axis.GetLabelSize() * plot.open_pad.scale_factor)
-                    y_axis.SetNdivisions(505)
-                    y_axis.SetTitleOffset(0.65)
+                # ratio histograms
+                # mc error band
+                ratio_mcerr_hist = mc_hist_sum.Clone()
+                ratio_mcerr_hist.Divide(mc_hist_sum)
+                # ratio
+                ratio_hist = data_hist.Clone()
+                ratio_hist.Divide(mc_hist_sum)
 
-                    x_axis = ratio_hist.GetXaxis()
-                    x_axis.SetTitleSize(x_axis.GetTitleSize() * plot.open_pad.scale_factor)
-                    x_axis.SetLabelSize(x_axis.GetLabelSize() * plot.open_pad.scale_factor)
+                y_axis = ratio_hist.GetYaxis()
+                y_axis.SetRangeUser(0.5, 1.5)
+                y_axis.SetTitle("data/MC")
+                y_axis.SetTitleSize(y_axis.GetTitleSize() * plot.open_pad.scale_factor)
+                y_axis.SetLabelSize(y_axis.GetLabelSize() * plot.open_pad.scale_factor)
+                y_axis.SetNdivisions(505)
+                y_axis.SetTitleOffset(0.65)
 
-                    plot.draw({"invis": ratio_hist}, invis=True)
-                    plot.draw_as_graph(ratio_mcerr_hist, options="2")
-                    plot.draw({"data/mc": ratio_hist})
+                x_axis = ratio_hist.GetXaxis()
+                x_axis.SetTitleSize(x_axis.GetTitleSize() * plot.open_pad.scale_factor)
+                x_axis.SetLabelSize(x_axis.GetLabelSize() * plot.open_pad.scale_factor)
+
+                plot.draw({"invis": ratio_hist}, invis=True)
+                plot.draw_as_graph(ratio_mcerr_hist, options="2")
+                plot.draw({"data/mc": ratio_hist})
+
+                if self.draw_systematics:
+                    # build envelope of ratio to nominal hist
+                    for hist in up_shifted_mc_hists.values():
+                        hist.Divide(mc_hist_sum)
+                    for hist in down_shifted_mc_hists.values():
+                        hist.Divide(mc_hist_sum)
+                    scaled_envelope = build_hist_envelope(ratio_mcerr_hist, up_shifted_mc_hists,
+                        down_shifted_mc_hists, envelope_as_errors=True)
+                    plot.draw_as_graph(scaled_envelope, options="2", hatched=True)
 
         for category, plot in plot_dict.items():
             plot.save(os.path.join(local_tmp.path,
@@ -481,47 +532,11 @@ class PlotScaleFactor(PlotTask):
                 for plot_category in plots:
                     plot = plots[plot_category]
                     plot.cd(0, 0)
-                    errors_up = []
-                    errors_down = []
-                    for shift_idx, shift in enumerate(up_shifted_fit_hists[plot_category]):
-                        up_shifted_hist = up_shifted_fit_hists[plot_category][shift]
-                        down_shifted_hist = down_shifted_fit_hists[plot_category][shift]
-
-                        for bin_idx in range(1, up_shifted_hist.GetNbinsX() + 1):
-                            nominal_value = nominal_fit_hists[plot_category].GetBinContent(bin_idx)
-
-                            # combine all shifts that have an effect in the same direction
-                            # effect from <shift>_up/done systematics
-                            diff_up = up_shifted_hist.GetBinContent(bin_idx) - nominal_value
-                            diff_down = down_shifted_hist.GetBinContent(bin_idx) - nominal_value
-
-                            # shift with effect in up/down direction
-                            error_up = max([diff_up, diff_down, 0])
-                            error_down = min([diff_up, diff_down, 0])
-
-                            # detect systematics where up/down shift direction is the same
-                            #if diff_up * diff_down > 0:
-                            #    print "One sided shift: {}, {}".format(shift, plot_category)
-
-                            # add in quadrature
-                            if shift_idx == 0:
-                                errors_up.append(error_up**2)
-                                errors_down.append(error_down**2)
-                            else:
-                                errors_up[bin_idx - 1] += error_up**2
-                                errors_down[bin_idx - 1] += error_down**2
-                    errors_up = np.sqrt(errors_up)
-                    errors_down = np.sqrt(errors_down)
 
                     # build shifted histograms
-                    fit_hist_up = nominal_fit_hists[plot_category].Clone()
-                    fit_hist_down = nominal_fit_hists[plot_category].Clone()
-
-                    for bin_idx in range(1, fit_hist_up.GetNbinsX() + 1):
-                        fit_hist_up.SetBinContent(bin_idx, fit_hist_up.GetBinContent(bin_idx)
-                            + errors_up[bin_idx - 1])
-                        fit_hist_down.SetBinContent(bin_idx, fit_hist_down.GetBinContent(bin_idx)
-                            - errors_down[bin_idx - 1])
+                    fit_hist_down, fit_hist_up = build_hist_envelope(nominal_fit_hists[plot_category],
+                        up_shifted_hists[plot_category], down_shifted_fit_hists[plot_category],
+                        envelope_as_errors=False)
 
                     if self.norm_to_nominal:
                         fit_hist_up.Divide(nominal_fit_hists[plot_category])

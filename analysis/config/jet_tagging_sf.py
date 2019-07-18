@@ -52,8 +52,6 @@ cfg.add_process(process_ttVJets)
 ch_ee = cfg.add_channel("ee", 1)
 ch_emu = cfg.add_channel("emu", 2)
 ch_mumu = cfg.add_channel("mumu", 3)
-ch_e = cfg.add_channel("e", 4)
-ch_mu = cfg.add_channel("mu", 5)
 
 # define configurations that are not part of a config
 

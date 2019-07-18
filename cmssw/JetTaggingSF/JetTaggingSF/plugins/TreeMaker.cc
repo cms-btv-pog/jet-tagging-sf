@@ -101,8 +101,8 @@ enum LeptonChannel
     C_EE,
     C_EMU,
     C_MUMU,
-//    C_E,
-//    C_MU
+    C_E,
+    C_MU
 };
 
 bool comparePt(const pat::Jet& jet1, const pat::Jet& jet2)
@@ -204,8 +204,8 @@ private:
     vstring eeTriggers_;
     vstring emuTriggers_;
     vstring mumuTriggers_;
-    //vstring eTriggers_;
-    //vstring muTriggers_;
+    vstring eTriggers_;
+    vstring muTriggers_;
     vstring metFilters_;
     vstring jesFiles_;
     vint jesRanges_;
@@ -263,8 +263,8 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , eeTriggers_(iConfig.getParameter<vstring>("eeTriggers"))
     , emuTriggers_(iConfig.getParameter<vstring>("emuTriggers"))
     , mumuTriggers_(iConfig.getParameter<vstring>("mumuTriggers"))
-    //, eTriggers_(iConfig.getParameter<vstring>("eTriggers"))
-    //, muTriggers_(iConfig.getParameter<vstring>("muTriggers"))
+    , eTriggers_(iConfig.getParameter<vstring>("eTriggers"))
+    , muTriggers_(iConfig.getParameter<vstring>("muTriggers"))
     , metFilters_(iConfig.getParameter<vstring>("metFilters"))
     , jesFiles_(iConfig.getParameter<vstring>("jesFiles"))
     , jesRanges_(iConfig.getParameter<vint>("jesRanges"))
@@ -865,14 +865,14 @@ bool TreeMaker::triggerSelection(const edm::Event& event, LeptonChannel& channel
     {
         triggersToPass = mumuTriggers_;
     }
-    //else if (channel == C_E)
-    //{
-    //    triggersToPass = eTriggers_;
-    //}
-    //else if (channel == C_MU)
-    //{
-    //    triggersToPass = muTriggers_;
-    //}
+    else if (channel == C_E)
+    {
+        triggersToPass = eTriggers_;
+    }
+    else if (channel == C_MU)
+    {
+        triggersToPass = muTriggers_;
+    }
 
     const edm::TriggerNames& triggerNames = event.triggerNames(*triggerBitsHandle);
     for (size_t i = 0; i < triggerBitsHandle->size(); ++i)
@@ -955,7 +955,7 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     size_t nLeptons = nElectrons + nMuons;
     size_t nTightLeptons = nTightElectrons + nTightMuons;
 
-    if (nLeptons != 2 || nTightLeptons < 1)
+    if (nLeptons > 2 || nTightLeptons < 1)
     {
         return false;
     }
@@ -979,18 +979,18 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
         lep1 = &muons[0];
         lep2 = &muons[1];
     }
-    //else if (nElectrons == 1 && nMuons == 0)
-    //{
-    //    is_sl = true;
-    //    channel = C_E;
-    //    lep1 = &electrons[0];
-    //}
-    //else if (nElectrons == 0 && nMuons == 1)
-    //{
-    //    is_sl = true;
-    //    channel = C_MU;
-    //    lep1 = &muons[0];
-    //}
+    else if (nElectrons == 1 && nMuons == 0)
+    {
+        is_sl = true;
+        channel = C_E;
+        lep1 = &electrons[0];
+    }
+    else if (nElectrons == 0 && nMuons == 1)
+    {
+        is_sl = true;
+        channel = C_MU;
+        lep1 = &muons[0];
+    }
     else
     {
         throw std::runtime_error("could not determine lepton channel!");
@@ -1007,9 +1007,9 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
     {
         if ((leptonChannel_ == "ee" && channel != C_EE) ||
             (leptonChannel_ == "emu" && channel != C_EMU) ||
-            (leptonChannel_ == "mumu" && channel != C_MUMU))
-            //(leptonChannel_ == "e" && channel != C_E) ||
-            //(leptonChannel_ == "mu" && channel != C_MU))
+            (leptonChannel_ == "mumu" && channel != C_MUMU) ||
+            (leptonChannel_ == "e" && channel != C_E) ||
+            (leptonChannel_ == "mu" && channel != C_MU))
         {
             return false;
         }

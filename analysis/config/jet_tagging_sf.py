@@ -32,8 +32,8 @@ cfg = analysis.add_config(name="base", id=0)
 cfg.add_process(process_data_ee)
 cfg.add_process(process_data_emu)
 cfg.add_process(process_data_mumu)
-#cfg.add_process(process_data_e)
-#cfg.add_process(process_data_mu)
+cfg.add_process(process_data_e)
+cfg.add_process(process_data_mu)
 cfg.add_process(process_tt_dl)
 cfg.add_process(process_tt_sl)
 cfg.add_process(process_dy_lep)
@@ -52,8 +52,8 @@ cfg.add_process(process_ttVJets)
 ch_ee = cfg.add_channel("ee", 1)
 ch_emu = cfg.add_channel("emu", 2)
 ch_mumu = cfg.add_channel("mumu", 3)
-#ch_e = cfg.add_channel("e", 4)
-#ch_mu = cfg.add_channel("mu", 5)
+ch_e = cfg.add_channel("e", 4)
+ch_mu = cfg.add_channel("mu", 5)
 
 # define configurations that are not part of a config
 
@@ -208,8 +208,9 @@ def get_z_window_info(cfg, flavour, et_miss=30.0, z_window=10.):
 
 def get_region_info(cfg, idx, channel, et_miss=30., z_window=10., add_btag_cut=True, b_tagger="deepcsv"):
     hf_cuts, lf_cuts = [], []
-    hf_cuts.append(get_btag_info(cfg, idx, "medium", b_tagger, ">"))
-    lf_cuts.append(get_btag_info(cfg, idx, "loose", b_tagger, "<"))
+    if add_btag_cut:
+        hf_cuts.append(get_btag_info(cfg, idx, "medium", b_tagger, ">"))
+        lf_cuts.append(get_btag_info(cfg, idx, "loose", b_tagger, "<"))
 
     if channel != "emu":
         lf_cuts.extend(get_z_window_info(cfg, "lf", et_miss=et_miss, z_window=z_window))
@@ -328,7 +329,7 @@ for lep_idx in xrange(1, 3):
         binning=(25, 0., 500.,),
         unit="GeV",
         tags={"main"},
-        x_title="Lep_{} p_{{T}}".format(lep_idx),
+        x_title="Lep_{{{}}} p_{{T}}".format(lep_idx),
     )
 
 for jet_idx in xrange(1, 5):
@@ -340,14 +341,14 @@ for jet_idx in xrange(1, 5):
         expression="jet{}_pt{{jec_identifier}}".format(jet_idx),
         binning=(25, 0., 500.,),
         unit="GeV",
-        x_title="Jet_{} p_{{T}}".format(jet_idx),
+        x_title="Jet_{{{}}} p_{{T}}".format(jet_idx),
         tags=tags
     )
     cfg.add_variable(
         name="jet{}_eta".format(jet_idx),
         expression="jet{}_eta{{jec_identifier}}".format(jet_idx),
         binning=(25, -2.5, 2.5),
-        x_title="Jet_{} Eta".format(jet_idx),
+        x_title="Jet_{{{}}} Eta".format(jet_idx),
         tags=tags,
     )
 
@@ -374,14 +375,14 @@ def add_btag_variables(cfg):
                 name="jet{}_deepcsv_b{}".format(jet_idx, postfix),
                 expression="jet{}_deepcsv_b{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} prob_{{b}}".format(jet_idx),
+                x_title="Jet_{{{}}} prob_{{b}}".format(jet_idx),
                 context=cfg.name,
             )
             cfg.add_variable(
                 name="jet{}_deepcsv_bb{}".format(jet_idx, postfix),
                 expression="jet{}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} prob_{{bb}}".format(jet_idx),
+                x_title="Jet_{{{}}} prob_{{bb}}".format(jet_idx),
                 context=cfg.name,
             )
             # deepcsv discriminator
@@ -389,7 +390,7 @@ def add_btag_variables(cfg):
                 name="jet{}_deepcsv_bcomb{}".format(jet_idx, postfix),
                 expression="jet{0}_deepcsv_b{{jec_identifier}} + jet{0}_deepcsv_bb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} DeepCSV".format(jet_idx),
+                x_title="Jet_{{{}}} DeepCSV".format(jet_idx),
                 tags=tags,
                 aux={"b_tagger": "deepcsv"}, # to filter required b-tagger in histogram writer
                 context=cfg.name,
@@ -403,7 +404,7 @@ def add_btag_variables(cfg):
                 expression="jet{0}_deepjet_b{{jec_identifier}} + jet{0}_deepjet_bb{{jec_identifier}} + "\
                     "jet{0}_deepjet_lepb{{jec_identifier}}".format(jet_idx),
                 binning=binning,
-                x_title="Jet_{} DeepJet".format(jet_idx),
+                x_title="Jet_{{{}}} DeepJet".format(jet_idx),
                 tags=tags,
                 aux={"b_tagger": "deepjet"}, # to filter required b-tagger in histogram writer
                 context=cfg.name,
@@ -468,6 +469,23 @@ def add_categories(cfg, b_tagger):
                         selection=join_root_selection("channel == {}".format(ch.id), ps_sel, rg_sel),
                         tags={b_tagger},
                     )
+
+                    # combined region categories, with tag jet cut applied
+                    # used to determine e.g. sample composition in measurement regions
+                    rg_btag_merged_name = "{}__{}__{}__{}__btag".format(ps_name, rg_name, b_tagger, cfg.name)
+                    if not cfg.has_category(rg_btag_merged_name):
+                        rg_btag_merged_cat = cfg.add_category(
+                            name=rg_btag_merged_name,
+                            label="{}, {}".format(ps_name, rg_name, b_tagger),
+                            tags={"combined", b_tagger},
+                            aux={
+                                "phase_space": ps_name,
+                                "region": rg_name,
+                            },
+                            context=cfg.name,
+                        )
+                    else:
+                        rg_btag_merged_cat = cfg.get_category(rg_btag_merged_name)
 
                     # flavor loop (b, c, udsg, ...)
                     for fl_name, fl_sel in get_flavor_info(i_probe_jet):
@@ -556,6 +574,8 @@ def add_categories(cfg, b_tagger):
                                 else:
                                     merged_cat = cfg.get_category(merged_name)
                                 merged_cat.add_category(eta_cat)
+                                rg_btag_merged_cat.add_category(eta_cat)
+
                                 # Specialized b-tag discriminant binnings are defined on
                                 # the merged categories, but needed when writing leaf categories
                                 eta_cat.set_aux("binning_category", merged_cat)

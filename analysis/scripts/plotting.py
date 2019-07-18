@@ -15,7 +15,9 @@ import os
 import tarfile
 
 import luigi
+import law
 
+from collections import OrderedDict
 from analysis.tasks.base import AnalysisTask
 from analysis.root import ROOTPlot
 from law.target.local import LocalDirectoryTarget
@@ -30,7 +32,7 @@ class PlotFromCSV(AnalysisTask):
     norm_to_nominal = luigi.BoolParameter()
 
     def output(self):
-        return self.local_target("plots.tgz")
+        return self.local_target("plots_{}.tgz".format(self.shift))
 
     def run(self):
         ROOT.PyConfig.IgnoreCommandLineOptions = True
@@ -61,53 +63,58 @@ class PlotFromCSV(AnalysisTask):
             v_sys.push_back("up_" + shift)
             v_sys.push_back("down_" + shift)
 
-        readers = {}
-        for input_file, id in zip([self.csv_file, self.compare_file], ["first", "compare"]):
-            calib = ROOT.BTagCalibration("csvv1", input_file)
-            reader = ROOT.BTagCalibrationReader(
-                3,              # 0 is for loose op, 1: medium, 2: tight, 3: discr. reshaping
-                "central",      # central systematic type
-                v_sys,          # vector of other sys. types
-            )
-
-            for jetFlavor in [0, 1, 2]:
-                reader.load(
-                    calib,
-                    jetFlavor,          # 0 is for b flavour, 1: FLAV_C, 2: FLAV_UDSG
-                    "iterativefit"      # measurement type
-                )
-            readers[id] = reader
-
         flavor_ids = self.config_inst.get_aux("flavor_ids")
         binning = self.config_inst.get_aux("binning")[self.flavor]
 
         pt_binning = [(start, end) for start, end in zip(binning["pt"][:-1], binning["pt"][1:])]
         eta_binning = [(start, end) for start, end in zip(binning["abs(eta)"][:-1], binning["abs(eta)"][1:])]
 
-        for pt_idx, pt_range in enumerate(pt_binning):
-            for eta_idx, eta_range in enumerate(eta_binning):
-                fig = plt.figure()
-                ax = fig.add_subplot(111)
-                ax.set_title("pt: %s to %s, eta: %.1f to %.1f" % (pt_range + eta_range))
+        figures = {}
+        for input_file, id in zip([self.csv_file, self.compare_file], ["first", "compare"]):
+            # create calibration reader
+            calib = ROOT.BTagCalibration("csv_{}".format(id), input_file)
+            reader = ROOT.BTagCalibrationReader(
+                3,              # 0 is for loose op, 1: medium, 2: tight, 3: discr. reshaping
+                "central",      # central systematic type
+                v_sys,          # vector of other sys. types
+            )
+            for jetFlavor in [0, 1, 2]:
+                reader.load(
+                    calib,
+                    jetFlavor,          # 0 is for b flavour, 1: FLAV_C, 2: FLAV_UDSG
+                    "iterativefit"      # measurement type
+                )
 
-                pt_val = np.mean(pt_range)
-                eta_val = np.mean(eta_range)
+            for pt_idx, pt_range in enumerate(pt_binning):
+                for eta_idx, eta_range in enumerate(eta_binning):
+                    key = pt_range + eta_range
+                    if key not in figures:
+                        fig = plt.figure()
+                        ax = fig.add_subplot(111)
+                        ax.set_title("pt: %s to %s, eta: %.1f to %.1f" % (pt_range + eta_range))
+                    else:
+                        fig, ax = figures[key]
 
-                def get_values(reader, sys_type):
-                    x_values = np.linspace(0., 1., 10000)
-                    y_values = []
-                    for csv_value in x_values:
-                        sf = reader.eval_auto_bounds(
-                            sys_type,      # systematic (here also 'up'/'down' possible)
-                            flavor_ids[self.flavor],              # jet flavor
-                            eta_val,            # absolute value of eta
-                            pt_val,             # pt
-                            csv_value
-                        )
-                        y_values.append(sf)
-                    return np.array(x_values), np.array(y_values)
+                    if pt_range[1] == np.inf:
+                        pt_val = pt_range[0] + 1
+                    else:
+                        pt_val = np.mean(pt_range)
+                    eta_val = np.mean(eta_range)
 
-                for id, reader in readers.items():
+                    def get_values(csv_reader, sys_type):
+                        x_values = np.linspace(0., 1., 10000)
+                        y_values = []
+                        for csv_value in x_values:
+                            sf = csv_reader.eval_auto_bounds(
+                                sys_type,      # systematic (here also 'up'/'down' possible)
+                                flavor_ids[self.flavor],              # jet flavor
+                                eta_val,            # absolute value of eta
+                                pt_val,             # pt
+                                csv_value
+                            )
+                            y_values.append(sf)
+                        return np.array(x_values), np.array(y_values)
+
                     x_values, nominal_values = get_values(reader, "central")
                     if not self.norm_to_nominal:
                         ax.plot(x_values, nominal_values, label="{}, {}".format(id, "nominal"))
@@ -143,13 +150,52 @@ class PlotFromCSV(AnalysisTask):
                     ax.plot(x_values, up_values, label="{}, {}".format(id, "up_" + self.shift))
                     ax.plot(x_values, down_values, label="{}, {}".format(id, "down" + self.shift))
 
-                ax.legend()
-                fig.savefig(os.path.join(local_tmp.path, "SF_%s_%s_Pt%sto%s_eta%.1fTo%.1f.pdf" % ((self.flavor, self.shift) + pt_range + eta_range)))
+                    figures[key] = (fig, ax)
+
+            del reader
+            del calib
+
+        for key, (fig, ax) in figures.items():
+            ax.legend()
+            fig.savefig(os.path.join(local_tmp.path, "SF_%s_%s_Pt%sTo%s_eta%.1fTo%.1f.pdf" % ((self.flavor, self.shift) + key)))
 
         with self.output().localize("w") as tmp:
             with tarfile.open(tmp.path, "w:gz") as tar:
                 for plot_file in os.listdir(local_tmp.path):
                     tar.add(os.path.join(local_tmp.path, plot_file), arcname=plot_file)
+
+
+class PlotShiftsFromCSV(AnalysisTask, law.WrapperTask):
+    shifts = law.CSVParameter(default=[], description="shifts to require")
+    skip_shifts = law.CSVParameter(default=[], description="shifts to skip, supports patterns")
+
+    flavor = PlotFromCSV.flavor
+    norm_to_nominal = PlotFromCSV.norm_to_nominal
+
+    wrapped_task = PlotFromCSV
+
+    def __init__(self, *args, **kwargs):
+        super(PlotShiftsFromCSV, self).__init__(*args, **kwargs)
+
+        jes_sources = self.config_inst.get_aux("jes_sources")
+
+        if not self.shifts:
+            self.shifts = []
+            if self.flavor == "c":
+                self.shifts = ["cferr1", "cferr2"]
+            else:
+                self.shifts.extend(["jes{}".format(jes_source) for jes_source in jes_sources if jes_source != "Total"])
+                self.shifts.extend(["{}{}".format(region, type) for region, type in
+                    itertools.product(["lf", "hf"], ["", "stats1", "stats2"])])
+        if self.skip_shifts:
+            filter_fn = lambda d: not law.util.multi_match(d, self.skip_shifts)
+            self.shifts = filter(filter_fn, self.shifts)
+
+    def requires(self):
+        def req(shift):
+            return self.wrapped_task.req(self, shift=shift)
+
+        return OrderedDict([(shift, req(shift)) for shift in self.shifts])
 
 
 class PlotFromRoot(AnalysisTask):

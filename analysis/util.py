@@ -4,7 +4,7 @@
 __all__ = [
     "calc_checksum", "wget", "call_thread", "determine_xrd_redirector", "parse_leaf_list",
     "get_tree_names", "get_trees", "copy_trees", "TreeExtender", "TreeInFileExtender",
-    "walk_categories", "format_shifts"
+    "walk_categories", "format_shifts", "build_hist_envelope",
 ]
 
 
@@ -16,6 +16,8 @@ import subprocess
 import threading
 import Queue
 import re
+
+import numpy as np
 
 import law
 
@@ -439,6 +441,76 @@ def walk_categories(category):
 
         yield category, children
         categories.extend(children)
+
+def build_hist_envelope(nominal_hist, up_shifted_hists, down_shifted_hists, envelope_as_errors=False):
+    """
+    Create a shift envelope from a combination of systematics shifts.
+    Expects *up_shifted_hists* and *down_shifted_hists* to be a dict of the form shift -> hist
+    If *envelope_as_errors* is True, returns a TGraphAsymmErrors that is a copy of
+    the nominal histogram with up and down errors set.
+    Otherwise, returns the down and up shifts as separate histograms.
+    """
+    import ROOT
+    ROOT.gROOT.SetBatch()
+    from array import array
+
+    errors_up = []
+    errors_down = []
+    for shift_idx, shift in enumerate(up_shifted_hists):
+        up_shifted_hist = up_shifted_hists[shift]
+        down_shifted_hist = down_shifted_hists[shift]
+
+        for bin_idx in range(1, up_shifted_hist.GetNbinsX() + 1):
+            nominal_value = nominal_hist.GetBinContent(bin_idx)
+
+            # combine all shifts that have an effect in the same direction
+            # effect from <shift>_up/done systematics
+            diff_up = up_shifted_hist.GetBinContent(bin_idx) - nominal_value
+            diff_down = down_shifted_hist.GetBinContent(bin_idx) - nominal_value
+
+            # shift with effect in up/down direction
+            error_up = max([diff_up, diff_down, 0])
+            error_down = min([diff_up, diff_down, 0])
+
+            # add in quadrature
+            if shift_idx == 0:
+                errors_up.append(error_up**2)
+                errors_down.append(error_down**2)
+            else:
+                errors_up[bin_idx - 1] += error_up**2
+                errors_down[bin_idx - 1] += error_down**2
+    errors_up = np.sqrt(errors_up)
+    errors_down = np.sqrt(errors_down)
+
+    # build shifted histograms
+    if envelope_as_errors:
+        x, y = [], []
+        xerr_down, xerr_up = [], []
+        yerr_down, yerr_up = [], []
+
+        for i in xrange(1, nominal_hist.GetNbinsX() + 1):
+            x.append(nominal_hist.GetBinCenter(i))
+            y.append(nominal_hist.GetBinContent(i))
+            xerr_down.append(nominal_hist.GetBinWidth(i) / 2.)
+            xerr_up.append(nominal_hist.GetBinWidth(i) / 2.)
+            yerr_down.append(errors_down[i - 1])
+            yerr_up.append(errors_up[i - 1])
+
+        envelope_graph = ROOT.TGraphAsymmErrors(len(x), array("f", x), array("f", y), array("f", xerr_down),
+            array("f", xerr_up), array("f", yerr_down), array("f", yerr_up))
+        return envelope_graph
+    else:
+        # up and down envelopes as their own histograms
+        envelope_hist_up = nominal_hist.Clone()
+        envelope_hist_down = nominal_hist.Clone()
+
+        for bin_idx in range(1, envelope_hist_up.GetNbinsX() + 1):
+            envelope_hist_up.SetBinContent(bin_idx, envelope_hist_up.GetBinContent(bin_idx)
+                + errors_up[bin_idx - 1])
+            envelope_hist_down.SetBinContent(bin_idx, envelope_hist_down.GetBinContent(bin_idx)
+                - errors_down[bin_idx - 1])
+
+        return envelope_hist_down, envelope_hist_up
 
 
 def format_shifts(shifts, prefix=""):

@@ -25,6 +25,7 @@ action() {
         # custom topics
         #
 
+        # https://twiki.cern.ch/twiki/bin/view/CMS/EgammaPostRecoRecipes
         git cms-merge-topic cms-egamma:EgammaPostRecoTools
         git cms-merge-topic cms-egamma:PhotonIDValueMapSpeedup1029 #optional but speeds up the photon ID value module so things fun faster
         git cms-merge-topic cms-egamma:slava77-btvDictFix_10210 #fixes the Run2018D dictionary issue, see https://github.com/cms-sw/cmssw/issues/26182
@@ -33,11 +34,7 @@ action() {
         # E-gamma
         git cms-addpkg EgammaAnalysis/ElectronTools  #check out the package otherwise code accessing it will crash
         rm EgammaAnalysis/ElectronTools/data -rf   #delete the data directory so we can populate it ourselves
-        git clone git@github.com:cms-egamma/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
-        cd EgammaAnalysis/ElectronTools/data
-        git checkout ScalesSmearing2018_Dev
-        cd -
-        git cms-merge-topic cms-egamma:EgammaPostRecoTools_dev
+        git clone git@github.com:cms-data/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
 
         # MET
         git cms-addpkg RecoMET/METFilters

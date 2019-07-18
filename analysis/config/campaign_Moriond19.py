@@ -42,7 +42,7 @@ dataset_data_C_ee = od.Dataset(
     "data_C_ee", 2,
     campaign=campaign,
     is_data=True,
-    n_files=2179,
+    n_files=2183,
     keys=["/EGamma/Run2018C-17Sep2018-v1/MINIAOD"],
     context=campaign_name,
 )
@@ -54,7 +54,7 @@ dataset_data_D_ee = od.Dataset(
     n_files=8663,
     keys=["/EGamma/Run2018D-PromptReco-v2/MINIAOD"],
     context=campaign_name,
-    aux={"global_tag": "102X_dataRun2_Prompt_v11"},
+    aux={"global_tag": "102X_dataRun2_Prompt_v13"},
 )
 
 datasets_data_ee = [
@@ -141,6 +141,89 @@ dataset_data_D_mumu = od.Dataset(
 
 datasets_data_mumu = [
     dataset_data_A_mumu, dataset_data_B_mumu, dataset_data_C_mumu, dataset_data_D_mumu,
+]
+
+dataset_data_A_mu = od.Dataset(
+    "data_A_mu", 30,
+    campaign=campaign,
+    is_data=True,
+    n_files=3224,
+    keys=["/SingleMuon/Run2018A-17Sep2018-v2/MINIAOD"],
+    context=campaign_name,
+)
+
+dataset_data_B_mu = od.Dataset(
+    "data_B_mu", 31,
+    campaign=campaign,
+    is_data=True,
+    n_files=1551,
+    keys=["/SingleMuon/Run2018B-17Sep2018-v1/MINIAOD"],
+    context=campaign_name,
+)
+
+dataset_data_C_mu = od.Dataset(
+    "data_C_mu", 32,
+    campaign=campaign,
+    is_data=True,
+    n_files=1556,
+    keys=["/SingleMuon/Run2018C-17Sep2018-v1/MINIAOD"],
+    context=campaign_name,
+)
+
+dataset_data_D_mu = od.Dataset(
+    "data_D_mu", 33,
+    campaign=campaign,
+    is_data=True,
+    n_files=5533,
+    keys=["/SingleMuon/Run2018D-PromptReco-v2/MINIAOD"],
+    context=campaign_name,
+    aux={"global_tag": "102X_dataRun2_Prompt_v13"},
+)
+
+datasets_data_mu = [
+    dataset_data_A_mu, dataset_data_B_mu, dataset_data_C_mu, dataset_data_D_mu,
+]
+
+# Single electron data shares the same files with ee
+dataset_data_A_e = od.Dataset(
+    "data_A_e", 40,
+    campaign=campaign,
+    is_data=True,
+    n_files=dataset_data_A_ee.n_files,
+    keys=dataset_data_A_ee.keys,
+    context=campaign_name,
+)
+
+dataset_data_B_e = od.Dataset(
+    "data_B_e", 41,
+    campaign=campaign,
+    is_data=True,
+    n_files=dataset_data_B_ee.n_files,
+    keys=dataset_data_B_ee.keys,
+    context=campaign_name,
+)
+
+dataset_data_C_e = od.Dataset(
+    "data_C_e", 42,
+    campaign=campaign,
+    is_data=True,
+    n_files=dataset_data_C_ee.n_files,
+    keys=dataset_data_C_ee.keys,
+    context=campaign_name,
+)
+
+dataset_data_D_e = od.Dataset(
+    "data_D_e", 43,
+    campaign=campaign,
+    is_data=True,
+    n_files=dataset_data_D_ee.n_files,
+    keys=dataset_data_D_ee.keys,
+    context=campaign_name,
+    aux={"global_tag": "102X_dataRun2_Prompt_v13"},
+)
+
+datasets_data_e = [
+    dataset_data_A_e, dataset_data_B_e, dataset_data_C_e, dataset_data_D_e,
 ]
 
 # MC datasets
@@ -466,7 +549,10 @@ for d in datasets_data_emu:
     d.add_process(process_data_emu)
 for d in datasets_data_mumu:
     d.add_process(process_data_mumu)
-
+for d in datasets_data_mu:
+    d.add_process(process_data_mu)
+for d in datasets_data_e:
+    d.add_process(process_data_e)
 
 dataset_tt_dl.add_process(process_tt_dl)
 dataset_tt_sl.add_process(process_tt_sl)

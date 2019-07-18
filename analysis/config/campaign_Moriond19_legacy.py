@@ -232,9 +232,9 @@ datasets_data_mumu = [
 dataset_tt_dl = od.Dataset(
     "tt_dl", 101,
     campaign=campaign,
-    n_files=592,
+    n_files=778,
     keys=[
-        "/TTTo2L2Nu_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
+        "/TTTo2L2Nu_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -242,9 +242,9 @@ dataset_tt_dl = od.Dataset(
 dataset_tt_sl = od.Dataset(
     "tt_sl", 102,
     campaign=campaign,
-    n_files=1142,
+    n_files=1105,
     keys=[
-        "/TTToSemilepton_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
+        "/TTToSemiLeptonic_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -278,9 +278,9 @@ dataset_dy_lep_50ToInf = od.Dataset(
 dataset_st_s_lep = od.Dataset(
     "st_s_lep", 300,
     campaign=campaign,
-    n_files=8,
+    n_files=104,
     keys=[
-        "/ST_s-channel_4f_leptonDecays_13TeV-amcatnlo-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
+        "/ST_s-channel_4f_leptonDecays_TuneCP5_PSweights_13TeV-amcatnlo-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -289,9 +289,9 @@ dataset_st_s_lep = od.Dataset(
 dataset_st_t_t = od.Dataset(
     "st_t_t", 301,
     campaign=campaign,
-    n_files=499,
+    n_files=307,
     keys= [
-        "/ST_t-channel_top_4f_inclusiveDecays_13TeV-powhegV2-madspin-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
+        "/ST_t-channel_top_4f_InclusiveDecays_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -299,9 +299,9 @@ dataset_st_t_t = od.Dataset(
 dataset_st_t_tbar = od.Dataset(
     "st_t_tbar", 302,
     campaign=campaign,
-    n_files=298,
+    n_files=224,
     keys= [
-        "/ST_t-channel_antitop_4f_inclusiveDecays_13TeV-powhegV2-madspin-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
+        "/ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -311,9 +311,9 @@ dataset_st_t_tbar = od.Dataset(
 dataset_st_tW_t = od.Dataset(
     "st_tW_t", 321,
     campaign=campaign,
-    n_files=60,
+    n_files=65,
     keys=[
-        "/ST_tW_top_5f_inclusiveDecays_13TeV-powheg-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v1/MINIAODSIM",
+        "/ST_tW_top_5f_inclusiveDecays_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -321,9 +321,9 @@ dataset_st_tW_t = od.Dataset(
 dataset_st_tW_tbar = od.Dataset(
     "st_tW_tbar", 322,
     campaign=campaign,
-    n_files=58,
+    n_files=98,
     keys=[
-        "/ST_tW_antitop_5f_inclusiveDecays_13TeV-powheg-pythia8_TuneCUETP8M1/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3_ext1-v1/MINIAODSIM",
+        "/ST_tW_antitop_5f_inclusiveDecays_TuneCP5_PSweights_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -380,9 +380,9 @@ dataset_W_lep = od.Dataset(
 dataset_ttH_bb = od.Dataset(
     "ttH_bb", 601,
     campaign=campaign,
-    n_files=37,
+    n_files=188,
     keys=[
-        "/ttHTobb_M125_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
+        "/ttHTobb_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -390,9 +390,9 @@ dataset_ttH_bb = od.Dataset(
 dataset_ttH_nonbb = od.Dataset(
     "ttH_nonbb", 602,
     campaign=campaign,
-    n_files=35,
+    n_files=143,
     keys=[
-        "/ttHToNonbb_M125_TuneCUETP8M2_ttHtranche3_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v2/MINIAODSIM",
+        "/ttHToNonbb_M125_TuneCP5_13TeV-powheg-pythia8/RunIISummer16MiniAODv3-PUMoriond17_94X_mcRun2_asymptotic_v3-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )

@@ -30,7 +30,7 @@ action() {
     export PYTHONPATH_ORIG="$PYTHONPATH"
     export LD_LIBRARY_PATH_ORIG="$LD_LIBRARY_PATH"
 
-    export JTSF_DATA="$HOME/jtsf_data"
+    export JTSF_DATA="$TMP/jtsf_data"
     export JTSF_SOFTWARE="$JTSF_DATA/software"
     export JTSF_STORE="$JTSF_DATA/store"
     export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
@@ -53,7 +53,7 @@ action() {
     fi
 
     #
-    # setup CMSSW
+    # load CMSSW
     #
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
@@ -64,10 +64,7 @@ action() {
     load_replica "{{cmssw_base_url}}" "$CMSSW_VERSION\.\d+\.tgz" "cmssw.tgz"
     tar -xzf "cmssw.tgz"
     rm "cmssw.tgz"
-    cd src
-    eval `scramv1 runtime -sh`
-    scram build
-    cd "$HOME"
+    cd "$TMP"
 
     #
     # load the software bundle
@@ -78,7 +75,7 @@ action() {
     load_replica "{{software_base_url}}" "software\.\d+\.tgz" "software.tgz"
     tar -xzf "software.tgz"
     rm "software.tgz"
-    cd "$HOME"
+    cd "$TMP"
 
     #
     # load the repo bundle
@@ -87,6 +84,13 @@ action() {
     load_replica "{{repo_base}}" "jet-tagging-sf\.{{repo_checksum}}\.\d+\.tgz" "repo.tgz"
     tar -xzf "repo.tgz"
     rm "repo.tgz"
+
+    # setup CMSSW
+
+    cd "$CMSSW_BASE/src"
+    eval `scramv1 runtime -sh`
+    scram build
+    cd "$TMP"
 
     # source the repo setup
     source "jet-tagging-sf/setup.sh"

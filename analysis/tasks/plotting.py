@@ -301,9 +301,9 @@ class PlotVariable(PlotTask):
                 if self.draw_systematics:
                     # build envelope of ratio to nominal hist
                     for hist in up_shifted_mc_hists.values():
-                        self.divide_hists(hist, mc_hist_sum)
+                        hist.Divide(mc_hist_sum)
                     for hist in down_shifted_mc_hists.values():
-                        self.divide_hists(hist, mc_hist_sum)
+                        hist.Divide(mc_hist_sum)
                     scaled_envelope = build_hist_envelope(ratio_mcerr_hist, up_shifted_mc_hists,
                         down_shifted_mc_hists, envelope_as_errors=True)
                     plot.draw_as_graph(scaled_envelope, options="2", hatched=True)

@@ -70,7 +70,7 @@ class PlotFromCSV(AnalysisTask):
         eta_binning = [(start, end) for start, end in zip(binning["abs(eta)"][:-1], binning["abs(eta)"][1:])]
 
         figures = {}
-        for input_file, id in zip([self.csv_file, self.compare_file], ["first", "compare"]):
+        for input_file, id in zip([self.csv_file, self.compare_file], ["new", "old"]):
             # create calibration reader
             calib = ROOT.BTagCalibration("csv_{}".format(id), input_file)
             reader = ROOT.BTagCalibrationReader(
@@ -119,6 +119,7 @@ class PlotFromCSV(AnalysisTask):
                     if not self.norm_to_nominal:
                         ax.plot(x_values, nominal_values, label="{}, {}".format(id, "nominal"))
                     if self.shift == "NONE":
+                        figures[key] = (fig, ax)
                         continue
 
                     total_errors_up = np.zeros(nominal_values.shape)

@@ -49,6 +49,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
 
     source_path = None
     version = None
+    afs_host = "lxplus"
 
     def __init__(self, *args, **kwargs):
         super(DownloadSetupFiles, self).__init__(*args, **kwargs)
@@ -126,6 +127,10 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
             dst = os.path.join(tmp_dir.path, h)
             if src.startswith("http"):
                 wget(src, dst)
+            # if afs is not available on our system, use scp
+            elif src.startswith("/afs") and not os.path.exists(src):
+                p = subprocess.Popen(["scp", "{}:{}".format(self.afs_host, src), dst])
+                p.communicate() # wait for transfer to finish
             else:
                 shutil.copy2(src, dst)
 

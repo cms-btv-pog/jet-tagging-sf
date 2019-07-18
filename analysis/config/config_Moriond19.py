@@ -5,8 +5,10 @@ import scinum as sn
 def create_config(base_cfg):
     # setup the config for Moriond 2019 (2018 data)
     from analysis.config.campaign_Moriond19 import campaign as campaign_Moriond19
-    from analysis.config.jet_tagging_sf import ch_ee, ch_emu, ch_mumu, ch_e, ch_mu
+    from analysis.config.jet_tagging_sf import ch_ee, ch_emu, ch_mumu
     cfg = base_cfg.copy(campaign=campaign_Moriond19)
+    ch_e = cfg.add_channel("e", 4)
+    ch_mu = cfg.add_channel("mu", 5)
 
     # add datasets
     dataset_names = [
@@ -185,35 +187,32 @@ def create_config(base_cfg):
     # file merging information (stage -> dataset -> files after merging)
     cfg.set_aux("file_merging", {
         "trees": {
-            "tt_dl": 194,
-            "tt_sl": 3,
-            "dy_lep_50ToInf": 38,
-            "dy_lep_4To50_Ht70To100": 14,
-            "dy_lep_4To50_Ht100To200": 2,
-            "dy_lep_50ToInf_Ht70To100": 15,
-            "dy_lep_50ToInf_Ht100To200": 26,
-            "dy_lep_50ToInf_Ht200To400": 39,
-            "dy_lep_50ToInf_Ht400To600": 42,
-            "dy_lep_50ToInf_Ht600To800": 38,
-            "dy_lep_50ToInf_Ht800To1200": 14,
-            "dy_lep_50ToInf_Ht1200To2500": 3,
-            "dy_lep_50ToInf_Ht2500ToInf": 2,
-            "st_tW_t": 3,
-            "st_tW_tbar": 2,
-            "ttH_bb": 5,
-            "ttH_nonbb": 6,
+            "data_D_mumu": 2,
+            "data_D_e": 3,
+            "data_A_mu": 2,
+            "data_D_mu": 3,
+            "tt_dl": 484,
+            "tt_sl": 508,
+            "dy_lep_50ToInf": 47,
+            "st_s_lep": 21,
+            "st_t_t": 55,
+            "st_t_tbar": 30,
+            "st_tW_t": 22,
+            "st_tW_tbar": 16,
+            "ttH_bb": 46,
+            "ttH_nonbb": 38,
             "ttWJets": 9,
-            "ttZJets": 21,
+            "ttZJets": 22,
         }
     })
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod4",
-        "MergeTrees": "prod4",
-        "MergeMetaData": "prod4",
-        "WriteHistograms": "prod5",
-        "MergeHistograms": "prod5",
+        "WriteTrees": "prod6",
+        "MergeTrees": "prod6",
+        "MergeMetaData": "prod6",
+        "WriteHistograms": "prod6",
+        "MergeHistograms": "prod6",
         "MeasureCScaleFactors": "prod5",
         "MeasureScaleFactors": "prod5",
         "FitScaleFactors": "prod5",

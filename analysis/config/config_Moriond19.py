@@ -88,9 +88,9 @@ def create_config(base_cfg):
 
     # lumi, normtag and pileup file
     cfg.set_aux("lumi_file", "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/"
-        "PromptReco/Cert_314472-325175_13TeV_PromptReco_Collisions18_JSON.txt")
+        "ReReco/Cert_314472-325175_13TeV_17SeptEarlyReReco2018ABC_PromptEraD_Collisions18_JSON.txt")
     # https://twiki.cern.ch/twiki/bin/view/CMS/TWikiLUM
-    cfg.set_aux("normtag_file", "/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_BRIL.json") # preliminary
+    cfg.set_aux("normtag_file", "/cvmfs/cms-bril.cern.ch/cms-lumi-pog/Normtags/normtag_PHYSICS.json")
     cfg.set_aux("pileup_file", "/afs/cern.ch/cms/CAF/CMSCOMM/COMM_DQM/certification/Collisions18/13TeV/"
         "PileUp/pileup_latest.txt")
 

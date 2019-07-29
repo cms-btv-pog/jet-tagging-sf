@@ -172,13 +172,11 @@ def create_config(base_cfg):
     # file merging information (stage -> dataset -> files after merging)
     cfg.set_aux("file_merging", {
         "trees": {
-            "tt_dl": 198,
-            "tt_sl": 3,
+            "tt_dl": 156,
+            "tt_sl": 2,
             "dy_lep_50ToInf": 36,
-            "st_tW_t": 2,
-            "st_tW_tbar": 2,
-            "ttH_bb": 2,
-            "ttH_nonbb": 3,
+            "ttH_bb": 4,
+            "ttH_nonbb": 7,
             "ttWJets_lep": 4,
             "ttZJets_lep": 20,
         }
@@ -186,16 +184,17 @@ def create_config(base_cfg):
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod1",
-        "MergeTrees": "prod1",
-        "MergeMetaData": "prod1",
-        "WriteHistograms": "prod1",
-        "MergeHistograms": "prod1",
-        "MeasureCScaleFactors": "prod1",
-        "MeasureScaleFactors": "prod1",
-        "FitScaleFactors": "prod1",
-        "GetScaleFactorWeights": "prod2",
-        "MergeScaleFactorWeights": "prod2",
+        "WriteTrees": "prod3",
+        "MergeTrees": "prod3",
+        "MergeMetaData": "prod3",
+        "WriteHistograms": "prod4",
+        "MergeHistograms": "prod4",
+        "MeasureCScaleFactors": "prod4",
+        "MeasureScaleFactors": "prod4",
+        "FitScaleFactors": "prod4",
+        "GetScaleFactorWeights": "prod4",
+        "MergeScaleFactorWeights": "prod4",
+        "OptimizeBinning": "prod3",
     })
 
     return cfg

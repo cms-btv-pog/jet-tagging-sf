@@ -242,6 +242,11 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
             # only consider top-level categories with at least one given tag if specified
             if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
                 continue
+            # for intermediate iterations, skip merged categories not used for measurement
+            # (to improve performance)
+            if not self.final_it:
+                if category.has_tag("merged") and not category.get_aux("phase_space") == "measure":
+                    continue
             # recurse through all children of category, add leaf categories
             for cat, children in walk_categories(category):
                 if not children:
@@ -680,28 +685,6 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         inp = self.input()
         outp = self.output()
         outp.parent.touch(0o0770)
-
-        # get child categories
-        categories = []
-        channels = [self.config_inst.get_aux("dataset_channels")[self.dataset_inst]] \
-            if self.dataset_inst.is_data else self.config_inst.channels.values()
-
-        for category in self.config_inst.categories:
-            # only consider top-level categories with at least one given tag if specified
-            if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
-                continue
-            # recurse through all children of category, add leaf categories
-            for cat, children in walk_categories(category):
-                if not children:
-                    # only use categories matching the task config
-                    if cat.get_aux("config", None) != self.config_inst.name:
-                        continue
-                    # only use categories for the chosen b-tag algorithm
-                    if cat.has_tag(self.b_tagger):
-                        channel = cat.get_aux("channel")
-                        categories.append((channel, cat))
-
-        categories = list(set(categories))
 
         # get processes
         if len(self.dataset_inst.processes) != 1:

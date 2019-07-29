@@ -450,10 +450,6 @@ def add_categories(cfg, b_tagger):
                     rg_merged_cat = cfg.get_category(rg_merged_name)
                 rg_merged_cat.add_category(rg_cat_combined)
 
-            # TODO: Only for fast calculation now, remove later
-            if ps_name == "closure":
-                continue
-
             # loop over both jet1 jet2 permutations
             for i_tag_jet, i_probe_jet in [(1, 2), (2, 1)]:
                 # region loop (hf, lf, ...)

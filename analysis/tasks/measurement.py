@@ -305,7 +305,7 @@ class MeasureCScaleFactors(MeasureScaleFactors):
         # these are stored in the config itself as we measure them inclusively over channels
         categories = []
         for category, _, _ in self.config_inst.walk_categories():
-            if category.has_tag(("c", self.b_tagger), mode=all):
+            if category.has_tag(("c", self.b_tagger), mode=all) and category.get_aux("phase_space") == "measure":
                 if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
                     continue
                 categories.append(category)
@@ -509,7 +509,7 @@ class FitScaleFactors(MeasureScaleFactors):
             if len(self.category_tags) > 0 and not category.has_tag(self.category_tags, mode=any):
                 continue
             if self.has_c_shift:
-                if category.get_aux("region") == "c":
+                if category.get_aux("region") == "c" and category.get_aux("phase_space") == "measure":
                     if category.has_tag(self.b_tagger):
                         categories.append(category)
             else:

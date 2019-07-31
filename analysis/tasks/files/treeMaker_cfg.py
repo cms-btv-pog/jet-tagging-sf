@@ -179,12 +179,14 @@ try:
     process = cms.Process("JTSF")
     seq = cms.Sequence()
 
+    miniAODProcess = "RECO" if options.isData else "PAT"
+
     # some default collections
     electronCollection = cms.InputTag("slimmedElectrons")
     muonCollection = cms.InputTag("slimmedMuons")
     metCollection = cms.InputTag("slimmedMETs")
     jetCollection = cms.InputTag("slimmedJets")
-    metFilterBitsCollection = cms.InputTag("TriggerResults", "", "RECO")
+    metFilterBitsCollection = cms.InputTag("TriggerResults", "", miniAODProcess)
 
     # message logger
     process.load("FWCore.MessageLogger.MessageLogger_cfi")
@@ -279,8 +281,8 @@ try:
         "jetCollUnskimmed" : jetCollection.value(),
     }
     if options.campaign == "2017_Run2_pp_13TeV_ICHEP18":
-        params["fixEE2017"] = True,
-        params["fixEE2017Params"] = {"userawPt": True, "ptThreshold": 50.0, "minEtaThreshold": 2.65, "maxEtaThreshold": 3.139},
+        params["fixEE2017"] = True
+        params["fixEE2017Params"] = {"userawPt": True, "ptThreshold": 50.0, "minEtaThreshold": 2.65, "maxEtaThreshold": 3.139}
 
     runMetCorAndUncFromMiniAOD(process, **params)
     seq += process.fullPatMetSequence

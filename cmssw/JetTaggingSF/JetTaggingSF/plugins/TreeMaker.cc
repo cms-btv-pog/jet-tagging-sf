@@ -221,6 +221,7 @@ private:
     edm::EDGetTokenT<GenEventInfoProduct> genInfoToken_;
     edm::EDGetTokenT<edm::TriggerResults> triggerBitsToken_;
     edm::EDGetTokenT<edm::TriggerResults> metFilterBitsToken_;
+    edm::EDGetTokenT<bool> ecalBadCalibFilterUpdateToken_;
     edm::EDGetTokenT<std::vector<PileupSummaryInfo> > pileupInfoToken_;
     edm::EDGetTokenT<reco::BeamSpot> beamSpotToken_;
     edm::EDGetTokenT<std::vector<reco::Vertex> > vertexToken_;
@@ -276,6 +277,7 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , genInfoToken_(consumes<GenEventInfoProduct>(iConfig.getParameter<edm::InputTag>("genInfoCollection")))
     , triggerBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerBitsCollection")))
     , metFilterBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("metFilterBitsCollection")))
+    , ecalBadCalibFilterUpdateToken_(consumes< bool >(edm::InputTag("ecalBadCalibReducedMINIAODFilter")))
     , pileupInfoToken_(consumes<std::vector<PileupSummaryInfo> >(iConfig.getParameter<edm::InputTag>("pileupInfoCollection")))
     , beamSpotToken_(consumes<reco::BeamSpot>(iConfig.getParameter<edm::InputTag>("beamSpotCollection")))
     , vertexToken_(consumes<std::vector<reco::Vertex> >(iConfig.getParameter<edm::InputTag>("vertexCollection")))
@@ -828,12 +830,23 @@ bool TreeMaker::metFilterSelection(const edm::Event& event)
     event.getByToken(metFilterBitsToken_, metFilterBitsHandle);
 
     const edm::TriggerNames& metFilterNames = event.triggerNames(*metFilterBitsHandle);
-    for (size_t i = 0; i < metFilterBitsHandle->size(); i++)
+    for (size_t i = 0; i < metFilters_.size(); i++)
     {
-        string name = metFilterNames.triggerName(i);
-        if (std::find(metFilters_.begin(), metFilters_.end(), name) != metFilters_.end())
+        // updated filter, see https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETOptionalFiltersRun2#How_to_run_ecal_BadCalibReducedM
+        if (metFilters_.at(i) == "Flag_ecalBadCalibReducedMINIAODFilter")
         {
-            if (!metFilterBitsHandle->accept(i))
+            edm::Handle<bool> passecalBadCalibFilterUpdate;
+            event.getByToken(ecalBadCalibFilterUpdateToken_, passecalBadCalibFilterUpdate);
+            bool _passecalBadCalibFilterUpdate = (*passecalBadCalibFilterUpdate );
+            if (!_passecalBadCalibFilterUpdate)
+            {
+                return false;
+            }
+        }
+        else
+        {
+            unsigned int index = metFilterNames.triggerIndex(metFilters_.at(i));
+            if (!metFilterBitsHandle->accept(index))
             {
                 return false;
             }

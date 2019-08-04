@@ -225,6 +225,148 @@ datasets_data_mumu = [
     dataset_data_F_mumu, dataset_data_G_mumu, dataset_data_H_mumu
 ]
 
+# single electron
+
+dataset_data_B_e = od.Dataset(
+    "data_B_e", 31,
+    campaign = campaign,
+    n_files=11+1560,
+    keys=["/SingleElectron/Run2016B-17Jul2018_ver1-v1/MINIAOD",
+        "/SingleElectron/Run2016B-17Jul2018_ver2-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_C_e = od.Dataset(
+    "data_C_e", 32,
+    campaign = campaign,
+    n_files=674,
+    keys=["/SingleElectron/Run2016C-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_D_e = od.Dataset(
+    "data_D_e", 33,
+    campaign = campaign,
+    n_files=966,
+    keys=["/SingleElectron/Run2016D-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_E_e = od.Dataset(
+    "data_E_e", 34,
+    campaign = campaign,
+    n_files=819,
+    keys=["/SingleElectron/Run2016E-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_F_e = od.Dataset(
+    "data_F_e", 35,
+    campaign = campaign,
+    n_files=499,
+    keys=["/SingleElectron/Run2016F-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_G_e = od.Dataset(
+    "data_G_e", 36,
+    campaign = campaign,
+    n_files=1188,
+    keys=["/SingleElectron/Run2016G-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_H_e = od.Dataset(
+    "data_H_e", 37,
+    campaign = campaign,
+    n_files=968,
+    keys=["/SingleElectron/Run2016H-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+datasets_data_e = [
+    dataset_data_B_e, dataset_data_C_e, dataset_data_D_e, dataset_data_E_e,
+    dataset_data_F_e, dataset_data_G_e, dataset_data_H_e
+]
+
+# single muon
+
+dataset_data_B_mu = od.Dataset(
+    "data_B_mu", 41,
+    campaign = campaign,
+    n_files=19+915,
+    keys=["/SingleMuon/Run2016B-17Jul2018_ver1-v1/MINIAOD",
+        "/SingleMuon/Run2016B-17Jul2018_ver2-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_C_mu = od.Dataset(
+    "data_C_mu", 42,
+    campaign = campaign,
+    n_files=369,
+    keys=["/SingleMuon/Run2016C-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_D_mu = od.Dataset(
+    "data_D_mu", 43,
+    campaign = campaign,
+    n_files=670,
+    keys=["/SingleMuon/Run2016D-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_E_mu = od.Dataset(
+    "data_E_mu", 44,
+    campaign = campaign,
+    n_files=565,
+    keys=["/SingleMuon/Run2016E-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_F_mu = od.Dataset(
+    "data_F_mu", 45,
+    campaign = campaign,
+    n_files=462,
+    keys=["/SingleMuon/Run2016F-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_G_mu = od.Dataset(
+    "data_G_mu", 46,
+    campaign = campaign,
+    n_files=963,
+    keys=["/SingleMuon/Run2016G-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+dataset_data_H_mu = od.Dataset(
+    "data_H_mu", 47,
+    campaign = campaign,
+    n_files=1131,
+    keys=["/SingleMuon/Run2016H-17Jul2018-v1/MINIAOD"],
+    is_data=True,
+    context=campaign_name,
+)
+
+datasets_data_mu = [
+    dataset_data_B_mu, dataset_data_C_mu, dataset_data_D_mu, dataset_data_E_mu,
+    dataset_data_F_mu, dataset_data_G_mu, dataset_data_H_mu
+]
+
 # MC datasets
 
 # tt
@@ -445,7 +587,10 @@ for d in datasets_data_emu:
     d.add_process(process_data_emu)
 for d in datasets_data_mumu:
     d.add_process(process_data_mumu)
-
+for d in datasets_data_e:
+    d.add_process(process_data_e)
+for d in datasets_data_mu:
+    d.add_process(process_data_mu)
 
 dataset_tt_dl.add_process(process_tt_dl)
 dataset_tt_sl.add_process(process_tt_sl)

@@ -118,8 +118,8 @@ class PlotVariable(PlotTask):
 
         return reqs
 
-    def associate_process(self, process):
-        # associate process either to data or monte carlo
+    def associate_hist(self, process=None, flavor=None, region=None):
+        # associate hist either to data or monte carlo
         # returns *add_to_data*, *sign* (1. or -1.)
         if process.is_data:
             return True, 1.
@@ -162,7 +162,7 @@ class PlotVariable(PlotTask):
             plot_dict[category] = plot
 
         with inp["hists"].load("r") as input_file:
-            for category in enumerate(categories):
+            for category in categories:
                 data_hist = None
                 mc_hists = defaultdict(lambda: defaultdict(lambda: None)) # shift -> key (process/flavor)
 
@@ -202,7 +202,7 @@ class PlotVariable(PlotTask):
                                 binning_type = "measurement" if self.rebin else None
                                 hist = self.rebin_hist(hist, region, binning_type=binning_type, truncate=self.truncate)
 
-                                add_to_data, sign = self.associate_process(process)
+                                add_to_data, sign = self.associate_hist(process=process, flavor=flavor, region=region)
                                 if add_to_data:
                                     if shift != "nominal":
                                         raise Exception("Cannot add shifted samples to data.")
@@ -229,14 +229,18 @@ class PlotVariable(PlotTask):
                     mc_hist_sum.Add(mc_hist)
                 hist_maximum = max([mc_hist_sum.GetMaximum(), data_hist.GetMaximum()])
 
+                # get plot names
+                mc_key = self.mc_key.format(**{"region": category.get_aux("region", None)})
+                data_key = self.data_key.format(**{"region": category.get_aux("region", None)})
+
                 plot = plot_dict[category]
                 # data and mc histograms
                 plot.cd(0, 1)
                 if self.draw_stacked:
                     plot.draw(mc_hists["nominal"], stacked=True, stack_maximum=1.5*hist_maximum, y_title="Entries")
                 else:
-                    plot.draw({self.mc_key: mc_hist_sum}, line_color=None)
-                plot.draw({self.data_key: data_hist})
+                    plot.draw({mc_key: mc_hist_sum}, line_color=None)
+                plot.draw({data_key: data_hist})
 
                 if self.draw_systematics:
                     up_shifted_mc_hists = {}
@@ -325,7 +329,7 @@ class PlotContaminationEstimation(PlotVariable):
     data_key = "Data - nonZJets"
     mc_key = "ZJets"
 
-    def associate_process(self, process):
+    def associate_hist(self, process=None, flavor=None, region=None):
         if process.is_data:
             return True, 1.
 
@@ -333,6 +337,21 @@ class PlotContaminationEstimation(PlotVariable):
             return False, 1.
         else: # subtract non-ZJets from data
             return True, -1.
+
+class PlotContaminationSubtracted(PlotVariable):
+    data_key = "Data - non-{region}"
+    mc_key = "{region}"
+
+    def associate_hist(self, process=None, flavor=None, region=None):
+        if process.is_data:
+            return True, 1.
+
+        if region == "hf" and flavor != "b":
+            return True, -1.
+        elif region == "lf" and flavor != "udsg":
+            return True, -1.
+        else:
+            return False, 1.
 
 
 class PlotScaleFactor(PlotTask):

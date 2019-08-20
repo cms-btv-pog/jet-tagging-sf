@@ -484,8 +484,10 @@ class FitScaleFactors(MeasureScaleFactors):
         inp = self.input()
         outp = self.output()
 
-        interpolation_type = ROOT.Math.Interpolation.kAKIMA
         interpolation_bins = 1000
+
+        # cannot get the function from ROOT, use scipy instead
+        from scipy.interpolate import Akima1DInterpolator
 
         def fit_func_pol6(x_min=0.0, x_max=1.0):
             # 6th degree polynomial for LF region
@@ -550,7 +552,8 @@ class FitScaleFactors(MeasureScaleFactors):
                         continue
                     x_values.push_back(hist.GetBinCenter(bin_idx))
                     y_values.push_back(hist.GetBinContent(bin_idx))
-                interpolator = ROOT.Math.Interpolator(x_values, y_values, interpolation_type)
+
+                interpolator = Akima1DInterpolator(x_values, y_values)
                 # define region in which to use interpolation
                 first_point, last_point = min(x_values), max(x_values)
 
@@ -560,11 +563,11 @@ class FitScaleFactors(MeasureScaleFactors):
                     if bin_center < 0:
                         interpolation_hist.SetBinContent(bin_idx, hist.GetBinContent(1))
                     elif bin_center < first_point:
-                        interpolation_hist.SetBinContent(bin_idx, interpolator.Eval(first_point))
+                        interpolation_hist.SetBinContent(bin_idx, interpolator(first_point))
                     elif bin_center > last_point:
-                        interpolation_hist.SetBinContent(bin_idx, interpolator.Eval(last_point))
+                        interpolation_hist.SetBinContent(bin_idx, interpolator(last_point))
                     else:
-                        interpolation_hist.SetBinContent(bin_idx, interpolator.Eval(bin_center))
+                        interpolation_hist.SetBinContent(bin_idx, interpolator(bin_center))
                 hist_dict[category] = interpolation_hist
 
                 # fill .csv file in final iteration (after normalization fix)
@@ -593,25 +596,29 @@ class FitScaleFactors(MeasureScaleFactors):
                         "{eta_max}, {pt_min}, {pt_max}".format(**results)
                     fit_results.append(fit_results_tpl + ", -15, 0, {}".format(hist.GetBinContent(1)))
                     fit_results.append(fit_results_tpl + ", 0, {}, {}".format(first_point,
-                        interpolator.Eval(first_point)))
+                        interpolator(first_point)))
 
                     # intermediate functions
+                    interpolator_idx = 0
                     for bin_idx in range(1, nbins):
                         if hist.GetBinCenter(bin_idx) < first_point:
                             continue
                         x_min = hist.GetBinCenter(bin_idx)
                         x_max = hist.GetBinCenter(bin_idx + 1)
-                        y_start = hist.GetBinContent(bin_idx)
-                        y_end = hist.GetBinContent(bin_idx + 1)
-                        slope = (y_end - y_start) / (x_max - x_min)
-                        intercept = y_start - x_min * slope
-                        func = fit_func_pol1(x_min, x_max, [intercept, slope])
 
+                        interpolator_coefficients = interpolator.c[:, interpolator_idx]
+                        interpolator_idx += 1
+                        formula = ""
+                        for i in xrange(3):
+                            formula += "{}*".format(interpolator_coefficients[i]) + \
+                                "*".join(["(x-{})".format(hist.GetBinCenter(bin_idx))] * (3 - i))
+                            formula += "+" if interpolator_coefficients[i+1] >= 0. else ""
+                        formula += str(interpolator_coefficients[3])
                         fit_results.append(fit_results_tpl + ", {}, {}, {}".format(x_min,
-                            x_max, str(func.GetExpFormula("p"))))
+                            x_max, formula))
 
                     fit_results.append(fit_results_tpl + ", {}, 1.1, {}".format(last_point,
-                        interpolator.Eval(last_point)))
+                        interpolator(last_point)))
             # write to output file
             with outp["sf"].localize("w") as tmp:
                 with tmp.dump("RECREATE") as output_file:

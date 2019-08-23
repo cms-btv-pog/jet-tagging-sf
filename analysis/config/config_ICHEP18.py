@@ -221,7 +221,7 @@ def create_config(base_cfg):
         "MergeHistograms": "prod2",
         "MeasureCScaleFactors": "prod2",
         "MeasureScaleFactors": "prod2",
-        "FitScaleFactors": "prod2",
+        "FitScaleFactors": "prod3",
         "GetScaleFactorWeights": "prod2",
         "MergeScaleFactorWeights": "prod2",
         "OptimizeBinning": "prod1",

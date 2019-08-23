@@ -67,13 +67,13 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow)
         jes_unc_src_file = setup_files["jes_unc_src_file"] if self.dataset_inst.is_mc else ""
 
         # determine the xrd redirector and download the file
-        redirector = determine_xrd_redirector(lfn)
+        redirector = determine_xrd_redirector(lfn) if os.environ["JTSF_DIST_VERSION"] == "slc6" else "xrootd-cms.infn.it"
         xrd_url = "root://{}/{}".format(redirector, lfn)
         if self.stream_input_file:
             input_file = xrd_url
         else:
             input_file = "file://" + tmp_dir.child("input_file.root", type="f").path
-            cmd = "xrdcp {} {}".format(xrd_url, input_file)
+            cmd = "xrdcp-old {} {}".format(xrd_url, input_file)
             with self.publish_step("download input file from {} ...".format(xrd_url)):
                 code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash")[0]
                 if code != 0:

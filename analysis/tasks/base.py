@@ -279,7 +279,7 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
         config.render_variables["cmssw_base_url"] = reqs["cmssw"].output().dir.url()
 
         scram_arch = os.getenv("SCRAM_ARCH")
-        if self.req_sandbox is not None:
+        if self.req_sandbox != "NO_SANDBOX":
             scram_arch = scram_arch.replace(self.sl_dist_version, self.req_sandbox)
         config.render_variables["scram_arch"] = scram_arch
 

@@ -5,7 +5,6 @@ import os
 import uuid
 import shutil
 import subprocess
-import collections
 import tarfile
 
 import law
@@ -15,6 +14,7 @@ import six
 from analysis.tasks.base import AnalysisTask, DatasetTask
 from analysis.util import wget
 
+from collections import OrderedDict
 
 class GetDatasetLFNs(DatasetTask, law.TransferLocalFile):
 
@@ -79,7 +79,7 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         self.jes_tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
         self.jes_tmp_dir.touch()
 
-        jes_files = collections.defaultdict(lambda: collections.defaultdict(dict))
+        jes_files = OrderedDict()
         for src in ("mc", "data"):
             for _, _, version in self.config_inst.get_aux("jes_version")[src]:
                 # get tarball of all jes corrections
@@ -91,9 +91,10 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
                 tar.close()
                 # select the ones we need
                 for level in self.config_inst.get_aux("jes_levels")[src] + ["Uncertainty"]:
-                    jes_files[src][version][level] = os.path.join(
-                        self.jes_tmp_dir.path, jes_file_name(version, level)
-                    )
+                    jes_files.setdefault(src, OrderedDict()).setdefault(version, OrderedDict())[level] = \
+                        os.path.join(
+                            self.jes_tmp_dir.path, jes_file_name(version, level)
+                        )
         jes_unc_src_file = os.path.join(
             self.jes_tmp_dir.path, jes_file_name(self.config_inst.get_aux("jes_version")["mc"][0][2], "UncertaintySources")
         )
@@ -101,17 +102,17 @@ class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
         # prepare JER files
         jer_url = lambda version, src: "https://raw.githubusercontent.com/cms-jet/JRDatabase" \
             "/master/textFiles/{0}/{0}_{1}_AK4PFchs.txt".format(version, src)
-        jer_files = {}
+        jer_files = OrderedDict()
         for src in ("SF", "PtResolution", "PhiResolution"):
             jer_files[src] = jer_url(self.config_inst.get_aux("jer_version") + "_MC", src)
 
-        return {
-            "lumi_file": self.config_inst.get_aux("lumi_file"),
-            "pileup_file": self.config_inst.get_aux("pileup_file"),
-            "jes_files": jes_files,
-            "jes_unc_src_file": jes_unc_src_file,
-            "jer_files": jer_files,
-        }
+        return OrderedDict([
+            ("lumi_file", self.config_inst.get_aux("lumi_file")),
+            ("pileup_file", self.config_inst.get_aux("pileup_file")),
+            ("jes_files", jes_files),
+            ("jes_unc_src_file", jes_unc_src_file),
+            ("jer_files", jer_files)
+        ])
 
     def run(self):
         # create a tmp dir

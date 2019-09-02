@@ -361,8 +361,8 @@ class PlotContaminationSubtracted(PlotVariable):
 class PlotScaleFactor(PlotTask):
     hist_name = "sf"
 
-    shifts = CSVParameter(default=["ALL"], description="Systematic shifts to plot."
-        "Specify shift bases, up/down variations are created from this.")
+    shifts = CSVParameter(default=["*"], description="Systematic shifts to plot."
+        " Allows globbing.")
     fix_normalization = FitScaleFactors.fix_normalization
     norm_to_nominal = luigi.BoolParameter()
     is_c_flavour = luigi.BoolParameter()
@@ -382,24 +382,21 @@ class PlotScaleFactor(PlotTask):
         if self.norm_to_nominal:
             self.file_identifiers.append("normed")
 
-        # Check if multiple shifts are present and thus have to be combined (envelope)
-        self.multiple_shifts = "ALL" in self.shifts or len(self.shifts) >= 2
-
-        if "ALL" in self.shifts:
-            if self.is_c_flavour:
-                self.shifts = MeasureCScaleFactors.shifts
-            else:
-                # do not double count jes shift (total shift and shift by sources)
-                self.shifts = [shift for shift in MeasureScaleFactors.shifts
-                    if not shift in jes_total_shifts]
+        if self.is_c_flavour:
+            all_shifts = MeasureCScaleFactors.shifts
         else:
-            self.shifts = ["{}_{}".format(shift, direction) for shift, direction
-                in itertools.product(self.shifts, ["up", "down"])]
+            all_shifts = MeasureScaleFactors.shifts
+
+        skip_shifts = ["nominal"] + list(jes_total_shifts)
+        all_shifts = [shift for shift in all_shifts if shift not in skip_shifts]
+        # get matching shifts
+        self.shifts = [shift for shift in all_shifts if law.util.multi_match(shift, self.shifts)]
+
+        # Check if multiple shifts are present and thus have to be combined (envelope)
+        self.multiple_shifts = len(self.shifts) > 2
 
         if not self.is_c_flavour:
             # make sure the nominal histograms are processed first
-            if "nominal" in self.shifts:
-                self.shifts.remove("nominal")
             self.shifts.insert(0, "nominal")
 
         if len(self.shifts) != len(set(self.shifts)):

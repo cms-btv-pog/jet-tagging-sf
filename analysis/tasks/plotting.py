@@ -239,6 +239,10 @@ class PlotVariable(PlotTask):
                 if self.draw_stacked:
                     plot.draw(mc_hists["nominal"], stacked=True, stack_maximum=1.5*hist_maximum, y_title="Entries")
                 else:
+                    # fix axis range
+                    invis_hist = mc_hist_sum.Clone() if mc_hist_sum.GetMaximum() > data_hist.GetMaximum() else data_hist.Clone()
+                    invis_hist.Scale(1.5)
+                    plot.draw({"invis": invis_hist}, invis=True)
                     plot.draw({mc_key: mc_hist_sum}, line_color=None)
                 plot.draw({data_key: data_hist})
 

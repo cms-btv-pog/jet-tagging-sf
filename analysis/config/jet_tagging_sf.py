@@ -320,6 +320,21 @@ cfg.add_variable(
     binning=(10, 0., 10.,),
     x_title="N(jets)",
 )
+cfg.add_variable(
+    name="n_tags_deepcsv",
+    expression="n_tags_deepcsv",
+    aux={"b_tagger": "deepcsv"}, # to filter required b-tagger in histogram writer
+    binning=(10, 0., 10.,),
+    tags={"n_tags"},
+)
+cfg.add_variable(
+    name="n_tags_deepjet",
+    expression="n_tags_deepjet",
+    aux={"b_tagger": "deepjet"}, # to filter required b-tagger in histogram writer
+    binning=(10, 0., 10.,),
+    tags={"n_tags"},
+)
+
 for lep_idx in xrange(1, 3):
     cfg.add_variable(
         name="lep{}_pt".format(lep_idx),

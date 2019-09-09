@@ -23,6 +23,9 @@ from analysis.tasks.measurement import MeasureScaleFactors, MeasureCScaleFactors
 
 
 class PlotTask(AnalysisTask):
+
+    suffix = luigi.Parameter(default="", description="Suffix for plot name. Use AN-specific naming scheme if set.")
+
     def rebin_hist(self, hist, region, binning_type=None, b_tagger=None, truncate=False):
         if b_tagger is None:
             b_tagger = self.b_tagger
@@ -67,6 +70,24 @@ class PlotTask(AnalysisTask):
             error = 0 if denominator == 0 else hist.GetBinError(i) / denominator
             hist.SetBinContent(i, value)
             hist.SetBinError(i, error)
+
+    def get_plot_name(self, category_name, identifier, b_tagger):
+        if self.suffix == "":
+            return "{}_{}.pdf".format(category_name, identifier)
+        else:
+            category = self.config_inst.get_category(category_name)
+            b_tag_label = self.config_inst.get_aux("btaggers")[b_tagger]["label"]
+            region = category.get_aux("region")
+
+            pt_binning = self.config_inst.get_aux("binning")[region]["pt"]
+            eta_binning = self.config_inst.get_aux("binning")[region]["abs(eta)"]
+
+            pt_bin_start = category.get_aux("pt")[0]
+            pt_bin_idx = pt_binning.index(pt_bin_start)
+            eta_bin_start = category.get_aux("eta")[0]
+            eta_bin_idx = eta_binning.index(eta_bin_start)
+            return "{}_{}_Pt{}_Eta{}_{}.pdf".format(b_tag_label, region.upper(),
+                pt_bin_idx, eta_bin_idx, self.suffix)
 
     def output(self):
         return self.local_target("plots.tgz")
@@ -317,8 +338,8 @@ class PlotVariable(PlotTask):
                     plot.draw_as_graph(scaled_envelope, options="2", hatched=True)
 
         for category, plot in plot_dict.items():
-            plot.save(os.path.join(local_tmp.path,
-                "{}_{}.pdf".format(category.name, self.variable)),
+            plot_name = self.get_plot_name(category.name, self.variable, self.b_tagger)
+            plot.save(os.path.join(local_tmp.path, plot_name),
                 draw_legend=(False, True), log_y=self.logarithmic,
                 lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
             del plot
@@ -589,9 +610,9 @@ class PlotScaleFactor(PlotTask):
         # save plots
         for plot_category in plots:
             plot = plots[plot_category]
-            plot.save(os.path.join(local_tmp.path, "{}_{}.pdf".format(plot_category,
-                self.shifts_identifier)), draw_legend=True,
-                lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
+            plot_name = self.get_plot_name(plot_category, self.shifts_identifier, self.btaggers[0])
+            plot.save(os.path.join(local_tmp.path, plot_name), draw_legend=True,
+                lumi=self.config_inst.get_aux("lumi").values()[0] / 1000.)
             del plot
 
         with outp.localize("w") as tmp:

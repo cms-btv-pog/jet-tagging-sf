@@ -34,8 +34,6 @@ class PlotTask(AnalysisTask):
             bin_edges = [hist.GetBinLowEdge(idx) for idx in range(1, hist.GetNbinsX() + 2)]
         else:
             binning = self.config_inst.get_aux("binning")
-            btagger_cfg = self.config_inst.get_aux("btaggers")[b_tagger]
-
             bin_edges = binning[region][b_tagger][binning_type]
 
         if truncate:
@@ -71,7 +69,10 @@ class PlotTask(AnalysisTask):
             hist.SetBinContent(i, value)
             hist.SetBinError(i, error)
 
-    def get_plot_name(self, category_name, identifier, b_tagger):
+    def get_plot_name(self, category_name, identifier, b_tagger, iteration=None):
+        """
+        Set plot names for use in the AN
+        """
         if self.suffix == "":
             return "{}_{}.pdf".format(category_name, identifier)
         else:
@@ -79,15 +80,23 @@ class PlotTask(AnalysisTask):
             b_tag_label = self.config_inst.get_aux("btaggers")[b_tagger]["label"]
             region = category.get_aux("region")
 
-            pt_binning = self.config_inst.get_aux("binning")[region]["pt"]
-            eta_binning = self.config_inst.get_aux("binning")[region]["abs(eta)"]
+            if category.has_aux("pt"):
+                pt_binning = self.config_inst.get_aux("binning")[region]["pt"]
+                eta_binning = self.config_inst.get_aux("binning")[region]["abs(eta)"]
 
-            pt_bin_start = category.get_aux("pt")[0]
-            pt_bin_idx = pt_binning.index(pt_bin_start)
-            eta_bin_start = category.get_aux("eta")[0]
-            eta_bin_idx = eta_binning.index(eta_bin_start)
-            return "{}_{}_Pt{}_Eta{}_{}.pdf".format(b_tag_label, region.upper(),
-                pt_bin_idx, eta_bin_idx, self.suffix)
+                pt_bin_start = category.get_aux("pt")[0]
+                pt_bin_idx = pt_binning.index(pt_bin_start)
+                eta_bin_start = category.get_aux("eta")[0]
+                eta_bin_idx = eta_binning.index(eta_bin_start)
+
+                return "{}_{}_Pt{}_Eta{}_{}.pdf".format(b_tag_label, region.upper(),
+                    pt_bin_idx, eta_bin_idx, self.suffix)
+            else:
+                # inclusive regions without pt binning are used for SF validation
+                # There we compare plots for the first and last iteration
+                phase_space = category.get_aux("phase_space")
+                return "{}_{}_it{}_{}_{}.pdf".format(b_tag_label, region.upper(),
+                    str(iteration), phase_space, self.suffix)
 
     def output(self):
         return self.local_target("plots.tgz")
@@ -109,6 +118,7 @@ class PlotVariable(PlotTask):
         "for b-tag variable plots.")
     rebin = luigi.BoolParameter(description="Rebin variable to 'measurement' binning, only "
         "for b-tag variable plots. Not usable with category-optimized binning.")
+    x_title = luigi.Parameter(default="", description="Title for the plot x-axis.")
 
     logarithmic = luigi.BoolParameter(description="Plot y axis with logarithmic scale.")
     draw_stacked = luigi.BoolParameter(description="Plot MC processes separated by *mc_split*, "
@@ -215,6 +225,7 @@ class PlotVariable(PlotTask):
                                 # create variable name from template
                                 aux = leaf_cat.aux.copy()
                                 aux["b_tag_var"] = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
+                                aux["b_tagger"] = self.b_tagger
                                 aux["shift"] = shift
                                 variable = variable.format(**aux)
 
@@ -320,6 +331,11 @@ class PlotVariable(PlotTask):
                 y_axis.SetTitleOffset(0.65)
 
                 x_axis = ratio_hist.GetXaxis()
+                if self.x_title:
+                    aux = category.aux.copy()
+                    aux["b_tag_var"] = self.config_inst.get_aux("btaggers")[self.b_tagger]["label"]
+                    x_axis.SetTitle(self.x_title.format(**aux))
+
                 x_axis.SetTitleSize(x_axis.GetTitleSize() * plot.open_pad.scale_factor)
                 x_axis.SetLabelSize(x_axis.GetLabelSize() * plot.open_pad.scale_factor)
 
@@ -338,7 +354,7 @@ class PlotVariable(PlotTask):
                     plot.draw_as_graph(scaled_envelope, options="2", hatched=True)
 
         for category, plot in plot_dict.items():
-            plot_name = self.get_plot_name(category.name, self.variable, self.b_tagger)
+            plot_name = self.get_plot_name(category.name, self.variable, self.b_tagger, self.iteration)
             plot.save(os.path.join(local_tmp.path, plot_name),
                 draw_legend=(False, True), log_y=self.logarithmic,
                 lumi=self.config_inst.get_aux("lumi").values()[0]/1000.)
@@ -488,7 +504,7 @@ class PlotScaleFactor(PlotTask):
 
             for shift_idx, (shift, inp_target) in enumerate(config_input.items()):
                 with inp_target["fit"]["sf"].load("r") as fit_file, \
-                    inp_target["hist"]["scale_factors"].load("r") as hist_file:
+                        inp_target["hist"]["scale_factors"].load("r") as hist_file:
                     for category_key in fit_file.GetListOfKeys():
                         category_name = category_key.GetName()
                         if not self.config_inst.has_category(category_name):
@@ -561,7 +577,7 @@ class PlotScaleFactor(PlotTask):
                         fit_hist.GetYaxis().SetRangeUser(y_min, y_max)
 
                         if len(self.b_taggers) == 1:
-                            title = self.config_inst.get_aux("btaggers")[b_tagger]["label"]
+                            title = self.config_inst.get_aux("btaggers")[b_tagger]["label"] + " discriminator"
                         else:
                             title = "B-Tag Discriminant"
 
@@ -588,7 +604,8 @@ class PlotScaleFactor(PlotTask):
                             plot.draw({shift: fit_hist}, line_color=None)
 
                         if shift == "nominal" and not self.norm_to_nominal:
-                            plot.draw({config_id + ", nominal": hist}, line_color=1)
+                            plot.draw({config_id + ", nominal": hist}, line_color=1,
+                                add_to_legend=(len(self.shifts) != 1))
 
             if self.multiple_shifts:
                 for plot_category in plots:
@@ -610,7 +627,7 @@ class PlotScaleFactor(PlotTask):
         # save plots
         for plot_category in plots:
             plot = plots[plot_category]
-            plot_name = self.get_plot_name(plot_category, self.shifts_identifier, self.btaggers[0])
+            plot_name = self.get_plot_name(plot_category, self.shifts_identifier, self.b_taggers[0], self.iterations[0])
             plot.save(os.path.join(local_tmp.path, plot_name), draw_legend=True,
                 lumi=self.config_inst.get_aux("lumi").values()[0] / 1000.)
             del plot

@@ -55,13 +55,15 @@ class ROOTPad(object):
 
     def draw_base_legend(self, location="lower"):
         if location == "lower":
-            coords = (0.5, 1.2 * self.bottom_margin, 1. - 1.2 * self.right_margin, 0.4)
+            coords = (0.05, 1.2 * self.bottom_margin, 0.5 - 1.2 * self.right_margin, 0.4)
         elif location == "upper":
-            coords = (0.5, 0.6, 1. - 1.2 * self.right_margin, 1 - 1.2 * self.top_margin)
+            coords = (0.5, 0.65, 1. - 1.2 * self.right_margin, 1 - 1.2 * self.top_margin)
         else:
             raise KeyError("Unknown legend location {}.".format(location))
         self.legend = ROOT.TLegend(*coords)
-        self.legend.SetNColumns(2)
+        self.legend.SetTextSize(0.04)
+        self.legend.SetTextFont(42)
+        self.legend.SetNColumns(1)
 
     def draw_text(self, text, xpos=None, ypos=None, size=None, align=33):
         self.cd()
@@ -215,7 +217,7 @@ class ROOTPad(object):
         self.pad.cd()
         if log_y:
             self.pad.SetLogy()
-        if draw_legend:
+        if draw_legend and self.legend_entries:
             self.legend.Draw()
         for obj in self.objects:
             if hasattr(obj, "Update"):

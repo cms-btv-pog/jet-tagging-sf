@@ -382,6 +382,7 @@ def add_btag_variables(cfg):
                 tags = {"skip_hf", "basic"}
                 postfix = "_lf"
 
+            tags = tags | {"b_tagging"}
             if jet_idx <= 2:
                 tags = tags | {"measurement", "main"}
             cfg.add_variable(

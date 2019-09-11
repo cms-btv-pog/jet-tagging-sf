@@ -224,39 +224,45 @@ def create_config(base_cfg):
     # add sl categories
     def add_categories(cfg, b_tagger):
         from order.util import join_root_selection
+        from analysis.config.jet_tagging_sf import get_flavor_info
 
         # categories
         for ch in [ch_e, ch_mu]:
             # phase space region loop (measurement, closure, ...)
             for ps_name, ps_sel in [("closure", join_root_selection(["n_jets{jec_identifier} == 4",
                     "n_tags_{}{{jec_identifier}} == 2".format(b_tagger)]))]:
-                # categories per channel
-                rg_cat_combined = ch.add_category(
-                    name="{}__{}__{}__{}".format(ch.name, ps_name, b_tagger, cfg.name),
-                    label="{}, {}".format(ch.name, ps_name),
-                    selection=join_root_selection("channel == {}".format(ch.id), ps_sel),
-                    tags={b_tagger},
-                    aux={
-                        "channel": ch,
-                        "phase_space": ps_name,
-                        "config": cfg.name,
-                    },
-                )
-                # combine region categories to create inclusive control regions for plotting
-                rg_merged_name = "sl__{}__{}".format(ps_name, b_tagger)
-                if not cfg.has_category(rg_merged_name):
-                    rg_merged_cat = cfg.add_category(
-                        name=rg_merged_name,
-                        label="sl, {}".format(ps_name),
-                        tags={"sl", b_tagger},
-                        aux={
-                            "phase_space": ps_name,
-                        },
-                        context=cfg.name,
-                    )
-                else:
-                    rg_merged_cat = cfg.get_category(rg_merged_name)
-                rg_merged_cat.add_category(rg_cat_combined)
+                for jet_idx in range(1, 5):
+                    for fl_name, fl_sel in get_flavor_info(jet_idx):
+                        # categories per channel
+                        rg_cat = ch.add_category(
+                            name="{}__{}__j{}__{}__{}__{}".format(ch.name, ps_name, str(jet_idx),
+                                fl_name, b_tagger, cfg.name),
+                            label="{}, {}, jet{}, {}".format(ch.name, ps_name, str(jet_idx), fl_name),
+                            selection=join_root_selection("channel == {}".format(ch.id), ps_sel, fl_sel),
+                            tags={b_tagger},
+                            aux={
+                                "channel": ch,
+                                "phase_space": ps_name,
+                                "config": cfg.name,
+                                "flavor": fl_name,
+                                "i_flavor_jet": jet_idx,
+                            },
+                        )
+                        # combine region categories to create inclusive control regions for plotting
+                        rg_merged_name = "sl__{}__{}".format(ps_name, b_tagger)
+                        if not cfg.has_category(rg_merged_name):
+                            rg_merged_cat = cfg.add_category(
+                                name=rg_merged_name,
+                                label="sl, {}".format(ps_name),
+                                tags={"sl", b_tagger},
+                                aux={
+                                    "phase_space": ps_name,
+                                },
+                                context=cfg.name,
+                            )
+                        else:
+                            rg_merged_cat = cfg.get_category(rg_merged_name)
+                        rg_merged_cat.add_category(rg_cat)
 
     add_categories(cfg, "deepcsv")
     add_categories(cfg, "deepjet")

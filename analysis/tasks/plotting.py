@@ -657,6 +657,6 @@ class PlotShiftedScaleFactorWrapper(AnalysisTask, law.WrapperTask):
 
     def requires(self):
         def req(shift):
-            return self.wrapped_task.req(self, shifts=[shift])
+            return self.wrapped_task.req(self, shifts=[shift + "_up", shift + "_down"])
 
         return OrderedDict([(shift, req(shift)) for shift in self.shifts])

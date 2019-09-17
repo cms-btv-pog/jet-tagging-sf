@@ -142,6 +142,7 @@ class ShiftTask(AnalysisTask):
             params["effective_shift"] = "nominal"
         return params
 
+
 class WrapperTask(AnalysisTask, law.WrapperTask):
 
     datasets = law.CSVParameter(default=[], description="datasets to require")
@@ -331,24 +332,37 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
         return law.util.rel_path(__file__, "files", "arc_stageout.sh")
 
 
-class HTCondorWorkflow(law.HTCondorWorkflow):
+class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
+    """
+    Batch systems are typically very heterogeneous by design, and so is HTCondor. Law does not aim
+    to "magically" adapt to all possible HTCondor setups which would certainly end in a mess.
+    Therefore we have to configure the base HTCondor workflow in law.contrib.htcondor to work with
+    the VISPA environment. In most cases, like in this example, only a minimal amount of
+    configuration is required.
+    """
+    htcondor_logs = luigi.BoolParameter()
+    htcondor_gpus = luigi.IntParameter(default=2, significant=False, description="number "
+        "of GPUs to request on the VISPA cluster")
+
+    def workflow_requires(self):
+        return self.requires_from_branch()
 
     def htcondor_output_directory(self):
+        # the directory where submission meta data should be stored
         return law.LocalDirectoryTarget(self.local_path())
-
-    def htcondor_create_job_file_factory(self, **kwargs):
-        # add the class name to the job file directory
-        job_file_dir = law.config.get_expanded("job", "job_file_dir")
-        kwargs["dir"] = os.path.join(job_file_dir, self.__class__.__name__)
-        return super(HTCondorWorkflow, self).htcondor_create_job_file_factory(**kwargs)
 
     def htcondor_job_config(self, config, job_num, branches):
         # copy the entire environment
         config.custom_content.append(("getenv", "true"))
-        config.custom_content.append(("+MaxRuntime", 100000))
-        # the CERN htcondor setup requires a "log" config, but we can safely set it to /dev/null
-        # if you are interested in the logs of the batch system itself, set a meaningful value here
+        # condor logs
+        config.stdout = "out.txt"
+        config.stderr = "err.txt"
         config.log = "log.txt"
+
+        if self.htcondor_gpus > 0:
+            config.custom_content.append(("request_gpus", self.htcondor_gpus))
+
+        config.custom_content.append(("RequestMemory", "16000"))
         return config
 
 

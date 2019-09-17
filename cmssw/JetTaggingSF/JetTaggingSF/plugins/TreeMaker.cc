@@ -214,6 +214,8 @@ private:
     vstring jesUncSources_;
     string jerPtResolutionFile_;
     string jerScaleFactorFile_;
+    double deepCSVWP_;
+    double deepJetWP_;
     bool (TreeMaker::*tightJetID_)(pat::Jet&);
     double maxJetEta_;
 
@@ -274,6 +276,8 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , jesUncSources_(iConfig.getParameter<vstring>("jesUncSources"))
     , jerPtResolutionFile_(iConfig.getParameter<string>("jerPtResolutionFile"))
     , jerScaleFactorFile_(iConfig.getParameter<string>("jerScaleFactorFile"))
+    , deepCSVWP_(iConfig.getParameter<double>("deepCSVWP"))
+    , deepJetWP_(iConfig.getParameter<double>("deepJetWP"))
     , genInfoToken_(consumes<GenEventInfoProduct>(iConfig.getParameter<edm::InputTag>("genInfoCollection")))
     , triggerBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerBitsCollection")))
     , metFilterBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("metFilterBitsCollection")))
@@ -443,6 +447,8 @@ void TreeMaker::setupVariables()
 
         varMap_.addInt32("jetmet_pass" + postfix);
         varMap_.addInt32("n_jets" + postfix);
+        varMap_.addInt32("n_tags_deepcsv" + postfix);
+        varMap_.addInt32("n_tags_deepjet" + postfix);
         varMap_.addInt32("pass_z_mask" + postfix);
         varMap_.addDouble("met_px" + postfix);
         varMap_.addDouble("met_py" + postfix);
@@ -752,6 +758,23 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
 
         varMap_.setInt32("jetmet_pass" + postfix, passJetMETSelection[i]);
         varMap_.setInt32("n_jets" + postfix, jets[i].size());
+        // b-tagged jets
+        int n_tags_deepcsv = 0;
+        int n_tags_deepjet = 0;
+        for (size_t j = 0; j < jets[i].size(); j++)
+        {
+            if ((jets[i][j].bDiscriminator("pfDeepCSVJetTags:probbb") + jets[i][j].bDiscriminator("pfDeepCSVJetTags:probb")) > deepCSVWP_)
+            {
+                n_tags_deepcsv += 1;
+            }
+            if ((jets[i][j].bDiscriminator("pfDeepFlavourJetTags:probb") + jets[i][j].bDiscriminator("pfDeepFlavourJetTags:probbb") +
+                jets[i][j].bDiscriminator("pfDeepFlavourJetTags:problepb")) > deepJetWP_)
+            {
+                n_tags_deepjet += 1;
+            }
+        }
+        varMap_.setInt32("n_tags_deepcsv" + postfix, n_tags_deepcsv);
+        varMap_.setInt32("n_tags_deepjet" + postfix, n_tags_deepjet);
         varMap_.setDouble("met_px" + postfix, mets[i].px());
         varMap_.setDouble("met_py" + postfix, mets[i].py());
 

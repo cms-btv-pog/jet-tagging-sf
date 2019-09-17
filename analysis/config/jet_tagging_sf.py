@@ -322,14 +322,14 @@ cfg.add_variable(
 )
 cfg.add_variable(
     name="n_tags_deepcsv",
-    expression="n_tags_deepcsv",
+    expression="n_tags_deepcsv{{jec_identifier}}",
     aux={"b_tagger": "deepcsv"}, # to filter required b-tagger in histogram writer
     binning=(10, 0., 10.,),
     tags={"n_tags"},
 )
 cfg.add_variable(
     name="n_tags_deepjet",
-    expression="n_tags_deepjet",
+    expression="n_tags_deepjet{{jec_identifier}}",
     aux={"b_tagger": "deepjet"}, # to filter required b-tagger in histogram writer
     binning=(10, 0., 10.,),
     tags={"n_tags"},

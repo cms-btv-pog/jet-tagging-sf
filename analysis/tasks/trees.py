@@ -103,6 +103,8 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow)
                 ("jesUncSources", self.config_inst.get_aux("jes_sources")),
                 ("jerPtResolutionFile", setup_files["jer_files"]["PtResolution"]),
                 ("jerScaleFactorFile", setup_files["jer_files"]["SF"]),
+                ("deepCSVWP", self.config_inst.get_aux("working_points")["deepcsv"]["medium"]),
+                ("deepJetWP", self.config_inst.get_aux("working_points")["deepjet"]["medium"]),
             ]
 
             # triggers

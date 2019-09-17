@@ -156,6 +156,20 @@ try:
         "JER scale factor file",
     )
     options.register(
+        "deepCSVWP",
+        0.,
+        VarParsing.multiplicity.singleton,
+        VarParsing.varType.float,
+        "Working point to count number of deepcsv tagged jets",
+    )
+    options.register(
+        "deepJetWP",
+        0.,
+        VarParsing.multiplicity.singleton,
+        VarParsing.varType.float,
+        "Working point to count number of deepjet tagged jets",
+    )
+    options.register(
         "reportEvery",
         1000,
         VarParsing.multiplicity.singleton,

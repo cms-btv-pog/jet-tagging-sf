@@ -204,7 +204,7 @@ class PlotVariable(PlotTask):
 
                     flavor = leaf_cat.get_aux("flavor", None)
                     channel = leaf_cat.get_aux("channel")
-                    region = leaf_cat.get_aux("region")
+                    region = leaf_cat.get_aux("region", None)
 
                     category_dir = input_file.GetDirectory(leaf_cat.name)
                     for process_key in category_dir.GetListOfKeys():
@@ -240,7 +240,7 @@ class PlotVariable(PlotTask):
                                         raise Exception("Cannot add shifted samples to data.")
                                     data_hist = add_hist(data_hist, hist, sign=sign)
                                 else:
-                                    if self.normalize:  # apply "trigger" sfs as part of the normalization
+                                    if self.normalize and region is not None:  # apply "trigger" sfs as part of the normalization
                                         hist.Scale(scales[channel.name][region])
 
                                     key = process if self.mc_split == "process" else flavor

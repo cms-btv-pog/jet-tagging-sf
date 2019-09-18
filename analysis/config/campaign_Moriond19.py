@@ -432,7 +432,8 @@ dataset_dy_lep_2Jets = od.Dataset(
     keys=[
         "/DYJetsToLL_2J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
-    con
+    context=campaign_name,
+)
 
 # single top
 
@@ -443,7 +444,8 @@ dataset_st_s_lep = od.Dataset(
     n_files=353,
     keys= [
         "/ST_s-channel_4f_leptonDecays_TuneCP5_13TeV-madgraph-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext1-v4/MINIAODSIM",
-    ]
+    ],
+    context=campaign_name,
 )
 
 # t-channel
@@ -454,6 +456,7 @@ dataset_st_t_t = od.Dataset(
     keys= [
         "/ST_t-channel_top_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 dataset_st_t_tbar = od.Dataset(
@@ -463,6 +466,7 @@ dataset_st_t_tbar = od.Dataset(
     keys= [
         "/ST_t-channel_antitop_4f_InclusiveDecays_TuneCP5_13TeV-powheg-madspin-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
+    context=campaign_name,
 )
 
 

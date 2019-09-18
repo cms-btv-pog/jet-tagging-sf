@@ -410,7 +410,7 @@ dataset_dy_lep_0Jets = od.Dataset(
     campaign=campaign,
     n_files=1405,
     keys=[
-        "dataset=/DYJetsToLL_0J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+        "/DYJetsToLL_0J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )

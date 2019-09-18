@@ -456,6 +456,36 @@ dataset_dy_lep_50ToInf = od.Dataset(
     context=campaign_name,
 )
 
+dataset_dy_lep_0Jets = od.Dataset(
+    "dy_lep_0Jets", 2240,
+    campaign=campaign,
+    n_files=1213,
+    keys=[
+        "/DYJetsToLL_0J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_1Jets = od.Dataset(
+    "dy_lep_1Jets", 2241,
+    campaign=campaign,
+    n_files=1494,
+    keys=[
+        "/DYJetsToLL_1J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_2Jets = od.Dataset(
+    "dy_lep_2Jets", 2242,
+    campaign=campaign,
+    n_files=869,
+    keys=[
+        "/DYJetsToLL_2J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
 # single top
 
 # s-channel
@@ -630,6 +660,9 @@ dataset_dy_lep_4To50_Ht400To600.add_process(process_dy_lep_5To50_Ht400To600)  # 
 dataset_dy_lep_4To50_Ht600ToInf.add_process(process_dy_lep_5To50_Ht600ToInf)  # TODO: 5To50 okay?
 dataset_dy_lep_10To50.add_process(process_dy_lep_10To50)
 dataset_dy_lep_50ToInf.add_process(process_dy_lep_50ToInf)
+dataset_dy_lep_0Jets.add_process(process_dy_lep_0Jets)
+dataset_dy_lep_1Jets.add_process(process_dy_lep_1Jets)
+dataset_dy_lep_2Jets.add_process(process_dy_lep_2Jets)
 dataset_dy_lep_50ToInf_Ht70To100.add_process(process_dy_lep_50ToInf_Ht70To100)
 dataset_dy_lep_50ToInf_Ht100To200.add_process(process_dy_lep_50ToInf_Ht100To200)
 dataset_dy_lep_50ToInf_Ht200To400.add_process(process_dy_lep_50ToInf_Ht200To400)

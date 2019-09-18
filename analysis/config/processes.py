@@ -222,6 +222,30 @@ process_dy_lep_50ToInf_Ht2500ToInf = process_dy_lep_50ToInf.add_process(
     },
 )
 
+process_dy_lep_0Jets = process_dy_lep.add_process(
+    "dy_lep_0Jets", 230,
+    label=r"Drell-Yan, 0 Jets",
+    xsecs={
+        13: sn.Number(4620.52),
+    },
+)
+
+process_dy_lep_1Jets = process_dy_lep.add_process(
+    "dy_lep_1Jets", 231,
+    label=r"Drell-Yan, 1 Jet",
+    xsecs={
+        13: sn.Number(859.59),
+    },
+)
+
+process_dy_lep_2Jets = process_dy_lep.add_process(
+    "dy_lep_2Jets", 232,
+    label=r"Drell-Yan, 2 Jets",
+    xsecs={
+        13: sn.Number(338.26),
+    },
+)
+
 process_st = od.Process(
     "st", 30,
     label=r"Single $t$/$\bar{t}$",

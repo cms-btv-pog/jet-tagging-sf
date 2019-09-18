@@ -265,9 +265,11 @@ dataset_dy_lep_10To50 = od.Dataset(
 dataset_dy_lep_50ToInf = od.Dataset(
     "dy_lep_50ToInf", 2231,
     campaign=campaign,
-    n_files=1254,
+    n_files=15 + 2802, # 1254
     keys=[
-        "/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+        "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+        "/DYJetsToLL_M-50_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15_ext2-v1/MINIAODSIM",
+        #"/DYJetsToLL_M-50_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -402,6 +404,35 @@ dataset_dy_lep_50ToInf_Ht2500ToInf = od.Dataset(
     ],
     context=campaign_name,
 )
+
+dataset_dy_lep_0Jets = od.Dataset(
+    "dy_lep_0Jets", 2240,
+    campaign=campaign,
+    n_files=1405,
+    keys=[
+        "dataset=/DYJetsToLL_0J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_1Jets = od.Dataset(
+    "dy_lep_1Jets", 2241,
+    campaign=campaign,
+    n_files=1517,
+    keys=[
+        "DYJetsToLL_1J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+    context=campaign_name,
+)
+
+dataset_dy_lep_2Jets = od.Dataset(
+    "dy_lep_2Jets", 2242,
+    campaign=campaign,
+    n_files=1102,
+    keys=[
+        "/DYJetsToLL_2J_TuneCP5_13TeV-amcatnloFXFX-pythia8/RunIIAutumn18MiniAOD-102X_upgrade2018_realistic_v15-v1/MINIAODSIM",
+    ],
+    con
 
 # single top
 
@@ -558,6 +589,9 @@ dataset_tt_dl.add_process(process_tt_dl)
 dataset_tt_sl.add_process(process_tt_sl)
 dataset_dy_lep_10To50.add_process(process_dy_lep_10To50)
 dataset_dy_lep_50ToInf.add_process(process_dy_lep_50ToInf)
+dataset_dy_lep_0Jets.add_process(process_dy_lep_0Jets)
+dataset_dy_lep_1Jets.add_process(process_dy_lep_1Jets)
+dataset_dy_lep_2Jets.add_process(process_dy_lep_2Jets)
 
 dataset_dy_lep_4To50_Ht70To100.add_process(process_dy_lep_5To50_Ht70To100)  # TODO: 5To50 okay?
 dataset_dy_lep_4To50_Ht100To200.add_process(process_dy_lep_5To50_Ht100To200)  # TODO: 5To50 okay?

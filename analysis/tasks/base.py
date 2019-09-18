@@ -32,7 +32,7 @@ class AnalysisTask(law.Task):
     version = luigi.Parameter()
     notify = law.slack.NotifySlackParameter()
 
-    outputs_siblings = True
+    output_collection_cls = law.target.collection.SiblingFileCollection
 
     config = luigi.Parameter(default=None)
 
@@ -343,9 +343,6 @@ class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
     htcondor_logs = luigi.BoolParameter()
     htcondor_gpus = luigi.IntParameter(default=2, significant=False, description="number "
         "of GPUs to request on the VISPA cluster")
-
-    def workflow_requires(self):
-        return self.requires_from_branch()
 
     def htcondor_output_directory(self):
         # the directory where submission meta data should be stored

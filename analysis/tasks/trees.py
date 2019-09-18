@@ -295,7 +295,7 @@ class MeasureTreeSizes(AnalysisTask):
 
             # determine the full url to the remote directory, split it into uberftp door and path
             task = WriteTrees.req(self, dataset=dataset.name)
-            url = task.output()["collection"].dir.url()
+            url = task.output()["collection"].dir.uri()
             m = re.match(r"^.+//(.*)\:\d+/.+(/pnfs/.+)$", url)
             if not m:
                 print("cannot parse url for dataset {}: {}".format(dataset.name, url))

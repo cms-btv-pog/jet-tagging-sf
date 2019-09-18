@@ -460,7 +460,7 @@ class WriteHistogramsWrapper(WrapperTask):
     wrapped_task = WriteHistograms
 
 
-class MergeHistograms(AnalysisTask, law.CascadeMerge):
+class MergeHistograms(AnalysisTask, law.tasks.CascadeMerge):
 
     iteration = WriteHistograms.iteration
     final_it = WriteHistograms.final_it
@@ -474,7 +474,7 @@ class MergeHistograms(AnalysisTask, law.CascadeMerge):
     merge_factor = 12
 
     def create_branch_map(self):
-        return law.CascadeMerge.create_branch_map(self)
+        return law.tasks.CascadeMerge.create_branch_map(self)
 
     def cascade_workflow_requires(self):
         reqs = collections.OrderedDict()

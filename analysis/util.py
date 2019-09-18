@@ -430,6 +430,7 @@ def parse_branch_names(expression, tree, expandAliases=True):
 
     return branches
 
+
 def walk_categories(category):
     """
     Recurses through nested categories, yielding each category and its children.
@@ -441,6 +442,7 @@ def walk_categories(category):
 
         yield category, children
         categories.extend(children)
+
 
 def build_hist_envelope(nominal_hist, up_shifted_hists, down_shifted_hists, envelope_as_errors=False):
     """

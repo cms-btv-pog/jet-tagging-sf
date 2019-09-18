@@ -487,7 +487,7 @@ class FitScaleFactors(MeasureScaleFactors):
         interpolation_bins = 1000
 
         # cannot get the function from ROOT, use scipy instead
-        from scipy.interpolate import Akima1DInterpolator
+        from scipy.interpolate import PchipInterpolator
 
         def fit_func_pol6(x_min=0.0, x_max=1.0):
             # 6th degree polynomial for LF region
@@ -553,7 +553,7 @@ class FitScaleFactors(MeasureScaleFactors):
                     x_values.push_back(hist.GetBinCenter(bin_idx))
                     y_values.push_back(hist.GetBinContent(bin_idx))
 
-                interpolator = Akima1DInterpolator(x_values, y_values)
+                interpolator = PchipInterpolator(x_values, y_values)
                 # define region in which to use interpolation
                 first_point, last_point = min(x_values), max(x_values)
 

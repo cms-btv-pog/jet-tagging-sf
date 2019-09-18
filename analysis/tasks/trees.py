@@ -154,14 +154,14 @@ class WriteTreesWrapper(WrapperTask):
     wrapped_task = WriteTrees
 
 
-class MergeTrees(DatasetTask, law.CascadeMerge, GridWorkflow, HTCondorWorkflow):
+class MergeTrees(DatasetTask, law.tasks.CascadeMerge, GridWorkflow, HTCondorWorkflow):
 
     merge_factor = 8
 
     workflow_run_decorators = [law.decorator.notify]
 
     def create_branch_map(self):
-        return law.CascadeMerge.create_branch_map(self)
+        return law.tasks.CascadeMerge.create_branch_map(self)
 
     def cascade_workflow_requires(self, **kwargs):
         return WriteTrees.req(self, version=self.get_version(WriteTrees), _prefer_cli=["version"],

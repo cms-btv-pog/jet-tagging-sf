@@ -30,7 +30,7 @@ law.contrib.load("arc", "cms", "git", "glite", "numpy", "tasks", "root", "slack"
 class AnalysisTask(law.Task):
 
     version = luigi.Parameter()
-    notify = law.NotifySlackParameter()
+    notify = law.slack.NotifySlackParameter()
 
     outputs_siblings = True
 
@@ -77,7 +77,7 @@ class AnalysisTask(law.Task):
         return cls(self.local_path(*args))
 
     def wlcg_target(self, *args, **kwargs):
-        cls = law.WLCGFileTarget if args else law.WLCGDirectoryTarget
+        cls = law.wlcg.WLCGFileTarget if args else law.wlcg.WLCGDirectoryTarget
         return cls(self.wlcg_path(*args), **kwargs)
 
 
@@ -214,7 +214,7 @@ class WrapperTask(AnalysisTask, law.WrapperTask):
         return collections.OrderedDict([(params, req(*params)) for params in params_list])
 
 
-class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
+class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
 
     glite_ce_map = {
         "RWTH": "grid-ce.physik.rwth-aachen.de:8443/cream-pbs-cms",
@@ -277,7 +277,7 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
     def _setup_render_variables(self, config, reqs):
         config.render_variables["jtsf_grid_user"] = os.getenv("JTSF_GRID_USER")
         config.render_variables["jtsf_cmssw_setup"] = os.getenv("JTSF_CMSSW_SETUP")
-        config.render_variables["cmssw_base_url"] = reqs["cmssw"].output().dir.url()
+        config.render_variables["cmssw_base_url"] = reqs["cmssw"].output().dir.uri()
 
         scram_arch = os.getenv("SCRAM_ARCH")
         if self.req_sandbox != "NO_SANDBOX":
@@ -285,26 +285,26 @@ class GridWorkflow(AnalysisTask, law.GLiteWorkflow, law.ARCWorkflow):
         config.render_variables["scram_arch"] = scram_arch
 
         config.render_variables["cmssw_version"] = os.getenv("CMSSW_VERSION")
-        config.render_variables["software_base_url"] = reqs["software"].output().dir.url()
+        config.render_variables["software_base_url"] = reqs["software"].output().dir.uri()
         config.render_variables["repo_checksum"] = reqs["repo"].checksum
-        config.render_variables["repo_base"] = reqs["repo"].output().dir.url()
+        config.render_variables["repo_base"] = reqs["repo"].output().dir.uri()
 
     def glite_workflow_requires(self):
-        reqs = law.GLiteWorkflow.glite_workflow_requires(self)
+        reqs = law.glite.GLiteWorkflow.glite_workflow_requires(self)
         self._setup_workflow_requires(reqs)
         return reqs
 
     def glite_output_directory(self):
-        return law.WLCGDirectoryTarget(self.wlcg_path())
+        return law.wlcg.WLCGDirectoryTarget(self.wlcg_path())
 
     def glite_output_uri(self):
-        return self.glite_output_directory().url(cmd="listdir")
+        return self.glite_output_directory().uri(cmd="listdir")
 
     def glite_bootstrap_file(self):
         return law.util.rel_path(__file__, "files", "grid_bootstrap.sh")
 
     def glite_job_config(self, config, job_num, branches):
-        config = law.GLiteWorkflow.glite_job_config(self, config, job_num, branches)
+        config = law.glite.GLiteWorkflow.glite_job_config(self, config, job_num, branches)
         self._setup_render_variables(config, self.glite_workflow_requires())
         config.vo = "cms:/cms/dcms"
         return config
@@ -497,7 +497,7 @@ class OptionalSandboxTask(law.SandboxTask):
         return super(OptionalSandboxTask, self).__getattribute__(attr, proxy=proxy)
 
 
-class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, OptionalSandboxTask):
+class UploadCMSSW(AnalysisTask, law.cms.BundleCMSSW, law.tasks.TransferLocalFile, OptionalSandboxTask):
 
     force_upload = luigi.BoolParameter(default=False, description="force uploading")
 
@@ -530,7 +530,7 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, Optional
         return self.wlcg_target(path, fs="wlcg_fs_software")
 
     def output(self):
-        return law.TransferLocalFile.output(self)
+        return law.tasks.TransferLocalFile.output(self)
 
     def run(self):
         bundle = law.LocalFileTarget(is_tmp="tgz")
@@ -540,7 +540,7 @@ class UploadCMSSW(AnalysisTask, law.BundleCMSSW, law.TransferLocalFile, Optional
         self.has_run = True
 
 
-class UploadSoftware(AnalysisTask, law.TransferLocalFile, OptionalSandboxTask):
+class UploadSoftware(AnalysisTask, law.tasks.TransferLocalFile, OptionalSandboxTask):
 
     version = None
 
@@ -567,7 +567,7 @@ class UploadSoftware(AnalysisTask, law.TransferLocalFile, OptionalSandboxTask):
         super(UploadSoftware, self).run()
 
 
-class UploadRepo(AnalysisTask, law.BundleGitRepository, law.TransferLocalFile):
+class UploadRepo(AnalysisTask, law.git.BundleGitRepository, law.tasks.TransferLocalFile):
 
     # settings for BundleGitRepository
     repo_path = os.environ["JTSF_BASE"]
@@ -586,7 +586,7 @@ class UploadRepo(AnalysisTask, law.BundleGitRepository, law.TransferLocalFile):
         return self.wlcg_target(path, fs="wlcg_fs_software")
 
     def output(self):
-        return law.TransferLocalFile.output(self)
+        return law.tasks.TransferLocalFile.output(self)
 
     def run(self):
         bundle = law.LocalFileTarget(is_tmp="tgz")

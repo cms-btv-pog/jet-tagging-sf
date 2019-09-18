@@ -16,7 +16,7 @@ from analysis.util import wget
 
 from collections import OrderedDict
 
-class GetDatasetLFNs(DatasetTask, law.TransferLocalFile):
+class GetDatasetLFNs(DatasetTask, law.tasks.TransferLocalFile):
 
     source_path = None
     version = None
@@ -45,7 +45,7 @@ class GetDatasetLFNs(DatasetTask, law.TransferLocalFile):
         self.transfer(tmp)
 
 
-class DownloadSetupFiles(AnalysisTask, law.TransferLocalFile):
+class DownloadSetupFiles(AnalysisTask, law.tasks.TransferLocalFile):
 
     source_path = None
     version = None

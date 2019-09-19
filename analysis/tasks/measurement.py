@@ -310,7 +310,6 @@ class MeasureCScaleFactors(MeasureScaleFactors):
                     continue
                 categories.append(category)
 
-        btagger_cfg = self.config_inst.get_aux("btaggers")[self.b_tagger]
         # get category-dependent binning if optimized binning is used
         if self.optimize_binning:
             category_binnings = inp["binning"].load()
@@ -476,6 +475,7 @@ class FitScaleFactors(MeasureScaleFactors):
         # and the .csv output for the b-tag reader should be created
         if self.fix_normalization:
             outp["csv"] = self.wlcg_target("scale_factors.csv")
+            outp["functions"] = self.wlcg_target("sf_functions.root")
         return outp
 
     def run(self):
@@ -487,23 +487,7 @@ class FitScaleFactors(MeasureScaleFactors):
         interpolation_bins = 1000
 
         # cannot get the function from ROOT, use scipy instead
-        from scipy.interpolate import PchipInterpolator
-
-        def fit_func_pol6(x_min=0.0, x_max=1.0):
-            # 6th degree polynomial for LF region
-            func = ROOT.TF1("f_pol6", "[0] + x*([1] + x*([2] + x*([3] + x*([4] + x*([5] + x*[6])))))", x_min, x_max)
-            for i_param in range(func.GetNpar()):
-                func.SetParameter(i_param, 1.)
-            return func
-
-        def fit_func_pol1(x_min, x_max, init_params=[1., 1.]):
-            # 1st degree polynomial for final fit in HF region and for c jets
-            func = ROOT.TF1("f_pol1", "pol1(0)", x_min, x_max)
-            if not len(init_params) == func.GetNpar():
-                raise ValueError("Expected {} parameter values, but got {}".format(func.GetNpar(),
-                    init_params))
-            func.SetParameters(*init_params)
-            return func
+        from scipy.interpolate import PchipInterpolator, BPoly, PPoly
 
         # get categories in which to fit the scale factors
         categories = []
@@ -526,6 +510,8 @@ class FitScaleFactors(MeasureScaleFactors):
         fit_results = []
         # finely binned histograms to write to the output file
         hist_dict = {}
+        # TF1's to write to the output file
+        function_dict = {}
         with inp["sf"]["scale_factors"].load("r") as input_file:
             for category in categories:
                 region = category.get_aux("region")
@@ -571,7 +557,10 @@ class FitScaleFactors(MeasureScaleFactors):
                 hist_dict[category] = interpolation_hist
 
                 # fill .csv file in final iteration (after normalization fix)
+                # also create piecewise linear TF1's
                 if self.fix_normalization:
+                    function_pieces = []
+
                     results = {}
                     results["eta_min"], results["eta_max"] = category.get_aux("eta")
                     pt_range = category.get_aux("pt")
@@ -598,7 +587,15 @@ class FitScaleFactors(MeasureScaleFactors):
                     fit_results.append(fit_results_tpl + ", 0, {}, {}".format(first_point,
                         interpolator(first_point)))
 
+                    function_pieces.append("(x < 0) * {}".format(hist.GetBinContent(1)))
+                    function_pieces.append("(x >= 0) * (x < {}) * {}".format(first_point,
+                        interpolator(first_point)))
+
                     # intermediate functions
+                    # change interpolated function from bernstein to power basis
+                    bpoly_interpolation = BPoly(interpolator.c, interpolator.x)
+                    ppoly_interpolation = PPoly.from_bernstein_basis(bpoly_interpolation)
+
                     interpolator_idx = 0
                     for bin_idx in range(1, nbins):
                         if hist.GetBinCenter(bin_idx) < first_point:
@@ -606,19 +603,36 @@ class FitScaleFactors(MeasureScaleFactors):
                         x_min = hist.GetBinCenter(bin_idx)
                         x_max = hist.GetBinCenter(bin_idx + 1)
 
-                        interpolator_coefficients = interpolator.c[:, interpolator_idx]
+                        interpolator_coefficients = ppoly_interpolation.c[:, interpolator_idx]
+                        interpolator_x = ppoly_interpolation.x[interpolator_idx]
                         interpolator_idx += 1
                         formula = ""
                         for i in xrange(3):
                             formula += "{}*".format(interpolator_coefficients[i]) + \
-                                "*".join(["(x-{})".format(hist.GetBinCenter(bin_idx))] * (3 - i))
-                            formula += "+" if interpolator_coefficients[i+1] >= 0. else ""
+                                "*".join(["(x-{})".format(interpolator_x)] * (3 - i))
+                            formula += "+" if interpolator_coefficients[i + 1] >= 0. else ""
                         formula += str(interpolator_coefficients[3])
                         fit_results.append(fit_results_tpl + ", {}, {}, {}".format(x_min,
                             x_max, formula))
+                        function_pieces.append("(x >= {}) * (x < {}) * ({})".format(
+                            x_min, x_max, formula))
 
                     fit_results.append(fit_results_tpl + ", {}, 1.1, {}".format(last_point,
                         interpolator(last_point)))
+                    function_pieces.append("(x >= {}) * {}".format(last_point,
+                        interpolator(last_point)))
+
+                    function = ROOT.TF1("sf_{}".format(category.name),
+                        " + ".join(["({})".format(piece) for piece in function_pieces]),
+                        -2., 1.1)
+                    function_dict[category] = function
+
+                    # sanity check
+                    for val in x_values:
+                        if (abs(function.Eval(val) - interpolator(val)) > 1e-5):
+                            raise Exception("SF Function does not match interpolator values: "
+                                "{} vs {}".format(function.Eval(val), interpolator(val)))
+
             # write to output file
             with outp["sf"].localize("w") as tmp:
                 with tmp.dump("RECREATE") as output_file:
@@ -630,6 +644,13 @@ class FitScaleFactors(MeasureScaleFactors):
                 with outp["csv"].localize("w") as tmp:
                     with tmp.open("w") as result_file:
                         result_file.write("\n".join(fit_results))
+
+                with outp["functions"].localize("w") as tmp:
+                    with tmp.dump("RECREATE") as output_file:
+                        for category, func in function_dict.items():
+                            category_dir = output_file.mkdir(category.name)
+                            category_dir.cd()
+                            func.Write("sf")
 
 
 class FitScaleFactorsWrapper(WrapperTask):

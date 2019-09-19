@@ -7,7 +7,6 @@ import numpy as np
 from collections import defaultdict
 from scipy.optimize import minimize
 
-from analysis.config.jet_tagging_sf import get_category
 from analysis.tasks.base import AnalysisTask
 from analysis.tasks.hists import MergeHistograms
 

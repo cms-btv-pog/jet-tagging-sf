@@ -14,7 +14,7 @@ from law.parameter import CSVParameter
 from order.util import join_root_selection
 from collections import defaultdict
 
-from analysis.config.jet_tagging_sf import get_category
+from analysis.config.jet_tagging_sf import CategoryGetter
 from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow, HTCondorWorkflow
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
@@ -61,6 +61,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
             raise ValueError("Unknown shift in {}".format(self.used_shifts))
         else:
             self.shifts = self.used_shifts
+
+        self.category_getter = CategoryGetter(self.config_inst, self.b_tagger)
 
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors
@@ -204,8 +206,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                 if region == "c" and not shift.startswith("c_stat"): # nominal c scale factors are 1
                     continue
 
-                category = get_category(self.config_inst, jet_pt, abs(jet_eta),
-                    region, self.b_tagger, phase_space="measure")
+                category = self.category_getter.get_category(jet_pt, abs(jet_eta), region)
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]
@@ -576,6 +577,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
             self.shifts = {"nominal"} | format_shifts(jes_sources, prefix="jes")  | \
                 format_shifts(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"])
 
+        self.category_getter = CategoryGetter(self.config_inst, self.b_tagger)
+
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors
 
@@ -662,8 +665,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 elif region != "c" and self.normalize_cerrs:
                     continue
 
-                category = get_category(self.config_inst,jet_pt, abs(jet_eta),
-                    region, self.b_tagger, phase_space="measure")
+                category = self.category_getter.get_category(jet_pt, abs(jet_eta), region)
 
                 # get scale factor
                 sf_hist = sf_hists[category.name]

@@ -273,32 +273,44 @@ def get_axis_info(cfg, idx, axis_var, fmt=None):
         "lf": binning_to_selection(lf_bins, variable),
     }
 
-def get_category(cfg, pt, eta, region, b_tagger, phase_space="measure"):
-    matches = []
-    for category in cfg.categories:
-        if not category.has_tag(b_tagger):
-            continue
-        cat_phasespace = category.get_aux("phase_space", None)
-        if not cat_phasespace == phase_space:
-            continue
 
-        cat_region = category.get_aux("region", None)
-        if not region == cat_region:
-            continue
+class CategoryGetter(object):
 
-        cat_pt_range = category.get_aux("pt", (0., 0.))
-        if not (cat_pt_range[0] < pt <= cat_pt_range[1]):
-            continue
+    def __init__(self, cfg, b_tagger, phase_space="measure"):
+        self.binning = cfg.get_aux("binning")
+        category_dict = {}
 
-        cat_eta_range = category.get_aux("eta", (0., 0.))
-        if not (cat_eta_range[0] < eta <= cat_eta_range[1]):
-            continue
-        matches.append(category)
-    # only return the category if the matching is unambiguos
-    if len(matches) == 1:
-        return matches[0]
-    else:
-        raise ValueError("Expected one single matching category, but got {}".format(matches))
+        for category in cfg.categories:
+            if not category.has_tag(b_tagger):
+                continue
+            cat_phasespace = category.get_aux("phase_space", None)
+            if not cat_phasespace == phase_space:
+                continue
+
+            cat_region = category.get_aux("region", None)
+            cat_pt_range = category.get_aux("pt", None)
+            cat_eta_range = category.get_aux("eta", None)
+
+            if any([aux is None for aux in [cat_region, cat_pt_range, cat_eta_range]]):
+                continue
+
+            pt_idx = self.binning[cat_region]["pt"].index(cat_pt_range[0])
+            eta_idx = self.binning[cat_region]["abs(eta)"].index(cat_eta_range[0])
+            key = (cat_region, pt_idx, eta_idx)
+
+            if key in category_dict:
+                raise KeyError("Duplicate category key {}.".format(key))
+            category_dict[key] = category
+
+        self.category_dict = category_dict
+
+    def get_category(self, pt, abs_eta, region):
+        region_binning = self.binning[region]
+        pt_idx = next(idx for idx, value in enumerate(region_binning["pt"]) if pt < value) - 1
+        eta_idx = next(idx for idx, value in enumerate(region_binning["abs(eta)"]) if abs_eta < value) - 1
+        key = (region, pt_idx, eta_idx)
+        return self.category_dict[key]
+
 
 # variables
 cfg.add_variable(

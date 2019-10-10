@@ -64,6 +64,8 @@ jes_sources = [
 ]
 jes_total_shifts = {"jesTotal_up", "jesTotal_down"}
 
+xrd_redirectors = ["xrootd-cms.infn.it", "cms-xrd-global.cern.ch", "cmsxrootd.fnal.gov"]
+
 cfg.set_aux("jes_sources", jes_sources[:])
 # jes sources are required for ShiftTasks already on class level to define list of shift
 # however, no information about the config instance is available at that point
@@ -334,14 +336,14 @@ cfg.add_variable(
 )
 cfg.add_variable(
     name="n_tags_deepcsv",
-    expression="n_tags_deepcsv{{jec_identifier}}",
+    expression="n_tags_deepcsv{jec_identifier}",
     aux={"b_tagger": "deepcsv"}, # to filter required b-tagger in histogram writer
     binning=(10, 0., 10.,),
     tags={"n_tags"},
 )
 cfg.add_variable(
     name="n_tags_deepjet",
-    expression="n_tags_deepjet{{jec_identifier}}",
+    expression="n_tags_deepjet{jec_identifier}",
     aux={"b_tagger": "deepjet"}, # to filter required b-tagger in histogram writer
     binning=(10, 0., 10.,),
     tags={"n_tags"},

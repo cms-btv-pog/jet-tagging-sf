@@ -21,6 +21,8 @@ import numpy as np
 
 import law
 
+from analysis.config.jet_tagging_sf import xrd_redirectors
+
 
 def calc_checksum(*paths, **kwargs):
     exclude = law.util.make_list(kwargs.get("exclude", ["*.pyc", "*.git*"]))
@@ -99,14 +101,13 @@ def determine_xrd_redirector(lfn, timeout=30):
     import ROOT
     ROOT.gROOT.SetBatch()
 
-    redirectors = ["xrootd-cms.infn.it", "cms-xrd-global.cern.ch", "cmsxrootd.fnal.gov"]
     pfn = lambda rdr: "root://{}/{}".format(rdr, lfn)
 
     def check(pfn):
         t = ROOT.TFile.Open(pfn)
         t.Close()
 
-    for rdr in 2 * redirectors:
+    for rdr in 2 * xrd_redirectors:
         _, err, timedout = call_thread(check, (pfn(rdr),), timeout=timeout)
         if not timedout and err is None:
             redirector = rdr

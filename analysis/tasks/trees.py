@@ -9,6 +9,7 @@ import math
 import shutil
 import subprocess
 import collections
+import random
 
 import law
 import luigi
@@ -17,6 +18,7 @@ import six
 from analysis.tasks.base import AnalysisTask, DatasetTask, WrapperTask, GridWorkflow, HTCondorWorkflow
 from analysis.tasks.external import GetDatasetLFNs, DownloadSetupFiles
 from analysis.util import wget, determine_xrd_redirector
+from analysis.config.jet_tagging_sf import xrd_redirectors
 
 class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow):
 
@@ -67,7 +69,10 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow)
         jes_unc_src_file = setup_files["jes_unc_src_file"] if self.dataset_inst.is_mc else ""
 
         # determine the xrd redirector and download the file
-        redirector = determine_xrd_redirector(lfn) if os.environ["JTSF_DIST_VERSION"] == "slc6" else "xrootd-cms.infn.it"
+        if os.environ["JTSF_DIST_VERSION"] == "slc6":
+            redirector = determine_xrd_redirector(lfn)
+        else:
+            redirector = random.choice(xrd_redirectors)
         xrd_url = "root://{}/{}".format(redirector, lfn)
         if self.stream_input_file:
             input_file = xrd_url

@@ -6,7 +6,7 @@ action() {
     [ -z "$scram_cores" ] && scram_cores="1"
 
     export SCRAM_ARCH="${JTSF_DIST_VERSION}_amd64_gcc700"
-    export CMSSW_VERSION="CMSSW_10_2_11"
+    export CMSSW_VERSION="CMSSW_10_2_15"
     [ -z "$CMSSW_BASE" ] && export CMSSW_BASE="$JTSF_DATA/cmssw/$SCRAM_ARCH/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"

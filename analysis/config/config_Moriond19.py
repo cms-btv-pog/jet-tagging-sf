@@ -209,16 +209,16 @@ def create_config(base_cfg):
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod8",
-        "MergeTrees": "prod8",
-        "MergeMetaData": "prod8",
-        "WriteHistograms": "prod11", #7
-        "MergeHistograms": "prod11", #7
-        "MeasureCScaleFactors": "prod8",
-        "MeasureScaleFactors": "prod8",
-        "FitScaleFactors": "prod8",
-        "GetScaleFactorWeights": "prod8",
-        "MergeScaleFactorWeights": "prod8",
+        "WriteTrees": "prod10",  # new JES, HEM fix
+        "MergeTrees": "prod10",  # new JES, HEM fix
+        "MergeMetaData": "prod10",  # new JES, HEM fix
+        "WriteHistograms": "prod12",  # new JES, HEM fix
+        "MergeHistograms": "prod12",  # new JES, HEM fix
+        "MeasureCScaleFactors": "prod9",  # new JES, HEM fix
+        "MeasureScaleFactors": "prod9",  # new JES, HEM fix
+        "FitScaleFactors": "prod9",  # new JES, HEM fix
+        "GetScaleFactorWeights": "prod9",  # new JES, HEM fix
+        "MergeScaleFactorWeights": "prod9",  # new JES, HEM fix
         "OptimizeBinning": "prod1",
     })
 

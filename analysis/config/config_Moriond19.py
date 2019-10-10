@@ -18,16 +18,9 @@ def create_config(base_cfg):
         "data_A_e", "data_B_e", "data_C_e", "data_D_e",
         "data_A_mu", "data_B_mu", "data_C_mu", "data_D_mu",
         "tt_dl", "tt_sl",
-        "dy_lep_10To50",
-        "dy_lep_50ToInf",
-        #"dy_lep_0Jets", "dy_lep_1Jets", "dy_lep_2Jets",
-        #"dy_lep_4To50_Ht70To100",
-        #"dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
-        #"dy_lep_4To50_Ht400To600", "dy_lep_4To50_Ht600ToInf",
-        #"dy_lep_50ToInf_Ht70To100", "dy_lep_50ToInf_Ht100To200",
-        #"dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
-        #"dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
-        #"dy_lep_50ToInf_Ht2500ToInf",
+        #"dy_lep_10To50",
+        #"dy_lep_50ToInf",
+        "dy_lep_0Jets", "dy_lep_1Jets", "dy_lep_2Jets",
         "st_s_lep",
         "st_t_t", "st_t_tbar",
         "st_tW_t", "st_tW_tbar",
@@ -83,8 +76,8 @@ def create_config(base_cfg):
     # global tags
     # https://twiki.cern.ch/twiki/bin/viewauth/CMS/PdmVAnalysisSummaryTable
     cfg.set_aux("global_tag", {
-        "data": "102X_dataRun2_Sep2018ABC_v2", # 102X_dataRun2_Prompt_v13
-        "mc": "102X_upgrade2018_realistic_v18",
+        "data": "102X_dataRun2_v12", # 102X_dataRun2_Prompt_v15
+        "mc": "102X_upgrade2018_realistic_v20",
     })
 
     # lumi, normtag and pileup file
@@ -142,19 +135,19 @@ def create_config(base_cfg):
 
     # JER
     # https://twiki.cern.ch/twiki/bin/view/CMS/JetResolution
-    cfg.set_aux("jer_version", "Autumn18_V1") # temporary, will be superseeded
+    cfg.set_aux("jer_version", "Autumn18_V7")
 
     # JES
     # https://twiki.cern.ch/twiki/bin/view/CMS/JECDataMC
     cfg.set_aux("jes_version", {
         "data": [
-            rr["A"] + ("Autumn18_RunA_V8_DATA",),
-            rr["B"] + ("Autumn18_RunB_V8_DATA",),
-            rr["C"] + ("Autumn18_RunC_V8_DATA",),
-            rr["D"] + ("Autumn18_RunD_V8_DATA",),
+            rr["A"] + ("Autumn18_RunA_V19_DATA",),
+            rr["B"] + ("Autumn18_RunB_V19_DATA",),
+            rr["C"] + ("Autumn18_RunC_V19_DATA",),
+            rr["D"] + ("Autumn18_RunD_V19_DATA",),
         ],
         "mc": [
-            (1, int(1e9), "Autumn18_V8_MC"),
+            (1, int(1e9), "Autumn18_V19_MC"),
         ],
     })
 
@@ -194,31 +187,38 @@ def create_config(base_cfg):
             "data_D_mu": 3,
             "tt_dl": 484,
             "tt_sl": 508,
-            "dy_lep_50ToInf": 47,
+            "dy_lep_50ToInf": 149,
+            "dy_lep_0Jets": 14,
+            "dy_lep_1Jets": 85,
+            "dy_lep_2Jets": 221,
             "st_s_lep": 21,
             "st_t_t": 55,
             "st_t_tbar": 30,
             "st_tW_t": 22,
-            "st_tW_tbar": 16,
+            "st_tW_tbar": 18,
+            "WW": 3,
+            "WZ": 2,
+            "ZZ": 2,
+            "W_lep": 5,
             "ttH_bb": 46,
             "ttH_nonbb": 38,
-            "ttWJets": 9,
-            "ttZJets": 22,
+            "ttWJets": 63,
+            "ttZJets": 106
         }
     })
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod6",
-        "MergeTrees": "prod6",
-        "MergeMetaData": "prod6",
-        "WriteHistograms": "prod7",
-        "MergeHistograms": "prod7",
-        "MeasureCScaleFactors": "prod5",
-        "MeasureScaleFactors": "prod5",
-        "FitScaleFactors": "prod6",
-        "GetScaleFactorWeights": "prod5",
-        "MergeScaleFactorWeights": "prod5",
+        "WriteTrees": "prod8",
+        "MergeTrees": "prod8",
+        "MergeMetaData": "prod8",
+        "WriteHistograms": "prod11", #7
+        "MergeHistograms": "prod11", #7
+        "MeasureCScaleFactors": "prod8",
+        "MeasureScaleFactors": "prod8",
+        "FitScaleFactors": "prod8",
+        "GetScaleFactorWeights": "prod8",
+        "MergeScaleFactorWeights": "prod8",
         "OptimizeBinning": "prod1",
     })
 

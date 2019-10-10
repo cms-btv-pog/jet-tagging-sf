@@ -177,7 +177,7 @@ private:
         std::vector<pat::Muon>&, std::vector<pat::Muon>&, reco::RecoCandidate*&,
         reco::RecoCandidate*&, LeptonChannel&, bool&);
     bool jetMETSelection(const edm::Event&, double, reco::RecoCandidate*, reco::RecoCandidate*,
-        const pat::MET&, const string&, const string&, std::vector<pat::Jet>&, pat::MET&, bool);
+        const pat::MET&, const string&, const string&, std::vector<pat::Jet>&, pat::MET&, bool, bool&);
     VertexID vertexID(reco::Vertex&);
     ElectronID electronID(pat::Electron&, reco::Vertex&, double);
     MuonID muonID(pat::Muon&, reco::Vertex&);
@@ -216,6 +216,7 @@ private:
     string jerScaleFactorFile_;
     double deepCSVWP_;
     double deepJetWP_;
+    bool applyHEMFilter_;
     bool (TreeMaker::*tightJetID_)(pat::Jet&);
     double maxJetEta_;
 
@@ -278,6 +279,7 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , jerScaleFactorFile_(iConfig.getParameter<string>("jerScaleFactorFile"))
     , deepCSVWP_(iConfig.getParameter<double>("deepCSVWP"))
     , deepJetWP_(iConfig.getParameter<double>("deepJetWP"))
+    , applyHEMFilter_(iConfig.getParameter<bool>("applyHEMFilter"))
     , genInfoToken_(consumes<GenEventInfoProduct>(iConfig.getParameter<edm::InputTag>("genInfoCollection")))
     , triggerBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerBitsCollection")))
     , metFilterBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("metFilterBitsCollection")))
@@ -331,8 +333,8 @@ void TreeMaker::setupJetCorrectionObjects()
         jerScaleFactor_ = new JME::JetResolutionScaleFactor(jerScaleFactorFile_);
 
         // add jet variations
-        jetVariations_.push_back(stringPair("jer", "up"));
-        jetVariations_.push_back(stringPair("jer", "down"));
+        // jetVariations_.push_back(stringPair("jer", "up"));
+        // jetVariations_.push_back(stringPair("jer", "down"));
     }
 
     // stop here, when no jes files are given
@@ -453,6 +455,11 @@ void TreeMaker::setupVariables()
         varMap_.addDouble("met_px" + postfix);
         varMap_.addDouble("met_py" + postfix);
         varMap_.addDouble("mht" + postfix);
+
+        if (applyHEMFilter_)
+        {
+            varMap_.addInt32("HEMVeto" + postfix);
+        }
 
         // jets
         for (size_t j = 1; j <= 4; j++)
@@ -663,6 +670,7 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     std::vector<std::vector<pat::Jet> > jets;
     std::vector<pat::MET> mets;
     std::vector<bool> passJetMETSelection;
+    std::vector<bool> passHEMVeto;
     bool passOneJetMETSelection = false;
     size_t rndSeed = rnd_->GetSeed();
     for (size_t i = 0; i < (isData_ ? 1 : jetVariations_.size()); i++)
@@ -674,11 +682,13 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
 
         rnd_->SetSeed(rndSeed);
 
+        bool HEMVeto = false;
         bool pass = jetMETSelection(
-            event, rho, lep1, lep2, metOrig, variation, direction, jets2, met, is_sl);
+            event, rho, lep1, lep2, metOrig, variation, direction, jets2, met, is_sl, HEMVeto);
         jets.push_back(jets2);
         mets.push_back(met);
         passJetMETSelection.push_back(pass);
+        passHEMVeto.push_back(HEMVeto);
 
         passOneJetMETSelection |= pass;
     }
@@ -758,6 +768,12 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
 
         varMap_.setInt32("jetmet_pass" + postfix, passJetMETSelection[i]);
         varMap_.setInt32("n_jets" + postfix, jets[i].size());
+
+        if (applyHEMFilter_)
+        {
+            varMap_.setInt32("HEMVeto" + postfix, (int)passHEMVeto[i]);
+        }
+
         // b-tagged jets
         int n_tags_deepcsv = 0;
         int n_tags_deepjet = 0;
@@ -1063,7 +1079,7 @@ bool TreeMaker::leptonSelection(std::vector<pat::Electron>& electrons,
 bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
     reco::RecoCandidate* lep1, reco::RecoCandidate* lep2, const pat::MET& metOrig,
     const string& variation, const string& direction, std::vector<pat::Jet>& jets, pat::MET& met,
-    bool is_sl)
+    bool is_sl, bool& HEMVeto)
 {
     // read jets
     edm::Handle<std::vector<pat::Jet> > jetsHandle;
@@ -1119,6 +1135,15 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
         if (type == J_VALID)
         {
             jets.push_back(jet);
+            //
+            if (applyHEMFilter_) {
+                if (jet.eta() > -3 && jet.eta() < -1.4)
+                {
+                    if (jet.phi() > -1.57 && jet.phi() < -0.87) {
+                        HEMVeto = true;
+                    }
+                }
+            }
 
             // propagate to met
             correctedMetP4.SetPx(correctedMetP4.Px() - (jet.px() - jetOrig.px()));

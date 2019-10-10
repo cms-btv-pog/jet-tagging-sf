@@ -364,6 +364,7 @@ try:
     process.treeMaker.muonCollection = muonCollection
     process.treeMaker.metCollection = metCollection
     process.treeMaker.jetCollection = jetCollection
+    process.treeMaker.applyHEMFilter = cms.bool(True) if options.campaign == "2018_Run2_pp_13TeV_MORIOND19" else cms.bool(False)
 
     # additional configuration
     process.maxEvents = cms.untracked.PSet(input=cms.untracked.int32(options.maxEvents))

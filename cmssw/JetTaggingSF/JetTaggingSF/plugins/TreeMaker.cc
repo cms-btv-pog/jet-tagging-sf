@@ -1454,8 +1454,17 @@ void TreeMaker::applyJER(pat::Jet& jet, const std::vector<reco::GenJet>* genJets
 
     double res = jerResolution_->getResolution({ { JME::Binning::JetPt, jet.pt() },
         { JME::Binning::JetEta, jet.eta() }, { JME::Binning::Rho, rho } });
-    double sf = jerScaleFactor_->getScaleFactor({ {JME::Binning::JetPt, jet.pt() },
-        { JME::Binning::JetEta, jet.eta() } }, v);
+
+    double sf = 0.;
+    if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19")
+    {
+        sf = jerScaleFactor_->getScaleFactor({ {JME::Binning::JetPt, jet.pt() },
+            { JME::Binning::JetEta, jet.eta() } }, v);
+    }
+    else
+    {
+        sf = jerScaleFactor_->getScaleFactor({ { JME::Binning::JetEta, jet.eta() } }, v);
+    }
 
     // try to find a matched gen jet
     double minDR = 0.2;

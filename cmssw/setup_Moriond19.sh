@@ -36,6 +36,9 @@ action() {
         rm EgammaAnalysis/ElectronTools/data -rf   #delete the data directory so we can populate it ourselves
         git clone git@github.com:cms-data/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
 
+        # fix for new JER version
+        git cms-merge-topic ahinzmann:resolutionSmearingFix102
+
         # MET
         git cms-addpkg RecoMET/METFilters
 

@@ -1137,7 +1137,7 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
             jets.push_back(jet);
             //
             if (applyHEMFilter_) {
-                if (jet.eta() > -3 && jet.eta() < -1.4)
+                if (jet.eta() > -3.0 && jet.eta() < -1.3)
                 {
                     if (jet.phi() > -1.57 && jet.phi() < -0.87) {
                         HEMVeto = true;
@@ -1454,7 +1454,8 @@ void TreeMaker::applyJER(pat::Jet& jet, const std::vector<reco::GenJet>* genJets
 
     double res = jerResolution_->getResolution({ { JME::Binning::JetPt, jet.pt() },
         { JME::Binning::JetEta, jet.eta() }, { JME::Binning::Rho, rho } });
-    double sf = jerScaleFactor_->getScaleFactor({ { JME::Binning::JetEta, jet.eta() } }, v);
+    double sf = jerScaleFactor_->getScaleFactor({ {JME::Binning::JetPt, jet.pt() },
+        { JME::Binning::JetEta, jet.eta() } }, v);
 
     // try to find a matched gen jet
     double minDR = 0.2;

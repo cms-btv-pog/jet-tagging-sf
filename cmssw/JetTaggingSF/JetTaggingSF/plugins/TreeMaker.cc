@@ -216,7 +216,7 @@ private:
     string jerScaleFactorFile_;
     double deepCSVWP_;
     double deepJetWP_;
-    bool applyHEMFilter_;
+    bool applyHEMFilter_; // add additional JES unc source for HEM issue and tag events with jet in HEM region
     bool (TreeMaker::*tightJetID_)(pat::Jet&);
     double maxJetEta_;
 
@@ -248,6 +248,7 @@ private:
     TH1F* pileupHist_;
     size_t nJESRanges_;
     size_t nJESFilesPerRange_;
+    string HEMIssueSource_;
     std::vector<std::pair<string, string> > jetVariations_;
     std::vector<FactorizedJetCorrector*> jetCorrectors_; // per jes range
     std::vector<JetCorrectionUncertainty*> jetCorrectorUncs_; // per jes range
@@ -302,6 +303,7 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , selectedWeightHist_(nullptr)
     , cutflowHist_(nullptr)
     , pileupHist_(nullptr)
+    , HEMIssueSource_("HEMIssue")
     , jerResolution_(nullptr)
     , jerScaleFactor_(nullptr)
     , rnd_(0)
@@ -406,6 +408,13 @@ void TreeMaker::setupJetCorrectionObjects()
     {
         jetVariations_.push_back(stringPair("jes" + jesUncSources_[i], "up"));
         jetVariations_.push_back(stringPair("jes" + jesUncSources_[i], "down"));
+    }
+
+    // add jet variation for 2018 HEM issue
+    if (applyHEMFilter_)
+    {
+        jetVariations_.push_back(stringPair("jes" + HEMIssueSource_, "up"));
+        jetVariations_.push_back(stringPair("jes" + HEMIssueSource_, "down"));
     }
 }
 
@@ -1395,7 +1404,26 @@ void TreeMaker::applyJES(pat::Jet& jet, const string& variation, const string& d
     double recorrectFactor = jetCorrector->getCorrection();
 
     // apply a variation / uncertainty?
-    if (!variation.empty())
+    if (variation == ("jes" + HEMIssueSource_))
+    {
+        std::cout << "HEM issue" << std::endl;
+        // check if jet in HEM region
+        if (jet.eta() > -3.0 && jet.eta() < -1.3)
+        {
+            if (jet.phi() > -1.57 && jet.phi() < -0.87) {
+                // apply uncertainty
+                if (direction == "up")
+                {
+                    recorrectFactor *= 1.2;
+                }
+                else
+                {
+                    recorrectFactor *= 0.8;
+                }
+            }
+        }
+    }
+    else if (!variation.empty())
     {
         // variation is "jes<source>"
         string source = variation.substr(3);

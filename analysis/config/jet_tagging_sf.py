@@ -73,6 +73,7 @@ if os.environ.get("JTSF_CAMPAIGN", None) is None:
     raise Exception("JTSF campaign has to be defined.")
 if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19":
     jes_sources.insert(0, "AbsoluteSample")
+    jes_sources.insert(0, "HEMIssue")
 
 # add auxiliary info to base config
 cfg.set_aux("sandboxes", {
@@ -657,6 +658,7 @@ add_btag_variables(config_Moriond19)
 add_categories(config_Moriond19, "deepcsv")
 add_categories(config_Moriond19, "deepjet")
 config_Moriond19.get_aux("jes_sources").insert(0, "AbsoluteSample")
+config_Moriond19.get_aux("jes_sources").insert(0, "HEMIssue")
 
 from analysis.config.config_Moriond19_legacy import create_config as create_config_Moriond19_legacy
 config_Moriond19_legacy = create_config_Moriond19_legacy(cfg)

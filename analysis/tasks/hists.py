@@ -461,7 +461,7 @@ class WriteHistogramsWrapper(WrapperTask):
     wrapped_task = WriteHistograms
 
 
-class MergeHistograms(AnalysisTask, law.tasks.CascadeMerge):
+class MergeHistograms(GridWorkflow, law.tasks.CascadeMerge):
 
     iteration = WriteHistograms.iteration
     final_it = WriteHistograms.final_it

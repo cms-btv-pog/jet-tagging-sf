@@ -411,7 +411,7 @@ void TreeMaker::setupJetCorrectionObjects()
     }
 
     // add jet variation for 2018 HEM issue
-    if (applyHEMFilter_)
+    if (applyHEMFilter_ && !isData)
     {
         jetVariations_.push_back(stringPair("jes" + HEMIssueSource_, "up"));
         jetVariations_.push_back(stringPair("jes" + HEMIssueSource_, "down"));

@@ -209,11 +209,11 @@ def create_config(base_cfg):
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod10",  # new JES, HEM fix
+        "WriteTrees": "prod11",  # new JES, HEM fix, prod11 for MC (HEM JES shift), prod10 for data
         "MergeTrees": "prod10",  # new JES, HEM fix
         "MergeMetaData": "prod10",  # new JES, HEM fix
         "WriteHistograms": "prod12",  # new JES, HEM fix
-        "MergeHistograms": "prod12",  # new JES, HEM fix
+        "MergeHistograms": "prod14",  # new JES, HEM fix (ran on grid)
         "MeasureCScaleFactors": "prod9",  # new JES, HEM fix
         "MeasureScaleFactors": "prod9",  # new JES, HEM fix
         "FitScaleFactors": "prod9",  # new JES, HEM fix

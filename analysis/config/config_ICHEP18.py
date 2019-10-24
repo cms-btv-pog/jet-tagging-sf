@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import scinum as sn
+import numpy as np
 
 def create_config(base_cfg):
     # setup the config for ICHEP 2018
@@ -16,16 +17,9 @@ def create_config(base_cfg):
         #"data_B_e", "data_C_e", "data_D_e", "data_E_e", "data_F_e",
         #"data_B_mu", "data_C_mu", "data_D_mu", "data_E_mu", "data_F_mu",
         "tt_dl", "tt_sl",
-        #"dy_lep_4To50_Ht70To100",
-        #"dy_lep_4To50_Ht100To200", "dy_lep_4To50_Ht200To400",
-        #"dy_lep_4To50_Ht400To600", "dy_lep_4To50_Ht600ToInf",
-        "dy_lep_10To50",
-        "dy_lep_50ToInf",
-        #"dy_lep_0Jets", "dy_lep_1Jets", "dy_lep_2Jets",
-        #"dy_lep_50ToInf_Ht70To100", "dy_lep_50ToInf_Ht100To200",
-        #"dy_lep_50ToInf_Ht200To400", "dy_lep_50ToInf_Ht400To600",
-        #"dy_lep_50ToInf_Ht600To800", "dy_lep_50ToInf_Ht800To1200", "dy_lep_50ToInf_Ht1200To2500",
-        #"dy_lep_50ToInf_Ht2500ToInf",
+        #"dy_lep_10To50",
+        #"dy_lep_50ToInf",
+        "dy_lep_0Jets", "dy_lep_1Jets", "dy_lep_2Jets",
         "st_s_lep",
         "st_t_t", "st_t_tbar",
         "st_tW_t", "st_tW_tbar",
@@ -59,6 +53,52 @@ def create_config(base_cfg):
             "tight": 0.7489,
         }
     })
+
+    #hf_binning = {
+    #    "pt": [20, 30, 50, 70, 100, np.inf],
+    #    "abs(eta)": [0., 2.5],
+    #    "deepcsv": {
+    #        "plotting": [
+    #            -2.01, 0.0, 0.1522, 0.4941, 0.8001, 1.01
+    #        ],
+    #        "measurement": [
+    #            -2.01, 0.0, 0.1522, 0.4941, 0.8001, 1.01
+    #        ],
+    #    },
+    #    "deepjet": {
+    #        "plotting": [
+    #            -2.01, 0.0, 0.0521, 0.3033, 0.7489, 1.01
+    #        ],
+    #        "measurement": [
+    #            -2.01, 0.0, 0.0521, 0.3033, 0.7489, 1.01
+    #        ],
+    #    },
+    #}
+
+    #cfg.set_aux("binning", {
+    #    "lf": {
+    #        "pt": [20, 30, 40, 60, np.inf],
+    #        "abs(eta)": [0., 0.8, 1.6, 2.5],
+    #        "deepcsv": {
+    #            "plotting": [
+    #                -2.01, 0.0, 0.1522, 0.4941, 1.01
+    #            ],
+    #            "measurement": [
+    #                -2.01, 0.0, 0.1522, 0.4941, 1.01
+    #            ],
+    #        },
+    #        "deepjet": {
+    #            "plotting": [
+    #                -2.01, 0.0, 0.0521, 0.3033, 1.01
+    #            ],
+    #            "measurement": [
+    #                -2.01, 0.0, 0.0521, 0.3033, 1.01
+    #            ],
+    #        }
+    #    },
+    #    "hf": hf_binning,
+    #    "c": hf_binning,
+    #})
 
     # luminosities per channel in /pb
     cfg.set_aux("lumi", {
@@ -205,6 +245,9 @@ def create_config(base_cfg):
             "tt_dl": 202,
             "tt_sl": 2,
             "dy_lep_50ToInf": 106,
+            "dy_lep_0Jets": 11,
+            "dy_lep_1Jets": 65,
+            "dy_lep_2Jets": 109,
             "st_tW_t": 2,
             "st_tW_tbar": 2,
             "ttH": 6,
@@ -218,13 +261,13 @@ def create_config(base_cfg):
         "WriteTrees": "prod1",
         "MergeTrees": "prod1",
         "MergeMetaData": "prod1",
-        "WriteHistograms": "prod2",
-        "MergeHistograms": "prod2",
-        "MeasureCScaleFactors": "prod2",
-        "MeasureScaleFactors": "prod2",
-        "FitScaleFactors": "prod3",
-        "GetScaleFactorWeights": "prod2",
-        "MergeScaleFactorWeights": "prod2",
+        "WriteHistograms": "prod4",
+        "MergeHistograms": "prod4",
+        "MeasureCScaleFactors": "prod4",
+        "MeasureScaleFactors": "prod4",
+        "FitScaleFactors": "prod4",
+        "GetScaleFactorWeights": "prod4",
+        "MergeScaleFactorWeights": "prod4",
         "OptimizeBinning": "prod1",
     })
 

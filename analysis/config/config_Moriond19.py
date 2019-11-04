@@ -214,11 +214,11 @@ def create_config(base_cfg):
         "MergeMetaData": "prod10",  # new JES, HEM fix
         "WriteHistograms": "prod12",  # new JES, HEM fix
         "MergeHistograms": "prod14",  # new JES, HEM fix (ran on grid)
-        "MeasureCScaleFactors": "prod9",  # new JES, HEM fix
-        "MeasureScaleFactors": "prod9",  # new JES, HEM fix
-        "FitScaleFactors": "prod9",  # new JES, HEM fix
-        "GetScaleFactorWeights": "prod9",  # new JES, HEM fix
-        "MergeScaleFactorWeights": "prod9",  # new JES, HEM fix
+        "MeasureCScaleFactors": "prod10",  # new JES, HEM fix
+        "MeasureScaleFactors": "prod10",  # new JES, HEM fix
+        "FitScaleFactors": "prod10",  # new JES, HEM fix
+        "GetScaleFactorWeights": "prod10",  # new JES, HEM fix
+        "MergeScaleFactorWeights": "prod10",  # new JES, HEM fix
         "OptimizeBinning": "prod1",
     })
 

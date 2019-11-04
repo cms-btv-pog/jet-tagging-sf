@@ -679,7 +679,7 @@ class CreateScaleFactorResults(AnalysisTask):
         return outp
 
     def run(self):
-        def get_hist_name(category, shift):
+        def get_func_name(category, shift):
             _, region, pt_range, eta_range, _ = category.split("__")
             name = "c_csv" if region == "c" else "csv"
             name += "_ratio"
@@ -721,8 +721,8 @@ class CreateScaleFactorResults(AnalysisTask):
         outp = self.output()
 
         csv_results = ["3, iterativefit, central, 1, {}, {}, 20.0, 10000, -15, 1.1, 1.0\n".format(*self.config_inst.get_aux("binning")["c"]["abs(eta)"])]
-        hf_hists = []
-        lf_hists = []
+        hf_funcs = []
+        lf_funcs = []
 
         for shift, inp_files in inp.items():
             # combine csv files for b-tag reader
@@ -733,41 +733,36 @@ class CreateScaleFactorResults(AnalysisTask):
                     line = line.replace("jesTotal", "jes")
                     csv_results.append(line)
 
-
-            # combine histogram files
-            with inp_files["sf"].load("r") as root_file:
+            # combine functions files
+            with inp_files["functions"].load("r") as root_file:
                 for category_key in root_file.GetListOfKeys():
                     category_dir = root_file.Get(category_key.GetName())
-
-                    hist = category_dir.Get("sf")
-                    name, region = get_hist_name(category_key.GetName(), shift)
+                    func = category_dir.Get("sf")
+                    name, region = get_func_name(category_key.GetName(), shift)
                     if name is None:
                         continue
 
-                    hist.SetDirectory(0)
                     if region in ("hf", "c"):
-                        hf_hists.append((name, hist))
+                        hf_funcs.append((name, func))
                     elif region == "lf":
-                        lf_hists.append((name, hist))
+                        lf_funcs.append((name, func))
                     else:
                         raise ValueError("Unknown region {}".format(region))
 
-        # add nominal c tag histogram (flat value of 1)
-        c_hist = hf_hists[0][1].Clone()
-        for bin_idx in range(1, c_hist.GetNbinsX() + 1):
-            c_hist.SetBinContent(bin_idx, 1.)
+        # add nominal c tag function (flat value of 1)
+        c_func = ROOT.TF1("c nominal", "1.", -2., 1.1)
         for iPt in range(5):
-            hf_hists.append(("c_csv_ratio_Pt{}_Eta0_final".format(iPt), c_hist.Clone()))
+            hf_funcs.append(("c_csv_ratio_Pt{}_Eta0_final".format(iPt), c_func.Clone()))
 
         with outp["root_lf"].localize("w") as tmp:
             with tmp.dump("RECREATE") as output_file:
-                for name, hist in lf_hists:
-                    hist.Write(name)
+                for name, func in lf_funcs:
+                    func.Write(name)
 
         with outp["root_hf"].localize("w") as tmp:
             with tmp.dump("RECREATE") as output_file:
-                for name, hist in hf_hists:
-                    hist.Write(name)
+                for name, func in hf_funcs:
+                    func.Write(name)
 
         with outp["csv"].localize("w") as tmp:
             with tmp.open("w") as result_file:

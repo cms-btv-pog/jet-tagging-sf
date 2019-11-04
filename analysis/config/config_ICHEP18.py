@@ -261,14 +261,15 @@ def create_config(base_cfg):
         "WriteTrees": "prod1",
         "MergeTrees": "prod1",
         "MergeMetaData": "prod1",
-        "WriteHistograms": "prod4",
-        "MergeHistograms": "prod4",
-        "MeasureCScaleFactors": "prod4",
-        "MeasureScaleFactors": "prod4",
-        "FitScaleFactors": "prod4",
-        "GetScaleFactorWeights": "prod4",
-        "MergeScaleFactorWeights": "prod4",
+        "WriteHistograms": "prod4", # n-jet binned DY, new interpolation
+        "MergeHistograms": "prod4", # n-jet binned DY, new interpolation
+        "MeasureCScaleFactors": "prod4", # n-jet binned DY, new interpolation
+        "MeasureScaleFactors": "prod4", # n-jet binned DY, new interpolation
+        "FitScaleFactors": "prod4", # n-jet binned DY, new interpolation
+        "GetScaleFactorWeights": "prod4", # n-jet binned DY, new interpolation
+        "MergeScaleFactorWeights": "prod4", # n-jet binned DY, new interpolation
         "OptimizeBinning": "prod1",
+        "CreateScaleFactorResults": "prod4",
     })
 
     return cfg

@@ -220,6 +220,7 @@ def create_config(base_cfg):
         "GetScaleFactorWeights": "prod10",  # new JES, HEM fix
         "MergeScaleFactorWeights": "prod10",  # new JES, HEM fix
         "OptimizeBinning": "prod1",
+        "CreateScaleFactorResults": "prod11", # use function instead of hist
     })
 
     # add sl categories

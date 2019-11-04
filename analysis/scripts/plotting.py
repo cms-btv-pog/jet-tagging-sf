@@ -27,9 +27,12 @@ dirname = os.path.abspath(os.path.dirname(__file__))
 class PlotFromCSV(AnalysisTask):
     shift = luigi.Parameter(default="ALL")
     flavor = luigi.ChoiceParameter(choices=["lf", "c", "hf"])
-    csv_file = os.path.join(dirname, "SFs_deepcsv_prod2.csv")
-    compare_file = os.path.join(dirname, "SFs_deepcsv_prod1.csv")
+    csv_file = os.path.join(dirname, "scale_factors.csv")
+    compare_file = None
     norm_to_nominal = luigi.BoolParameter()
+
+    root_hf_file = os.path.join(dirname, "scale_factors_deepjet_hf_binned.root")
+    root_lf_file = os.path.join(dirname, "scale_factors_deepjet_lf_binned.root")
 
     def output(self):
         return self.local_target("plots_{}.tgz".format(self.shift))
@@ -70,7 +73,11 @@ class PlotFromCSV(AnalysisTask):
         eta_binning = [(start, end) for start, end in zip(binning["abs(eta)"][:-1], binning["abs(eta)"][1:])]
 
         figures = {}
-        for input_file, id in zip([self.csv_file, self.compare_file], ["new", "old"]):
+        if self.compare_file is None:
+            csv_files, descriptions = [self.csv_file], ["csv"]
+        else:
+            csv_files, descriptions = [self.csv_file, self.compare_file], ["new", "old"]
+        for input_file, id in zip(csv_files, descriptions):
             # create calibration reader
             calib = ROOT.BTagCalibration("csv_{}".format(id), input_file)
             reader = ROOT.BTagCalibrationReader(
@@ -102,7 +109,7 @@ class PlotFromCSV(AnalysisTask):
                     eta_val = np.mean(eta_range)
 
                     def get_values(csv_reader, sys_type):
-                        x_values = np.linspace(0., 1., 10000)
+                        x_values = np.linspace(-1., 1., 10000)
                         y_values = []
                         for csv_value in x_values:
                             sf = csv_reader.eval_auto_bounds(
@@ -118,38 +125,61 @@ class PlotFromCSV(AnalysisTask):
                     x_values, nominal_values = get_values(reader, "central")
                     if not self.norm_to_nominal:
                         ax.plot(x_values, nominal_values, label="{}, {}".format(id, "nominal"))
-                    if self.shift == "NONE":
-                        figures[key] = (fig, ax)
-                        continue
 
-                    total_errors_up = np.zeros(nominal_values.shape)
-                    total_errors_down = np.zeros(nominal_values.shape)
-                    for shift in shifts:
-                        _, up_values = get_values(reader, "up_" + shift)
-                        _, down_values = get_values(reader, "down_" + shift)
+                    if self.shift != "NONE":
+                        total_errors_up = np.zeros(nominal_values.shape)
+                        total_errors_down = np.zeros(nominal_values.shape)
+                        for shift in shifts:
+                            _, up_values = get_values(reader, "up_" + shift)
+                            _, down_values = get_values(reader, "down_" + shift)
 
-                        if len(shifts) > 1: # build envelope
-                            diff_up = up_values - nominal_values
-                            diff_down = down_values - nominal_values
+                            if len(shifts) > 1: # build envelope
+                                diff_up = up_values - nominal_values
+                                diff_down = down_values - nominal_values
 
-                            # shift with effect in up/down direction
-                            errors_up = np.max([diff_up, diff_down, np.zeros(nominal_values.shape)], axis=0)
-                            errors_down = np.min([diff_up, diff_down, np.zeros(nominal_values.shape)], axis=0)
+                                # shift with effect in up/down direction
+                                errors_up = np.max([diff_up, diff_down, np.zeros(nominal_values.shape)], axis=0)
+                                errors_down = np.min([diff_up, diff_down, np.zeros(nominal_values.shape)], axis=0)
 
-                            # add in quadrature
-                            total_errors_up += errors_up**2
-                            total_errors_down += errors_down**2
-                    total_errors_up = total_errors_up**0.5
-                    total_errors_down = total_errors_down**0.5
+                                # add in quadrature
+                                total_errors_up += errors_up**2
+                                total_errors_down += errors_down**2
+                        total_errors_up = total_errors_up**0.5
+                        total_errors_down = total_errors_down**0.5
 
-                    if len(shifts) > 1:
-                        up_values = nominal_values + total_errors_up
-                        down_values = nominal_values - total_errors_down
-                    if self.norm_to_nominal:
-                        up_values /= nominal_values
-                        down_values /= nominal_values
-                    ax.plot(x_values, up_values, label="{}, {}".format(id, "up_" + self.shift))
-                    ax.plot(x_values, down_values, label="{}, {}".format(id, "down" + self.shift))
+                        if len(shifts) > 1:
+                            up_values = nominal_values + total_errors_up
+                            down_values = nominal_values - total_errors_down
+                        if self.norm_to_nominal:
+                            up_values /= nominal_values
+                            down_values /= nominal_values
+                        ax.plot(x_values, up_values, label="{}, {}".format(id, "up_" + self.shift))
+                        ax.plot(x_values, down_values, label="{}, {}".format(id, "down" + self.shift))
+
+                    if self.compare_file is None:
+                        if self.flavor in ["c", "hf"]:
+                            input_file = self.root_hf_file
+                        elif self.flavor == "lf":
+                            input_file = self.root_lf_file
+                        else:
+                            raise Exception("No .root file for c flavor SFs.")
+
+                        root_file = ROOT.TFile.Open(input_file)
+
+                        hist_name = "csv_ratio_Pt{}_Eta{}_final".format(pt_idx, eta_idx)
+                        if self.flavor == "c":
+                            hist_name = "c_" + hist_name
+                        hist = root_file.Get(hist_name)
+
+                        x_values = []
+                        y_values = []
+                        for i in xrange(1, hist.GetNbinsX() + 1):
+                            x_val = hist.GetBinCenter(i)
+                            y_val = hist.GetBinContent(i)
+                            x_values.append(x_val)
+                            y_values.append(y_val)
+
+                    ax.plot(x_values, y_values, label="{}, {}".format(".root", "nominal"))
 
                     figures[key] = (fig, ax)
 

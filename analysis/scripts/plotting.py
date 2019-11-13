@@ -27,8 +27,8 @@ dirname = os.path.abspath(os.path.dirname(__file__))
 class PlotFromCSV(AnalysisTask):
     shift = luigi.Parameter(default="ALL")
     flavor = luigi.ChoiceParameter(choices=["lf", "c", "hf"])
-    csv_file = os.path.join(dirname, "scale_factors.csv")
-    compare_file = None
+    csv_file = os.path.join(dirname, "sf_2018_prod11.csv")  # new
+    compare_file = os.path.join(dirname, "sf_2018_prod7.csv")  # old
     norm_to_nominal = luigi.BoolParameter()
 
     root_hf_file = os.path.join(dirname, "scale_factors_deepjet_hf_binned.root")
@@ -109,7 +109,7 @@ class PlotFromCSV(AnalysisTask):
                     eta_val = np.mean(eta_range)
 
                     def get_values(csv_reader, sys_type):
-                        x_values = np.linspace(-1., 1., 10000)
+                        x_values = np.linspace(-0.1, 1., 10000)
                         y_values = []
                         for csv_value in x_values:
                             sf = csv_reader.eval_auto_bounds(
@@ -179,7 +179,7 @@ class PlotFromCSV(AnalysisTask):
                             x_values.append(x_val)
                             y_values.append(y_val)
 
-                    ax.plot(x_values, y_values, label="{}, {}".format(".root", "nominal"))
+                        ax.plot(x_values, y_values, label="{}, {}".format(".root", "nominal"))
 
                     figures[key] = (fig, ax)
 
@@ -187,7 +187,8 @@ class PlotFromCSV(AnalysisTask):
             del calib
 
         for key, (fig, ax) in figures.items():
-            ax.legend()
+            ax.legend(loc="lower right")
+            ax.set_ylim(0., 2.)
             fig.savefig(os.path.join(local_tmp.path, "SF_%s_%s_Pt%sTo%s_eta%.1fTo%.1f.pdf" % ((self.flavor, self.shift) + key)))
 
         with self.output().localize("w") as tmp:

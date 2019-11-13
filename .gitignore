@@ -6,6 +6,7 @@
 *.pkl
 *.egg-info
 *.root
+*.csv
 MANIFEST
 __pycache__
 dist

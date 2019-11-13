@@ -62,7 +62,6 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         else:
             self.shifts = self.used_shifts
 
-        self.category_getter = CategoryGetter(self.config_inst, self.b_tagger)
 
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors
@@ -233,6 +232,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         inp = self.input()
         outp = self.output()
         outp.parent.touch(0o0770)
+
+        self.category_getter = CategoryGetter(self.config_inst, self.b_tagger)
 
         # get child categories
         categories = []
@@ -472,7 +473,7 @@ class MergeHistograms(GridWorkflow, law.tasks.CascadeMerge):
     b_tagger = WriteHistograms.b_tagger
     category_tags = WriteHistograms.category_tags
 
-    merge_factor = 12
+    merge_factor = 13
 
     def create_branch_map(self):
         return law.tasks.CascadeMerge.create_branch_map(self)
@@ -576,8 +577,6 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
             jes_sources = self.config_inst.get_aux("jes_sources")
             self.shifts = {"nominal"} | format_shifts(jes_sources, prefix="jes")  | \
                 format_shifts(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"])
-
-        self.category_getter = CategoryGetter(self.config_inst, self.b_tagger)
 
     def workflow_requires(self):
         from analysis.tasks.measurement import FitScaleFactors
@@ -685,6 +684,8 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         inp = self.input()
         outp = self.output()
         outp.parent.touch(0o0770)
+
+        self.category_getter = CategoryGetter(self.config_inst, self.b_tagger)
 
         # get processes
         if len(self.dataset_inst.processes) != 1:

@@ -5,7 +5,6 @@ import os
 import array
 import luigi
 import itertools
-import tarfile
 import numpy as np
 
 from collections import defaultdict
@@ -692,7 +691,7 @@ class BundleScaleFactors(AnalysisTask):
             + (self.iteration,) + (normalization_part,) + (shift_part,)
 
     def output(self):
-        return self.wlcg_target("scale_factors.tar.gz")
+        return self.wlcg_target("scale_factors.root")
 
     def run(self):
         import ROOT
@@ -701,11 +700,16 @@ class BundleScaleFactors(AnalysisTask):
         outp = self.output()
 
         with outp.localize("w") as tmp_out:
-            with tarfile.open(tmp_out.path, "w:gz") as tar:
-
+            with tmp_out.dump("RECREATE") as output_file:
                 for shift, input_targets in inp.items():
-                    with input_targets["sf"].localize("r") as input_file:
-                        tar.add(input_file.path, arcname="{}_sfs.root".format(shift))
+                    shift_dir = output_file.mkdir(shift)
+
+                    with input_targets["sf"].load("r") as input_file:
+                        for category in input_file.GetListOfKeys():
+                            category_dir = shift_dir.mkdir(category.GetName())
+                            category_dir.cd()
+                            hist = input_file.Get(category.GetName()).Get("sf")
+                            hist.Write("sf")
 
 
 class CreateScaleFactorResults(AnalysisTask):

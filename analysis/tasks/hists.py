@@ -579,7 +579,7 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 format_shifts(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"])
 
     def workflow_requires(self):
-        from analysis.tasks.measurement import FitScaleFactors
+        from analysis.tasks.measurement import BundleScaleFactors
 
         reqs = super(GetScaleFactorWeights, self).workflow_requires()
 
@@ -591,14 +591,14 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
 
-            reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration,
-                shift=shift, fix_normalization=False, version=self.get_version(FitScaleFactors),
-                _prefer_cli=["version"]) for shift in self.shifts}
+            reqs["sf"] = BundleScaleFactors.req(self, iteration=self.iteration,
+                fix_normalization=False, version=self.get_version(BundleScaleFactors),
+                include_cshifts=self.normalize_cerrs, _prefer_cli=["version"])
 
         return reqs
 
     def requires(self):
-        from analysis.tasks.measurement import FitScaleFactors
+        from analysis.tasks.measurement import BundleScaleFactors
 
         reqs = {
             "tree": MergeTrees.req(self, cascade_tree=self.branch, branch=0,
@@ -607,14 +607,15 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                 _prefer_cli=["version"]),
         }
         reqs["pu"] = CalculatePileupWeights.req(self)
-        reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration,
-            shift=shift, fix_normalization=False, version=self.get_version(FitScaleFactors),
-            _prefer_cli=["version"]) for shift in self.shifts}
+        reqs["sf"] = BundleScaleFactors.req(self, iteration=self.iteration,
+            fix_normalization=False, version=self.get_version(BundleScaleFactors),
+            include_cshifts=self.normalize_cerrs, _prefer_cli=["version"])
         return reqs
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
-        return super(GetScaleFactorWeights, self).store_parts() + (self.b_tagger,) + (self.iteration,) + (c_err_part,)
+        return super(GetScaleFactorWeights, self).store_parts() + (self.b_tagger,) \
+            + (self.iteration,) + (c_err_part,)
 
     def output(self):
         return self.wlcg_target("stats_{}.json".format(self.branch))
@@ -625,16 +626,15 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         else:
             return ""
 
-    def get_scale_factors(self, inp, shift):
-        with inp.load() as sfs:
-            sf_hists = {}
-            for category in sfs.GetListOfKeys():
-                category_dir = sfs.Get(category.GetName())
-                hist = category_dir.Get("sf")
-                # decouple from open file
-                hist.SetDirectory(0)
+    def get_scale_factors(self, sfs, shift):
+        sf_hists = {}
+        for category in sfs.GetListOfKeys():
+            category_dir = sfs.Get(category.GetName())
+            hist = category_dir.Get("sf")
+            # decouple from open file
+            hist.SetDirectory(0)
 
-                sf_hists[category.GetName()] = hist
+            sf_hists[category.GetName()] = hist
 
         btag_var = self.config_inst.get_aux("btaggers")[self.b_tagger]["variable"]
         identifier = self.get_jec_identifier(shift)
@@ -723,8 +723,9 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
                     "({0}_px**2 + {0}_py**2)**0.5".format(obj))
 
             scale_factor_getters = {}
-            for shift in self.shifts:
-                scale_factor_getters[shift] = self.get_scale_factors(inp["sf"][shift]["sf"], shift)
+            with inp["sf"].load() as sf_file:
+                for shift in self.shifts:
+                    scale_factor_getters[shift] = self.get_scale_factors(sf_file.Get(shift), shift)
 
             # get info to scale event weight to lumi
             x_sec = process.get_xsec(self.config_inst.campaign.ecm).nominal

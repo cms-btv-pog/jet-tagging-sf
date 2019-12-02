@@ -5,6 +5,7 @@ import os
 import array
 import luigi
 import itertools
+import tarfile
 import numpy as np
 
 from collections import defaultdict
@@ -654,6 +655,57 @@ class FitScaleFactors(MeasureScaleFactors):
 class FitScaleFactorsWrapper(WrapperTask):
 
     wrapped_task = FitScaleFactors
+
+
+# bundle scale factors to reduce number of dCache requests
+class BundleScaleFactors(AnalysisTask):
+
+    iteration = FitScaleFactors.iteration
+    b_tagger = FitScaleFactors.b_tagger
+    optimize_binning = FitScaleFactors.optimize_binning
+    category_tags = FitScaleFactors.category_tags
+
+    fix_normalization = FitScaleFactors.fix_normalization
+    include_cshifts = luigi.BoolParameter()
+
+    shifts = MeasureScaleFactors.shifts | MeasureCScaleFactors.shifts
+
+    def __init__(self, *args, **kwargs):
+        super(BundleScaleFactors, self).__init__(*args, **kwargs)
+
+        self.shifts = MeasureScaleFactors.shifts
+        if self.include_cshifts:
+            self.shifts = self.shifts | MeasureCScaleFactors.shifts
+
+    def requires(self):
+        reqs = {
+            shift: FitScaleFactors.req(self, shift=shift,
+            version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
+            for shift in self.shifts
+        }
+        return reqs
+
+    def store_parts(self):
+        shift_part = "all" if self.include_cshifts else "no_cshift"
+        normalization_part = "rescaled" if self.fix_normalization else "unscaled"
+        return super(BundleScaleFactors, self).store_parts() + (self.b_tagger,) \
+            + (self.iteration,) + (normalization_part,) + (shift_part,)
+
+    def output(self):
+        return self.wlcg_target("scale_factors.tar.gz")
+
+    def run(self):
+        import ROOT
+
+        inp = self.input()
+        outp = self.output()
+
+        with outp.localize("w") as tmp_out:
+            with tarfile.open(tmp_out.path, "w:gz") as tar:
+
+                for shift, input_targets in inp.items():
+                    with input_targets["sf"].localize("r") as input_file:
+                        tar.add(input_file.path, arcname="{}_sfs.root".format(shift))
 
 
 class CreateScaleFactorResults(AnalysisTask):

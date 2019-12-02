@@ -9,6 +9,7 @@ from collections import OrderedDict
 tcolors = {
     "data": ROOT.kBlack,
     "tt": ROOT.TColor.GetColor(220, 220, 220), # light gray
+    "dy_lep": ROOT.TColor.GetColor(40, 160, 120),
     "dy_lep_10To50": ROOT.kGreen,
     "dy_lep_50ToInf": ROOT.TColor.GetColor(40, 160, 120), # dark tea,
     "st": ROOT.TColor.GetColor(0, 215, 215),

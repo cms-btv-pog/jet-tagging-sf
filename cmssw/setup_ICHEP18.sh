@@ -41,6 +41,9 @@ action() {
         # MET EE fix
         git cms-merge-topic cms-met:METFixEE2017_949_v2
 
+        # deterministics seeds
+        git cms-merge-topic yrath:deterministicSeeds
+
         scram b -j "$scram_cores"
 
     else

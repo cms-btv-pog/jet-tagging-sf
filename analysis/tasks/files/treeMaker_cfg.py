@@ -338,6 +338,24 @@ try:
         seq.associate(process.deepFlavour)
         jetCollection = cms.InputTag("selectedUpdatedPatJetsNewDFTraining", "", process.name_())
 
+    # deterministic seeds
+    process.load("PhysicsTools.PatUtils.deterministicSeeds_cfi")
+    process.deterministicSeeds.produceCollections = cms.bool(True)
+    process.deterministicSeeds.produceValueMaps = cms.bool(False)
+    process.deterministicSeeds.electronCollection = electronCollection
+    process.deterministicSeeds.muonCollection = muonCollection
+    #process.deterministicSeeds.tauCollection = tauCollection
+    #process.deterministicSeeds.photonCollection = photonCollection
+    process.deterministicSeeds.jetCollection = jetCollection
+    process.deterministicSeeds.METCollection = metCollection
+    seq += process.deterministicSeeds
+
+    # overwrite output collections
+    muonCollection = cms.InputTag("deterministicSeeds", "muonsWithSeed", process.name_())
+    jetCollection = cms.InputTag("deterministicSeeds", "jetsWithSeed", process.name_())
+    metCollection = cms.InputTag("deterministicSeeds", "METsWithSeed", process.name_())
+    electronCollection = cms.InputTag("deterministicSeeds", "electronsWithSeed", process.name_())
+
     # load and configure the tree maker
     process.load("JetTaggingSF.JetTaggingSF.treeMaker_cfi")
     process.treeMaker.verbose = cms.untracked.bool(False)

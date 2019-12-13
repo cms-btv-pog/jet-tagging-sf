@@ -681,15 +681,12 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     std::vector<bool> passJetMETSelection;
     std::vector<bool> passHEMVeto;
     bool passOneJetMETSelection = false;
-    size_t rndSeed = rnd_->GetSeed();
     for (size_t i = 0; i < (isData_ ? 1 : jetVariations_.size()); i++)
     {
         string variation = jetVariations_[i].first;
         string direction = jetVariations_[i].second;
         std::vector<pat::Jet> jets2;
         pat::MET met(metOrig);
-
-        rnd_->SetSeed(rndSeed);
 
         bool HEMVeto = false;
         bool pass = jetMETSelection(
@@ -1124,6 +1121,8 @@ bool TreeMaker::jetMETSelection(const edm::Event& event, double rho,
         // when variation is empty, apply nominal JES and JER,
         // when variation is JER, apply nominal JES and JER variation,
         // otherwise, apply JES variation and nominal JER
+        int32_t seed = jet.userInt("deterministicSeed");
+        rnd_->SetSeed((uint32_t)seed);
         if (variation.empty())
         {
             applyJES(jet, "", "", event.run(), rho);

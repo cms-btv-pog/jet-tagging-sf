@@ -39,6 +39,9 @@ action() {
         # fix for new JER version
         git cms-merge-topic ahinzmann:resolutionSmearingFix102
 
+        # deterministic seed producer
+        git cms-merge-topic yrath:deterministicSeeds_102X
+
         # MET
         git cms-addpkg RecoMET/METFilters
 

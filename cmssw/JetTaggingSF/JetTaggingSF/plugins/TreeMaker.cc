@@ -216,6 +216,7 @@ private:
     string jerScaleFactorFile_;
     double deepCSVWP_;
     double deepJetWP_;
+    int pileupJetIdWP_;
     bool applyHEMFilter_; // add additional JES unc source for HEM issue and tag events with jet in HEM region
     bool (TreeMaker::*tightJetID_)(pat::Jet&);
     double maxJetEta_;
@@ -547,16 +548,19 @@ void TreeMaker::beginJob()
     if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19legacy")
     {
         tightJetID_ = &TreeMaker::tightJetID_2016;
+        pileupJetIdWP_ = 4;
         maxJetEta_ = 2.4;
     }
     else if (campaign_ == "2017_Run2_pp_13TeV_ICHEP18")
     {
         tightJetID_ = &TreeMaker::tightJetID_2017;
+        pileupJetIdWP_ = 4;
         maxJetEta_ = 2.5;
     }
     else if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19")
     {
         tightJetID_ = &TreeMaker::tightJetID_2018;
+        pileupJetIdWP_ = 4;
         maxJetEta_ = 2.5;
     }
     else
@@ -1311,7 +1315,7 @@ JetID TreeMaker::jetID(pat::Jet& jet, reco::RecoCandidate* lep1, reco::RecoCandi
     }
 
     // loose PU jet ID
-    if (jet.userInt("pileupJetId:fullId") < 4)
+    if ((jet.userInt("pileupJetId:fullId") < pileupJetIdWP_) && (jet.pt() < 50.))
     {
         return J_INVALID;
     }

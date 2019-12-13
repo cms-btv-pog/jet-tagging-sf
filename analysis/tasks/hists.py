@@ -31,7 +31,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         "tag. Use all if empty.")
     category_tags = CSVParameter(default=[], description="Only consider categories whose top-level "
     "category has one or more of the given tags. Use all if empty.")
-    used_shifts = CSVParameter(default=[]) # needs to be named differently from the wrapper task parameter
+    used_shifts = CSVParameter(default=[])  # needs to be named differently from the wrapper task parameter
     binning = CSVParameter(default=[], cls=luigi.FloatParameter, description="Overwrite default binning "
         "of variables. If exactly three values are provided, they are interpreted as a tuple of (n_bins, min, max).")
 
@@ -52,7 +52,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
             shifts = {"nominal"} | format_shifts(jes_sources, prefix="jes")
             if self.iteration > 0:
                 shifts = shifts | format_shifts(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"])
-                if self.final_it: # add c shifts
+                if self.final_it:  # add c shifts
                     shifts = shifts | format_shifts(["c_stats1", "c_stats2"])
 
         if len(self.used_shifts) == 0:
@@ -62,9 +62,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         else:
             self.shifts = self.used_shifts
 
-
     def workflow_requires(self):
-        from analysis.tasks.measurement import FitScaleFactors
+        from analysis.tasks.measurement import BundleScaleFactors
 
         reqs = super(WriteHistograms, self).workflow_requires()
 
@@ -77,19 +76,19 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                 reqs["tree"] = MergeTrees.req(self, cascade_tree=-1,
                     version=self.get_version(MergeTrees), _prefer_cli=["version"])
             if self.iteration > 0:
-                reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration - 1,
-                    shift=shift, fix_normalization=self.final_it,
-                    version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
-                    for shift in self.shifts}
+                reqs["sf"] = BundleScaleFactors.req(self, iteration=self.iteration - 1,
+                    fix_normalization=self.final_it, include_cshifts=self.final_it,
+                    version=self.get_version(BundleScaleFactors), _prefer_cli=["version"]
+                )
             if self.optimize_binning:
-                from analysis.tasks.util import OptimizeBinning # prevent circular import
+                from analysis.tasks.util import OptimizeBinning  # prevent circular import
                 reqs["binning"] = OptimizeBinning.req(self, version=self.get_version(OptimizeBinning),
                     _prefer_cli=["version"])
 
         return reqs
 
     def requires(self):
-        from analysis.tasks.measurement import FitScaleFactors
+        from analysis.tasks.measurement import BundleScaleFactors
 
         reqs = {
             "tree": MergeTrees.req(self, cascade_tree=self.branch, branch=0,
@@ -100,12 +99,12 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         if self.dataset_inst.is_mc:
             reqs["pu"] = CalculatePileupWeights.req(self)
         if self.iteration > 0:
-            reqs["sf"] = {shift: FitScaleFactors.req(self, iteration=self.iteration - 1,
-                shift=shift, fix_normalization=self.final_it,
-                version=self.get_version(FitScaleFactors), _prefer_cli=["version"])
-                for shift in self.shifts}
+            reqs["sf"] = BundleScaleFactors.req(self, iteration=self.iteration - 1,
+                fix_normalization=self.final_it, include_cshifts=self.final_it,
+                version=self.get_version(BundleScaleFactors), _prefer_cli=["version"]
+            )
         if self.optimize_binning:
-            from analysis.tasks.util import OptimizeBinning # prevent circular import
+            from analysis.tasks.util import OptimizeBinning  # prevent circular import
             reqs["binning"] = OptimizeBinning.req(self, version=self.get_version(OptimizeBinning),
                 _prefer_cli=["version"])
         return reqs
@@ -149,13 +148,15 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
     def get_scale_factor_weighter(self, inp, shift, nominal_sfs=None):
         sf_hists = {}
         input_files = [inp]
-        if nominal_sfs is not None: # c scale factor files have no histograms for hf/lf, so use nominal ones
+        # c scale factor files have no histograms for hf/lf, so use nominal ones
+        if nominal_sfs is not None:
             input_files.append(nominal_sfs)
 
         for input_file in input_files:
             with input_file.load() as sfs:
-                for category in sfs.GetListOfKeys():
-                    category_dir = sfs.Get(category.GetName())
+                shift_dir = sfs.Get(shift)
+                for category in shift_dir.GetListOfKeys():
+                    category_dir = shift_dir.Get(category.GetName())
                     hist = category_dir.Get("sf")
                     # decouple from open file
                     hist.SetDirectory(0)
@@ -202,7 +203,8 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                 else:
                     region = "lf"
 
-                if region == "c" and not shift.startswith("c_stat"): # nominal c scale factors are 1
+                # nominal c scale factors are 1
+                if region == "c" and not shift.startswith("c_stat"):
                     continue
 
                 category = self.category_getter.get_category(jet_pt, abs(jet_eta), region)
@@ -211,6 +213,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                 sf_hist = sf_hists[category.name]
                 bin_idx = sf_hist.FindBin(jet_btag)
                 scale_factor = sf_hist.GetBinContent(bin_idx)
+                scale_factor = max([0., scale_factor])
 
                 if abs(jet_flavor) == 5:
                     scale_factor_hf *= scale_factor
@@ -322,9 +325,10 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                                 for shift in self.shifts:
                                     nominal_sfs = inp["sf"]["nominal"]["sf"] if shift.startswith("c_stat") \
                                         else None
-                                    weighters.append(self.get_scale_factor_weighter(
-                                        inp["sf"][shift]["sf"], shift,
-                                        nominal_sfs=nominal_sfs))
+                                    weighters.append(self.get_scale_factor_weighter( # TODO
+                                        inp["sf"], shift,
+                                        nominal_sfs=nominal_sfs)
+                                    )
 
                             input_file.cd()
                             with TreeExtender(tree) as te:
@@ -433,7 +437,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
 
                                     hist = ROOT.TH1F("{}_{}".format(variable.name, shift),
                                         variable.full_title(root=True), variable.n_bins,
-                                        array.array("f", variable.bin_edges))
+                                        array.array("d", variable.bin_edges))
                                     hist.Sumw2()
 
                                     # build the full selection string, including the total event weight

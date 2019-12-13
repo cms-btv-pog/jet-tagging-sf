@@ -112,7 +112,8 @@ class DatasetTask(AnalysisTask):
 
 class ShiftTask(AnalysisTask):
 
-    shift = luigi.Parameter(default="nominal", significant=False, description="systematic shift to apply, default: nominal")
+    shift = luigi.Parameter(default="nominal", significant=False,
+        description="systematic shift to apply, default: nominal")
     effective_shift = luigi.Parameter(default=None)
 
     shifts = set()
@@ -404,97 +405,30 @@ class InstallCMSSWCode(AnalysisTask):
         output.touch(self.checksum)
 
 
-class SingularitySandbox(law.sandbox.base.Sandbox):
-    sandbox_type = "singularity"
-    default_singularity_args = []
+class AnalysisSandboxTask(law.SandboxTask):
 
-    # env cache per image
-    _envs = {}
+    allow_empty_sandbox = True
 
-    binds_allowed = False
+    def sandbox_setup_cmds(self):
+        cmds = super(AnalysisSandboxTask, self).sandbox_setup_cmds()
 
-    @property
-    def image(self):
-        return self.name
-
-    @property
-    def env(self):
-        # strategy: create a tempfile, forward it to a container, let python dump its full env,
-        # close the container and load the env file
-        if self.image not in self._envs:
-            with tmp_file() as tmp:
-                tmp_path = os.path.realpath(tmp[1])
-
-                cmd = "env -i singularity exec {0} bash -l -c '{1}; python -c \"" \
-                    "import os,pickle;pickle.dump(os.environ,open(\\\"{2}\\\",\\\"w\\\"))\"'"
-                cmd = cmd.format(self.image, self.pre_cmd(), tmp_path)
-
-                returncode, out, _ = interruptable_popen(cmd, shell=True, executable="/bin/bash",
-                    stdout=subprocess.PIPE, stderr=subprocess.STDOUT)
-                if returncode != 0:
-                    raise Exception("singularity sandbox env loading failed: " + str(out))
-
-                with open(tmp_path, "r") as f:
-                    env = six.moves.cPickle.load(f)
-
-            # cache
-            self._envs[self.image] = env
-
-        return self._envs[self.image]
-
-    def pre_cmd(self):
-        pre_cmds = []
-
-        # environment variables to set
-        env = self._get_env()
-        for tpl in env.items():
-            pre_cmds.append("export {}=\"{}\"".format(*tpl))
-
-        pre_cmds.append('export JTSF_CMSSW_SETUP="{}"'.format(os.environ["JTSF_CMSSW_SETUP"]))
-        pre_cmds.append("source {}".format(os.path.join(os.environ["JTSF_BASE"], "setup.sh")))
-        pre_cmds.append("source {}".format(os.path.join(
+        cmds.append('export JTSF_CMSSW_SETUP="{}"'.format(os.environ["JTSF_CMSSW_SETUP"]))
+        cmds.append("source {}".format(os.path.join(os.environ["JTSF_BASE"], "setup.sh")))
+        cmds.append("source {}".format(os.path.join(
             os.environ["JTSF_BASE"], "singularity", "setup_$JTSF_DIST_VERSION.sh"))
         )
 
-        return "; ".join(pre_cmds)
+        return cmds
 
-    def cmd(self, proxy_cmd):
-        # get args for the singularity command as configured in the task
-        args = make_list(getattr(self.task, "singularity_args",
-            self.default_singularity_args))
-
-        # handle scheduling within the container
-        ls_flag = "--local-scheduler"
-        if self.force_local_scheduler() and ls_flag not in proxy_cmd:
-            proxy_cmd.append(ls_flag)
-
-        # build the final command
-        cmd = "env -i singularity exec {args} {image} bash -l -c '{pre_cmd}; {proxy_cmd}'".format(
-            args=" ".join(args), image=self.image, pre_cmd=self.pre_cmd(),
-            proxy_cmd=" ".join(proxy_cmd))
-
-        return cmd
-
-class OptionalSandboxTask(law.SandboxTask):
-
-    @property
-    def env(self):
-        if self.sandbox_inst is not None and self.sandbox_inst.name == "None":
-            return os.environ
-        else:
-            return super(OptionalSandboxTask, self).env
-
-    def is_sandboxed(self):
-        _current_sandbox = os.getenv("LAW_SANDBOX", "").split(",")
-        return self.effective_sandbox in _current_sandbox
-
-    def __getattribute__(self, attr, proxy=True):
-        if attr in ["run", "input", "output"] and self.sandbox_inst is not None and self.sandbox_inst.name == "None":
-            return super(OptionalSandboxTask, self).__getattribute__(attr, proxy=False)
-        return super(OptionalSandboxTask, self).__getattribute__(attr, proxy=proxy)
+    def __init__(self, *args, **kwargs):
+        super(AnalysisSandboxTask, self).__init__(*args, **kwargs)
+        if self.sandbox_inst is not None:
+            self.sandbox_inst.forward_env = False
+            self.sandbox_inst.allow_binds = False
 
 
-class UploadCMSSW(AnalysisTask, law.cms.BundleCMSSW, law.tasks.TransferLocalFile, OptionalSandboxTask):
+class UploadCMSSW(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxTask,
+        law.cms.BundleCMSSW):
 
     force_upload = luigi.BoolParameter(default=False, description="force uploading")
 

@@ -55,7 +55,7 @@ ch_mumu = cfg.add_channel("mumu", 3)
 
 # define configurations that are not part of a config
 
-jes_sources = [
+jes_sources_factorized = [
     "AbsoluteStat", "AbsoluteScale", "AbsoluteMPFBias", "Fragmentation", "SinglePionECAL",
     "SinglePionHCAL", "FlavorQCD", "TimePtEta", "RelativeJEREC1", "RelativeJEREC2", "RelativeJERHF",
     "RelativePtBB", "RelativePtEC1", "RelativePtEC2", "RelativePtHF", "RelativeBal", "RelativeFSR",
@@ -63,17 +63,35 @@ jes_sources = [
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
 ]
 jes_total_shifts = {"jesTotal_up", "jesTotal_down"}
-
 xrd_redirectors = ["xrootd-cms.infn.it", "cms-xrd-global.cern.ch", "cmsxrootd.fnal.gov"]
 
-cfg.set_aux("jes_sources", jes_sources[:])
 # jes sources are required for ShiftTasks already on class level to define list of shift
 # however, no information about the config instance is available at that point
 if os.environ.get("JTSF_CAMPAIGN", None) is None:
     raise Exception("JTSF campaign has to be defined.")
+
 if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19":
-    jes_sources.insert(0, "AbsoluteSample")
-    jes_sources.insert(0, "HEMIssue")
+    jes_sources_factorized.insert(0, "AbsoluteSample")
+    jes_sources_factorized.insert(0, "HEMIssue")
+    jes_sources_reduced =  ["Absolute", "Absolute_2018", "BBEC1", "BBEC1_2018", "EC2",
+        "EC2_2018", "FlavorQCD", "HF", "HF_2018", "RelativeBal", "RelativeSample_2018",
+        "HEMIssue", "Total"]
+
+if os.environ["JTSF_CAMPAIGN"] == "2017_Run2_pp_13TeV_ICHEP18":
+    jes_sources_reduced = ["Absolute", "Absolute_2017", "BBEC1", "BBEC1_2017", "EC2",
+        "EC2_2017", "FlavorQCD", "HF", "HF_2017", "RelativeBal", "RelativeSample_2017",
+        "Total"]
+
+if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19legacy":
+    jes_sources_reduced = ["Absolute", "Absolute_2016", "BBEC1", "BBEC1_2016", "EC2",
+        "EC2_2016", "FlavorQCD", "HF", "HF_2016", "RelativeBal", "RelativeSample_2016",
+        "Total"]
+
+jes_all_sources = set(jes_sources_factorized + jes_sources_reduced)
+
+cfg.set_aux("jes_sources_factorized", jes_sources_factorized[:])
+cfg.set_aux("jes_sources_reduced", jes_sources_reduced[:])
+cfg.set_aux("jes_sources_all", jes_sources_all[:])
 
 # add auxiliary info to base config
 cfg.set_aux("sandboxes", {
@@ -85,6 +103,8 @@ cfg.set_aux("jes_levels", {
     "data": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
     "mc": ["L1FastJet", "L2Relative", "L3Absolute"],
 })
+
+cfg.set_aux("jes_scheme", "reduced")
 
 cfg.set_aux("btaggers", {
     "deepcsv": {
@@ -657,8 +677,6 @@ config_Moriond19 = create_config_Moriond19(cfg)
 add_btag_variables(config_Moriond19)
 add_categories(config_Moriond19, "deepcsv")
 add_categories(config_Moriond19, "deepjet")
-config_Moriond19.get_aux("jes_sources").insert(0, "AbsoluteSample")
-config_Moriond19.get_aux("jes_sources").insert(0, "HEMIssue")
 
 from analysis.config.config_Moriond19_legacy import create_config as create_config_Moriond19_legacy
 config_Moriond19_legacy = create_config_Moriond19_legacy(cfg)

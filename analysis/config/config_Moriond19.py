@@ -151,6 +151,11 @@ def create_config(base_cfg):
         ],
     })
 
+    cfg.set_aux("jes_uncertainty_file", {
+        "factorized": None,  # take file from jes github
+        "reduced": "https://cernbox.cern.ch/index.php/s/abTn1z0lpGZugkn",
+    })
+
     # https://github.com/cms-sw/cmssw/blob/master/SimGeneral/MixingModule/python/mix_2018_25ns_JuneProjectionFull18_PoissonOOTPU_cfi.py
     cfg.set_aux("pileup_mc", [
         4.695341e-10, 1.206213e-06, 1.162593e-06, 6.118058e-06, 1.626767e-05,

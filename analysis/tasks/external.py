@@ -73,31 +73,19 @@ class DownloadSetupFiles(AnalysisTask, law.tasks.TransferLocalFile):
 
     def get_source_files(self):
         # prepare JES files
-        jes_url = lambda version: "https://github.com/cms-jet/JECDatabase/raw/master/tarballs/{}.tar.gz".format(version)
-        jes_file_name = lambda version, level: "{0}_{1}_AK4PFchs.txt".format(version, level)
-
-        self.jes_tmp_dir = law.LocalDirectoryTarget(is_tmp=True)
-        self.jes_tmp_dir.touch()
+        jes_url = lambda version, level: "https://raw.githubusercontent.com/cms-jet/JECDatabase" \
+            "/master/textFiles/{0}/{0}_{1}_AK4PFchs.txt".format(version, level)
 
         jes_files = OrderedDict()
         for src in ("mc", "data"):
             for _, _, version in self.config_inst.get_aux("jes_version")[src]:
-                # get tarball of all jes corrections
-                jes_tarball = jes_url(version)
-                jes_tarball_dst = os.path.join(self.jes_tmp_dir.path, os.path.basename(jes_tarball))
-                wget(jes_tarball, jes_tarball_dst)
-                tar = tarfile.open(jes_tarball_dst, "r:gz")
-                tar.extractall(path=self.jes_tmp_dir.path)
-                tar.close()
-                # select the ones we need
                 for level in self.config_inst.get_aux("jes_levels")[src] + ["Uncertainty"]:
                     jes_files.setdefault(src, OrderedDict()).setdefault(version, OrderedDict())[level] = \
-                        os.path.join(
-                            self.jes_tmp_dir.path, jes_file_name(version, level)
-                        )
-        jes_unc_src_file = os.path.join(
-            self.jes_tmp_dir.path, jes_file_name(self.config_inst.get_aux("jes_version")["mc"][0][2], "UncertaintySources")
-        )
+                        jes_url(version, level)
+        jes_unc_src_file = self.config_inst.get_aux("jes_uncertainty_file")[self.config_inst.get_aux("jes_scheme")]
+        if jes_unc_src_file is None:
+            jes_unc_src_file = jes_url(self.config_inst.get_aux("jes_version")["mc"][0][2],
+                "UncertaintySources")
 
         # prepare JER files
         jer_url = lambda version, src: "https://raw.githubusercontent.com/cms-jet/JRDatabase" \
@@ -131,9 +119,12 @@ class DownloadSetupFiles(AnalysisTask, law.tasks.TransferLocalFile):
             # if afs is not available on our system, use scp
             elif src.startswith("/afs") and not os.path.exists(src):
                 p = subprocess.Popen(["scp", "{}:{}".format(self.afs_host, src), dst])
-                p.communicate() # wait for transfer to finish
+                p.communicate()  # wait for transfer to finish
             else:
                 shutil.copy2(src, dst)
+
+            if not os.path.exists(dst):
+                raise Exception("File copy failed!")
 
         law.util.map_struct(download, self.source_files)
 

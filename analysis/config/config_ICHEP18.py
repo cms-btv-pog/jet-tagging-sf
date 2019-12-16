@@ -54,52 +54,6 @@ def create_config(base_cfg):
         }
     })
 
-    #hf_binning = {
-    #    "pt": [20, 30, 50, 70, 100, np.inf],
-    #    "abs(eta)": [0., 2.5],
-    #    "deepcsv": {
-    #        "plotting": [
-    #            -2.01, 0.0, 0.1522, 0.4941, 0.8001, 1.01
-    #        ],
-    #        "measurement": [
-    #            -2.01, 0.0, 0.1522, 0.4941, 0.8001, 1.01
-    #        ],
-    #    },
-    #    "deepjet": {
-    #        "plotting": [
-    #            -2.01, 0.0, 0.0521, 0.3033, 0.7489, 1.01
-    #        ],
-    #        "measurement": [
-    #            -2.01, 0.0, 0.0521, 0.3033, 0.7489, 1.01
-    #        ],
-    #    },
-    #}
-
-    #cfg.set_aux("binning", {
-    #    "lf": {
-    #        "pt": [20, 30, 40, 60, np.inf],
-    #        "abs(eta)": [0., 0.8, 1.6, 2.5],
-    #        "deepcsv": {
-    #            "plotting": [
-    #                -2.01, 0.0, 0.1522, 0.4941, 1.01
-    #            ],
-    #            "measurement": [
-    #                -2.01, 0.0, 0.1522, 0.4941, 1.01
-    #            ],
-    #        },
-    #        "deepjet": {
-    #            "plotting": [
-    #                -2.01, 0.0, 0.0521, 0.3033, 1.01
-    #            ],
-    #            "measurement": [
-    #                -2.01, 0.0, 0.0521, 0.3033, 1.01
-    #            ],
-    #        }
-    #    },
-    #    "hf": hf_binning,
-    #    "c": hf_binning,
-    #})
-
     # luminosities per channel in /pb
     cfg.set_aux("lumi", {
         ch_ee: 41296.082,
@@ -210,6 +164,11 @@ def create_config(base_cfg):
         "mc": [
             (1, int(1e9), "Fall17_17Nov2017_V32_MC"),
         ],
+    })
+
+    cfg.set_aux("jes_uncertainty_file", {
+        "factorized": None,  # take file from jes github
+        "reduced": "https://cernbox.cern.ch/index.php/s/4ks9YSbEc7ietyE",
     })
 
     # https://github.com/cms-sw/cmssw/blob/master/SimGeneral/MixingModule/python/mix_2017_25ns_WinterMC_PUScenarioV1_PoissonOOTPU_cfi.py

@@ -87,17 +87,11 @@ if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19legacy":
         "EC2_2016", "FlavorQCD", "HF", "HF_2016", "RelativeBal", "RelativeSample_2016",
         "Total"]
 
-jes_all_sources = set(jes_sources_factorized + jes_sources_reduced)
+jes_sources_all = list(set(jes_sources_factorized + jes_sources_reduced))
 
 cfg.set_aux("jes_sources_factorized", jes_sources_factorized[:])
 cfg.set_aux("jes_sources_reduced", jes_sources_reduced[:])
 cfg.set_aux("jes_sources_all", jes_sources_all[:])
-
-# add auxiliary info to base config
-cfg.set_aux("sandboxes", {
-    "slc6": "singularity::/cvmfs/singularity.opensciencegrid.org/bbockelm/cms:rhel6",
-    "NO_SANDBOX": "singularity::None",
-})
 
 cfg.set_aux("jes_levels", {
     "data": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
@@ -105,6 +99,12 @@ cfg.set_aux("jes_levels", {
 })
 
 cfg.set_aux("jes_scheme", "reduced")
+
+# add auxiliary info to base config
+cfg.set_aux("sandboxes", {
+    "slc6": "singularity::/cvmfs/singularity.opensciencegrid.org/bbockelm/cms:rhel6",
+    "NO_SANDBOX": "singularity::None",
+})
 
 cfg.set_aux("btaggers", {
     "deepcsv": {

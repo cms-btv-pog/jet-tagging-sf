@@ -24,7 +24,8 @@ from analysis.config.jet_tagging_sf import analysis
 from analysis.util import calc_checksum
 
 
-law.contrib.load("arc", "cms", "git", "glite", "numpy", "tasks", "root", "slack", "wlcg", "htcondor")
+law.contrib.load("arc", "cms", "git", "glite", "numpy", "tasks", "root", "slack", "wlcg", "htcondor",
+    "singularity")
 
 
 class AnalysisTask(law.Task):
@@ -471,7 +472,7 @@ class UploadCMSSW(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxTask
         self.has_run = True
 
 
-class UploadSoftware(AnalysisTask, law.tasks.TransferLocalFile, OptionalSandboxTask):
+class UploadSoftware(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxTask):
 
     version = None
 

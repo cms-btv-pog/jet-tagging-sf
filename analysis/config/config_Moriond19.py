@@ -217,6 +217,7 @@ def create_config(base_cfg):
         "MeasureCScaleFactors": "prod10",  # new JES, HEM fix
         "MeasureScaleFactors": "prod10",  # new JES, HEM fix
         "FitScaleFactors": "prod10",  # new JES, HEM fix
+        "BundleScaleFactors": "prod10",  # new JES, HEM fix
         "GetScaleFactorWeights": "prod10",  # new JES, HEM fix
         "MergeScaleFactorWeights": "prod10",  # new JES, HEM fix
         "OptimizeBinning": "prod1",

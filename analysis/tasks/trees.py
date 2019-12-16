@@ -105,7 +105,9 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow)
                 ("jesRanges", jes_ranges),
                 ("jesUncFiles", jes_unc_files),
                 ("jesUncSrcFile", jes_unc_src_file),
-                ("jesUncSources", self.config_inst.get_aux("jes_sources")),
+                ("jesUncSources", self.config_inst.get_aux("jes_sources_{}".format(
+                    self.config_inst.get_aux("jes_scheme"))
+                )),
                 ("jerPtResolutionFile", setup_files["jer_files"]["PtResolution"]),
                 ("jerScaleFactorFile", setup_files["jer_files"]["SF"]),
                 ("deepCSVWP", self.config_inst.get_aux("working_points")["deepcsv"]["medium"]),

@@ -48,7 +48,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         if self.dataset_inst.is_data:
             shifts = {"nominal"}
         else:
-            jes_sources = self.config_inst.get_aux("jes_sources")
+            jes_sources = self.config_inst.get_aux("jes_sources_{}".format(
+                self.config_inst.get_aux("jes_scheme")
+            ))
             shifts = {"nominal"} | format_shifts(jes_sources, prefix="jes")
             if self.iteration > 0:
                 shifts = shifts | format_shifts(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"])
@@ -578,8 +580,10 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
         if self.normalize_cerrs:
             self.shifts = format_shifts(["c_stats1", "c_stats2"])
         else:
-            jes_sources = self.config_inst.get_aux("jes_sources")
-            self.shifts = {"nominal"} | format_shifts(jes_sources, prefix="jes")  | \
+            jes_sources = self.config_inst.get_aux("jes_sources_{}".format(
+                self.config_inst.get_aux("jes_scheme")
+            ))
+            self.shifts = {"nominal"} | format_shifts(jes_sources, prefix="jes") | \
                 format_shifts(["lf", "hf", "lf_stats1", "lf_stats2", "hf_stats1", "hf_stats2"])
 
     def workflow_requires(self):

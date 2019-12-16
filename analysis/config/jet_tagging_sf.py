@@ -93,12 +93,14 @@ cfg.set_aux("jes_sources_factorized", jes_sources_factorized[:])
 cfg.set_aux("jes_sources_reduced", jes_sources_reduced[:])
 cfg.set_aux("jes_sources_all", jes_sources_all[:])
 
+cfg.set_aux("jes_scheme", "reduced")
+
+jes_sources = cfg.get_aux("jes_sources_{}".format(cfg.get_aux("jes_scheme")))
+
 cfg.set_aux("jes_levels", {
     "data": ["L1FastJet", "L2Relative", "L3Absolute", "L2L3Residual"],
     "mc": ["L1FastJet", "L2Relative", "L3Absolute"],
 })
-
-cfg.set_aux("jes_scheme", "reduced")
 
 # add auxiliary info to base config
 cfg.set_aux("sandboxes", {

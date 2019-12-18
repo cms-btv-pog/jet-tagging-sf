@@ -152,7 +152,7 @@ def create_config(base_cfg):
 
     cfg.set_aux("jes_uncertainty_file", {
         "factorized": None,  # take file from jes github
-        "reduced": "https://cernbox.cern.ch/index.php/s/ujSKpZZSgczQZ3V",
+        "reduced": "https://cernbox.cern.ch/index.php/s/ujSKpZZSgczQZ3V/download",
     })
 
     # https://github.com/cms-sw/cmssw/blob/CMSSW_8_0_X/SimGeneral/MixingModule/python/mix_2016_25ns_Moriond17MC_PoissonOOTPU_cfi.py

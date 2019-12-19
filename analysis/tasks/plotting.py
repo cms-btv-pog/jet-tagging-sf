@@ -455,8 +455,8 @@ class PlotScaleFactor(PlotTask):
                         version=version if version is not None else self.get_version(measure_task),
                         _prefer_cli=["version"])
                     }
-            if self.fix_normalization and not self.is_c_flavour:
-                reqs[config]["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=False,
+            if self.fix_normalization:
+                reqs[config]["norm"] = MergeScaleFactorWeights.req(self, normalize_cerrs=self.is_c_flavour,
                     b_tagger=b_tagger, iteration=iteration,
                     version=version if version is not None else self.get_version(MergeScaleFactorWeights),
                     _prefer_cli=["version"])
@@ -483,7 +483,7 @@ class PlotScaleFactor(PlotTask):
         if self.norm_to_nominal and self.shifts[0] != "nominal":
             raise KeyError("'norm_to_nominal' is set to true, but no nominal values found.")
 
-        for config, config_input in inp.items():
+        for color_idx, (config, config_input) in enumerate(inp.items()):
             b_tagger, iteration, version = config
 
             config_ids = [b_tagger]
@@ -493,16 +493,20 @@ class PlotScaleFactor(PlotTask):
                 config_ids.append("version {}".format(version))
             config_id = ", ".join(config_ids)
 
-            # get scaling factors for normalization
-            if self.fix_normalization:
-                norm_factors = config_input.pop("norm").load()["nominal"]
-
+            nominal_hists = {}
             nominal_fit_hists = {}
             # combined errors for multiple shifts
+            up_shifted_hists = defaultdict(dict)
             up_shifted_fit_hists = defaultdict(dict)
+            down_shifted_hists = defaultdict(dict)
             down_shifted_fit_hists = defaultdict(dict)
 
+            normalization_input = config_input.pop("norm")
             for shift_idx, (shift, inp_target) in enumerate(config_input.items()):
+                # get scaling factors for normalization
+                if self.fix_normalization:
+                    norm_factors = normalization_input.load()[shift]
+
                 with inp_target["fit"]["sf"].load("r") as fit_file, \
                         inp_target["hist"]["scale_factors"].load("r") as hist_file:
                     for category_key in fit_file.GetListOfKeys():
@@ -524,19 +528,23 @@ class PlotScaleFactor(PlotTask):
                         fit_category_dir = fit_file.Get(category_name)
                         fit_hist = fit_category_dir.Get(self.hist_name)
 
+                        hist_category_dir = hist_file.Get(category_name)
+                        hist = hist_category_dir.Get(self.hist_name)
+                        # truncate first bin
+                        hist = self.rebin_hist(hist, region, b_tagger=b_tagger, truncate=True)
+
+                        # normalize histogram if required
+                        # fit histograms are already normalized in FitScaleFactors
+                        if self.fix_normalization and not self.is_c_flavour:
+                            hist.Scale(norm_factors[category_name])
+
                         if shift == "nominal":
-                            hist_category_dir = hist_file.Get(category_name)
-                            hist = hist_category_dir.Get(self.hist_name)
-                            # truncate first bin
-                            hist = self.rebin_hist(hist, region, b_tagger=b_tagger, truncate=True)
-
-                            # normalize histogram if required
-                            if self.fix_normalization:
-                                hist.Scale(norm_factors[category_name])
-
                             # make sure histograms are not cleaned up when the file is closed
                             nominal_fit_hists[plot_category] = fit_hist.Clone()
                             nominal_fit_hists[plot_category].SetDirectory(0)
+
+                            nominal_hists[plot_category] = hist.Clone()
+                            nominal_hists[plot_category].SetDirectory(0)
 
                         # for c-jets, there is no nominal histogram
                         # Instead, all nominal values are set to 1
@@ -554,9 +562,13 @@ class PlotScaleFactor(PlotTask):
                             if direction == "up":
                                 up_shifted_fit_hists[plot_category][sys] = fit_hist.Clone()
                                 up_shifted_fit_hists[plot_category][sys].SetDirectory(0)
+                                up_shifted_hists[plot_category][sys] = hist.Clone()
+                                up_shifted_hists[plot_category][sys].SetDirectory(0)
                             elif direction == "down":
                                 down_shifted_fit_hists[plot_category][sys] = fit_hist.Clone()
                                 down_shifted_fit_hists[plot_category][sys].SetDirectory(0)
+                                down_shifted_hists[plot_category][sys] = hist.Clone()
+                                down_shifted_hists[plot_category][sys].SetDirectory(0)
                             else:
                                 raise ValueError("Unknown direction {}".format(direction))
 
@@ -617,17 +629,26 @@ class PlotScaleFactor(PlotTask):
                         up_shifted_fit_hists[plot_category], down_shifted_fit_hists[plot_category],
                         envelope_as_errors=False)
 
+                    hist_down, hist_up = build_hist_envelope(nominal_hists[plot_category],
+                        up_shifted_hists[plot_category], down_shifted_hists[plot_category],
+                        envelope_as_errors=False)
+
                     if self.norm_to_nominal:
                         fit_hist_up.Divide(nominal_fit_hists[plot_category])
                         fit_hist_down.Divide(nominal_fit_hists[plot_category])
+                        hist_up.Divide(nominal_hists[plot_category])
+                        hist_down.Divide(nominal_hists[plot_category])
 
                     plot.draw({config_id + ", up": fit_hist_up}, line_color=None)
                     plot.draw({config_id + ", down": fit_hist_down}, line_color=None)
+                    plot.draw({config_id + ", up": hist_up}, line_color=2, options=["hist"])
+                    plot.draw({config_id + ", down": hist_down}, line_color=4, options=["hist"])
 
         # save plots
         for plot_category in plots:
             plot = plots[plot_category]
-            plot_name = self.get_plot_name(plot_category, self.shifts_identifier, self.b_taggers[0], self.iterations[0])
+            plot_name = self.get_plot_name(plot_category, self.shifts_identifier, self.b_taggers[0],
+                self.iterations[0])
             plot.save(os.path.join(local_tmp.path, plot_name), draw_legend=True,
                 lumi=self.config_inst.get_aux("lumi").values()[0] / 1000.)
             del plot

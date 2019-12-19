@@ -392,6 +392,11 @@ void TreeMaker::setupJetCorrectionObjects()
         // initialize the factorized jet corrector uncertainties
         for (size_t i = 0; i < jesUncSources_.size(); ++i)
         {
+            if (jesUncSources_[i] == HEMIssueSource_)
+            {
+                continue;
+            }
+
             if (!jesUncSrcFile_.empty())
             {
                 JetCorrectorParameters params(jesUncSrcFile_, jesUncSources_[i]);
@@ -411,12 +416,6 @@ void TreeMaker::setupJetCorrectionObjects()
         jetVariations_.push_back(stringPair("jes" + jesUncSources_[i], "down"));
     }
 
-    // add jet variation for 2018 HEM issue
-    if (applyHEMFilter_ && !isData_)
-    {
-        jetVariations_.push_back(stringPair("jes" + HEMIssueSource_, "up"));
-        jetVariations_.push_back(stringPair("jes" + HEMIssueSource_, "down"));
-    }
 }
 
 void TreeMaker::setupVariables()

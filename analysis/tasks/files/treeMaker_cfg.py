@@ -377,8 +377,8 @@ try:
     process.treeMaker.jesUncSources = cms.vstring(options.jesUncSources)
     process.treeMaker.jerPtResolutionFile = cms.string(options.jerPtResolutionFile)
     process.treeMaker.jerScaleFactorFile = cms.string(options.jerScaleFactorFile)
-    process.treeMaker.deepJetWP = cms.string(options.deepJetWP)
-    process.treeMaker.deepCSVWP = cms.string(options.deepCSVWP)
+    process.treeMaker.deepJetWP = cms.double(options.deepJetWP)
+    process.treeMaker.deepCSVWP = cms.double(options.deepCSVWP)
     process.treeMaker.metFilterBitsCollection = metFilterBitsCollection
     process.treeMaker.electronCollection = electronCollection
     process.treeMaker.muonCollection = muonCollection

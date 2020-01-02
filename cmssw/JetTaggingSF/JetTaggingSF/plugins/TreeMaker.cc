@@ -1408,7 +1408,6 @@ void TreeMaker::applyJES(pat::Jet& jet, const string& variation, const string& d
     // apply a variation / uncertainty?
     if (variation == ("jes" + HEMIssueSource_))
     {
-        std::cout << "HEM issue" << std::endl;
         // check if jet in HEM region
         if (jet.eta() > -3.0 && jet.eta() < -1.3)
         {
@@ -1430,7 +1429,7 @@ void TreeMaker::applyJES(pat::Jet& jet, const string& variation, const string& d
         // variation is "jes<source>"
         string source = variation.substr(3);
         JetCorrectionUncertainty* corr = nullptr;
-        if (source == "total")
+        if (source == "Total")
         {
             // total variation
             corr = jetCorrectorUnc;

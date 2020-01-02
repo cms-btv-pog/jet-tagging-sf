@@ -40,7 +40,9 @@ class MeasureScaleFactors(ShiftTask):
         return reqs
 
     def store_parts(self):
-        return super(MeasureScaleFactors, self).store_parts() + (self.b_tagger,) + (self.iteration,)
+        binning_part = "optimized" if self.optimize_binning else "default"
+        return super(MeasureScaleFactors, self).store_parts() + (self.b_tagger,) + (self.iteration,) \
+            + (binning_part,)
 
     def output(self):
         outputs = {"scale_factors": self.wlcg_target("scale_factors.root")}
@@ -522,7 +524,6 @@ class FitScaleFactors(MeasureScaleFactors):
                         "factor hist." % category_dir)
                 hist = category_dir.Get(hist_keys[0].GetName())
                 nbins = hist.GetNbinsX()
-
                 if self.fix_normalization:
                     hist.Scale(norm_factors[category.name])
 
@@ -687,8 +688,9 @@ class BundleScaleFactors(AnalysisTask):
     def store_parts(self):
         shift_part = "all" if self.include_cshifts else "no_cshift"
         normalization_part = "rescaled" if self.fix_normalization else "unscaled"
+        binning_part = "optimized" if self.optimize_binning else "default"
         return super(BundleScaleFactors, self).store_parts() + (self.b_tagger,) \
-            + (self.iteration,) + (normalization_part,) + (shift_part,)
+            + (self.iteration,) + (normalization_part,) + (shift_part,) + (binning_part,)
 
     def output(self):
         return self.wlcg_target("scale_factors.root")
@@ -725,7 +727,9 @@ class CreateScaleFactorResults(AnalysisTask):
         return reqs
 
     def store_parts(self):
-        return super(CreateScaleFactorResults, self).store_parts() + (self.b_tagger,) + (self.iteration,)
+        binning_part = "optimized" if self.optimize_binning else "default"
+        return super(CreateScaleFactorResults, self).store_parts() + (self.b_tagger,) + (self.iteration,) \
+            + (binning_part,)
 
     def output(self):
         outp = {}

@@ -112,7 +112,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
         return reqs
 
     def store_parts(self):
-        return super(WriteHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,)
+        binning_part = "optimized" if self.optimize_binning else "default"
+        return super(WriteHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,) \
+            + (binning_part,)
 
     def output(self):
         return self.wlcg_target("hists_{}.root".format(self.branch))
@@ -515,7 +517,9 @@ class MergeHistograms(GridWorkflow, law.tasks.CascadeMerge):
         ]
 
     def store_parts(self):
-        return super(MergeHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,)
+        binning_part = "optimized" if self.optimize_binning else "default"
+        return super(MergeHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,) \
+            + (binning_part,)
 
     def cascade_output(self):
         return self.wlcg_target("hists.root")
@@ -622,8 +626,10 @@ class GetScaleFactorWeights(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
+        binning_part = "optimized" if self.optimize_binning else "default"
+
         return super(GetScaleFactorWeights, self).store_parts() + (self.b_tagger,) \
-            + (self.iteration,) + (c_err_part,)
+            + (self.iteration,) + (binning_part,) + (c_err_part,)
 
     def output(self):
         return self.wlcg_target("stats_{}.json".format(self.branch))
@@ -795,7 +801,10 @@ class MergeScaleFactorWeights(AnalysisTask):
 
     def store_parts(self):
         c_err_part = "c_errors" if self.normalize_cerrs else "b_and_udsg"
-        return super(MergeScaleFactorWeights, self).store_parts() + (self.b_tagger,) + (self.iteration,) + (c_err_part,)
+        binning_part = "optimized" if self.optimize_binning else "default"
+
+        return super(MergeScaleFactorWeights, self).store_parts() + (self.b_tagger,) + (self.iteration,) \
+            + (binning_part,) + (c_err_part,)
 
     @law.decorator.notify
     def run(self):

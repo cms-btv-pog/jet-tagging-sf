@@ -51,10 +51,9 @@ dataset_data_D_ee = od.Dataset(
     "data_D_ee", 3,
     campaign=campaign,
     is_data=True,
-    n_files=8663,
-    keys=["/EGamma/Run2018D-PromptReco-v2/MINIAOD"],
+    n_files=8510,
+    keys=["/EGamma/Run2018D-22Jan2019-v2/MINIAOD"],
     context=campaign_name,
-    aux={"global_tag": "102X_dataRun2_Prompt_v15"},
 )
 
 datasets_data_ee = [
@@ -95,7 +94,6 @@ dataset_data_D_emu = od.Dataset(
     n_files=1373,
     keys=["/MuonEG/Run2018D-PromptReco-v2/MINIAOD"],
     context=campaign_name,
-    aux={"global_tag": "102X_dataRun2_Prompt_v15"},
 )
 
 datasets_data_emu = [
@@ -136,7 +134,6 @@ dataset_data_D_mumu = od.Dataset(
     n_files=2353,
     keys=["/DoubleMuon/Run2018D-PromptReco-v2/MINIAOD"],
     context=campaign_name,
-    aux={"global_tag": "102X_dataRun2_Prompt_v15"},
 )
 
 datasets_data_mumu = [
@@ -174,10 +171,9 @@ dataset_data_D_mu = od.Dataset(
     "data_D_mu", 33,
     campaign=campaign,
     is_data=True,
-    n_files=5533,
-    keys=["/SingleMuon/Run2018D-PromptReco-v2/MINIAOD"],
+    n_files=5195,
+    keys=["/SingleMuon/Run2018D-22Jan2019-v2/MINIAOD"],
     context=campaign_name,
-    aux={"global_tag": "102X_dataRun2_Prompt_v15"},
 )
 
 datasets_data_mu = [
@@ -219,7 +215,6 @@ dataset_data_D_e = od.Dataset(
     n_files=dataset_data_D_ee.n_files,
     keys=dataset_data_D_ee.keys,
     context=campaign_name,
-    aux={"global_tag": "102X_dataRun2_Prompt_v15"},
 )
 
 datasets_data_e = [

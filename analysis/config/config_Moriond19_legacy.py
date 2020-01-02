@@ -189,18 +189,18 @@ def create_config(base_cfg):
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod3",
-        "MergeTrees": "prod3",
-        "MergeMetaData": "prod3",
-        "WriteHistograms": "prod4",
-        "MergeHistograms": "prod4",
-        "MeasureCScaleFactors": "prod4",
-        "MeasureScaleFactors": "prod4",
-        "FitScaleFactors": "prod6",  # new interpolation functions
-        "GetScaleFactorWeights": "prod4",
-        "MergeScaleFactorWeights": "prod4",
+        "WriteTrees": "prod7", # reduced jes scheme
+        "MergeTrees": "prod7",
+        "MergeMetaData": "prod7",
+        "WriteHistograms": "prod7",
+        "MergeHistograms": "prod7",
+        "MeasureCScaleFactors": "prod7",
+        "MeasureScaleFactors": "prod7",
+        "FitScaleFactors": "prod7",
+        "GetScaleFactorWeights": "prod7",
+        "MergeScaleFactorWeights": "prod7",
         "OptimizeBinning": "prod3",
-        "CreateScaleFactorResults": "prod6",
+        "CreateScaleFactorResults": "prod7",
     })
 
     return cfg

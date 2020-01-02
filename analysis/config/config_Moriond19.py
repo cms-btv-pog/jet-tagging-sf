@@ -214,19 +214,19 @@ def create_config(base_cfg):
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod11",  # new JES, HEM fix, prod11 for MC (HEM JES shift), prod10 for data
-        "MergeTrees": "prod10",  # new JES, HEM fix
-        "MergeMetaData": "prod10",  # new JES, HEM fix
-        "WriteHistograms": "prod12",  # new JES, HEM fix
-        "MergeHistograms": "prod14",  # new JES, HEM fix (ran on grid)
-        "MeasureCScaleFactors": "prod10",  # new JES, HEM fix
-        "MeasureScaleFactors": "prod10",  # new JES, HEM fix
-        "FitScaleFactors": "prod10",  # new JES, HEM fix
-        "BundleScaleFactors": "prod10",  # new JES, HEM fix
-        "GetScaleFactorWeights": "prod10",  # new JES, HEM fix
-        "MergeScaleFactorWeights": "prod10",  # new JES, HEM fix
+        "WriteTrees": "prod15", # reduced jes sources
+        "MergeTrees": "prod15",
+        "MergeMetaData": "prod15",
+        "WriteHistograms": "prod15",
+        "MergeHistograms": "prod15",
+        "MeasureCScaleFactors": "prod15",
+        "MeasureScaleFactors": "prod15",
+        "FitScaleFactors": "prod15",
+        "BundleScaleFactors": "prod15",
+        "GetScaleFactorWeights": "prod15",
+        "MergeScaleFactorWeights": "prod15",
         "OptimizeBinning": "prod1",
-        "CreateScaleFactorResults": "prod11", # use function instead of hist
+        "CreateScaleFactorResults": "prod15",
     })
 
     # add sl categories

@@ -6,7 +6,7 @@ action() {
     [ -z "$scram_cores" ] && scram_cores="1"
 
     export SCRAM_ARCH="${JTSF_DIST_VERSION}_amd64_gcc700"
-    export CMSSW_VERSION="CMSSW_10_2_15"
+    export CMSSW_VERSION="CMSSW_10_2_18"
     [ -z "$CMSSW_BASE" ] && export CMSSW_BASE="$JTSF_DATA/cmssw/$SCRAM_ARCH/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
@@ -37,7 +37,7 @@ action() {
         git clone git@github.com:cms-data/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
 
         # fix for new JER version
-        git cms-merge-topic ahinzmann:resolutionSmearingFix102
+        # git cms-merge-topic ahinzmann:resolutionSmearingFix102
 
         # deterministic seed producer
         git cms-merge-topic yrath:deterministicSeeds_102X

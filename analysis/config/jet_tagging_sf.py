@@ -75,7 +75,7 @@ if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19":
     jes_sources_factorized.insert(0, "HEMIssue")
     jes_sources_reduced =  ["Absolute", "Absolute_2018", "BBEC1", "BBEC1_2018", "EC2",
         "EC2_2018", "FlavorQCD", "HF", "HF_2018", "RelativeBal", "RelativeSample_2018",
-        "HEMIssue", "Total"]
+        "Total", "HEMIssue"]
 
 if os.environ["JTSF_CAMPAIGN"] == "2017_Run2_pp_13TeV_ICHEP18":
     jes_sources_reduced = ["Absolute", "Absolute_2017", "BBEC1", "BBEC1_2017", "EC2",
@@ -105,7 +105,7 @@ cfg.set_aux("jes_levels", {
 # add auxiliary info to base config
 cfg.set_aux("sandboxes", {
     "slc6": "singularity::/cvmfs/singularity.opensciencegrid.org/bbockelm/cms:rhel6",
-    "NO_SANDBOX": "singularity::None",
+    "NO_SANDBOX": "NO_STR",
 })
 
 cfg.set_aux("btaggers", {

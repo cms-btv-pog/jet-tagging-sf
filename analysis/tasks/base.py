@@ -478,7 +478,6 @@ class UploadSoftware(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxT
 
     def __init__(self, *args, **kwargs):
         super(UploadSoftware, self).__init__(*args, **kwargs)
-        self.source_path = self.env["JTSF_SOFTWARE"] + ".tgz"
 
     def store_parts(self):
         sl_dist_version = self.env["JTSF_DIST_VERSION"]
@@ -489,6 +488,7 @@ class UploadSoftware(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxT
 
     def run(self):
         # create the local bundle
+        self.source_path = self.env["JTSF_SOFTWARE"] + ".tgz"
         bundle = law.LocalFileTarget(self.source_path, is_tmp=True)
         def _filter(tarinfo):
             return None if re.search("(\.pyc|\/\.git|\.tgz)$", tarinfo.name) else tarinfo

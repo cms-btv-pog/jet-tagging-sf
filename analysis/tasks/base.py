@@ -312,7 +312,7 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
         return config
 
     def arc_workflow_requires(self):
-        reqs = law.ARCWorkflow.arc_workflow_requires(self)
+        reqs = law.arc.ARCWorkflow.arc_workflow_requires(self)
         self._setup_workflow_requires(reqs)
         return reqs
 
@@ -326,7 +326,7 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
         return self.glite_bootstrap_file()
 
     def arc_job_config(self, config, job_num, branches):
-        config = law.ARCWorkflow.arc_job_config(self, config, job_num, branches)
+        config = law.arc.ARCWorkflow.arc_job_config(self, config, job_num, branches)
         self._setup_render_variables(config, self.arc_workflow_requires())
         return config
 

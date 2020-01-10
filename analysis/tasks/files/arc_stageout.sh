@@ -23,11 +23,7 @@ action() {
 
         if [ -f "$src_dir/$file_name" ]; then
             echo "stageout $msg_name $src_dir/$file_name"
-            unset GFAL_PLUGIN_DIR
-            PATH="$PATH_ORIG" \
-                PYTHONPATH="$PYTHONPATH_ORIG" \
-                LD_LIBRARY_PATH="$LD_LIBRARY_PATH_ORIG" \
-                gfal-copy "$src_dir/$file_name" "$output_uri/$file_name"
+            gfal-copy --force "$src_dir/$file_name" "$output_uri/$file_name"
         else
             2>&1 echo "cannot stageout missing $msg_name $src_dir/$file_name"
         fi

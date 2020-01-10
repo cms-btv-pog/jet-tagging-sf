@@ -148,6 +148,8 @@ action() {
     else
         export GLOBUS_THREAD_MODEL="none"
         export LD_LIBRARY_PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib:$LD_LIBRARY_PATH"
+        export PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/bin:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/sbin:$PATH"
+        export PYTHONPATH="$PYTHONPATH:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64/python2.7/site-packages/"
     fi
 
     # add _this_ repo

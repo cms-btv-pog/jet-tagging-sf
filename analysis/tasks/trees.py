@@ -77,12 +77,15 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow)
         if self.stream_input_file:
             input_file = xrd_url
         else:
-            input_file = "file://" + tmp_dir.child("input_file.root", type="f").path
-            cmd = "xrdcp-old {} {}".format(xrd_url, input_file)
-            with self.publish_step("download input file from {} ...".format(xrd_url)):
-                code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash")[0]
-                if code != 0:
-                    raise Exception("xrdcp failed")
+            dirname, basename = os.path.split(xrd_url)
+            input_target = law.wlcg.WLCGFileTarget(basename,
+                fs=law.wlcg.WLCGFileSystem(base=dirname, cache_config=None))
+            local_input_target = tmp_dir.child("input_file.root", type="f")
+            with self.publish_step("download input file ...", runtime=True):
+                input_file = input_target.copy_to_local(local_input_target)
+                input_file = law.target.file.add_scheme(input_file, "file")
+                self.publish_message("size is {:.2f} {}".format(
+                    *law.util.human_bytes(local_input_target.stat.st_size)))
 
         # cmsRun argument helper
         def cmsRunArg(key, value):
@@ -163,7 +166,7 @@ class WriteTreesWrapper(WrapperTask):
 
 class MergeTrees(DatasetTask, law.tasks.CascadeMerge, GridWorkflow, HTCondorWorkflow):
 
-    merge_factor = 8
+    merge_factor = 25
 
     workflow_run_decorators = [law.decorator.notify]
 
@@ -297,17 +300,24 @@ class MeasureTreeSizes(AnalysisTask):
         total_files = 0
         total_merged_files = 0
 
+        cfg = law.config.Config.instance()
+
         for dataset in self.config_inst.datasets:
             print(" dataset {} ".format(dataset.name).center(80, "-"))
 
             # determine the full url to the remote directory, split it into uberftp door and path
             task = WriteTrees.req(self, dataset=dataset.name)
-            url = task.output()["collection"].dir.uri()
-            m = re.match(r"^.+//(.*)\:\d+/.+(/pnfs/.+)$", url)
-            if not m:
-                print("cannot parse url for dataset {}: {}".format(dataset.name, url))
+            url_path = task.output()["collection"].dir.uri()
+            url_door = cfg.get("wlcg_fs", "base_listdir")
+            m_path = re.match(r"^.+//(.*)\:\d+/.+(/pnfs/.+)$", url_path)
+            m_door = re.match(r"^.+//(.*).+(/pnfs/.+)$", url_door)
+            if (not m_path or not m_door):
+                print("cannot parse url for dataset {}: {}, {}".format(
+                    dataset.name, url_path, url_door)
+                )
                 continue
-            door, path = m.groups()
+            _, path = m_path.groups()
+            door, _ = m_door.groups()
 
             # run uberftp to fetch the sizes per file in bytes
             cmd = "uberftp -glob on {} 'ls {}/tree_*.root'".format(door, path)

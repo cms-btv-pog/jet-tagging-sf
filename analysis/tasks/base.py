@@ -19,6 +19,7 @@ import six
 
 from law.workflow.base import BaseWorkflow
 from law.util import make_list, tmp_file, interruptable_popen
+from law.parameter import NO_STR
 
 from analysis.config.jet_tagging_sf import analysis
 from analysis.util import calc_checksum
@@ -35,7 +36,7 @@ class AnalysisTask(law.Task):
 
     output_collection_cls = law.target.collection.SiblingFileCollection
 
-    config = luigi.Parameter(default=None)
+    config = luigi.Parameter(default=NO_STR)
 
     accepts_messages = True
     message_cache_size = 20
@@ -45,7 +46,7 @@ class AnalysisTask(law.Task):
     def __init__(self, *args, **kwargs):
         super(AnalysisTask, self).__init__(*args, **kwargs)
 
-        if self.config is None:
+        if self.config == NO_STR:
             self.config = os.environ["JTSF_CAMPAIGN"]
 
         self.analysis_inst = analysis
@@ -326,7 +327,6 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
         return self.glite_bootstrap_file()
 
     def arc_job_config(self, config, job_num, branches):
-        config = law.arc.ARCWorkflow.arc_job_config(self, config, job_num, branches)
         self._setup_render_variables(config, self.arc_workflow_requires())
         return config
 
@@ -422,10 +422,9 @@ class AnalysisSandboxTask(law.SandboxTask):
         return cmds
 
     def __init__(self, *args, **kwargs):
+        self.singularity_forward_law = lambda: False
+        self.singularity_allow_binds = lambda: False
         super(AnalysisSandboxTask, self).__init__(*args, **kwargs)
-        if self.sandbox_inst is not None:
-            self.sandbox_inst.forward_env = False
-            self.sandbox_inst.allow_binds = False
 
 
 class UploadCMSSW(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxTask,

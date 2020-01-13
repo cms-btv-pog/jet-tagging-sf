@@ -2,9 +2,9 @@
 
 
 __all__ = [
-    "calc_checksum", "wget", "call_thread", "determine_xrd_redirector", "parse_leaf_list",
-    "get_tree_names", "get_trees", "copy_trees", "TreeExtender", "TreeInFileExtender",
-    "walk_categories", "format_shifts", "build_hist_envelope",
+    "calc_checksum", "wget", "call_thread", "call_proc", "determine_xrd_redirector",
+    "parse_leaf_list", "get_tree_names", "get_trees", "copy_trees", "TreeExtender",
+    "TreeInFileExtender", "walk_categories", "format_shifts", "build_hist_envelope",
 ]
 
 
@@ -14,6 +14,7 @@ import itertools
 import collections
 import subprocess
 import threading
+import multiprocessing
 import Queue
 import re
 
@@ -97,25 +98,55 @@ def call_thread(func, args=(), kwargs=None, timeout=None):
         return q.get() + (False,)
 
 
-def determine_xrd_redirector(lfn, timeout=30):
-    import ROOT
-    ROOT.gROOT.SetBatch()
+def call_proc(func, args=(), kwargs=None, timeout=None):
+    """
+    Execute a function *func* in a process and aborts the call when *timeout* is reached. *args* and
+    *kwargs* are forwarded to the function. The return value is a 3-tuple:
+    ``(finsihed_in_time, func(), err)``.
+    """
+    def wrapper(q, *args, **kwargs):
+        try:
+            ret = (func(*args, **kwargs), None)
+        except Exception as e:
+            ret = (None, str(e))
+        q.put(ret)
 
+    q = multiprocessing.Queue(1)
+
+    proc = multiprocessing.Process(target=wrapper, args=(q,) + args, kwargs=kwargs or {})
+    proc.start()
+    proc.join(timeout)
+
+    if proc.is_alive():
+        proc.terminate()
+        return (False, None, None)
+    else:
+        return (True,) + q.get()
+
+
+def determine_xrd_redirector(lfn, timeout=30, redirectors=None, check_tfile=None):
     pfn = lambda rdr: "root://{}/{}".format(rdr, lfn)
 
-    def check(pfn):
+    def check(pfn, check_tfile):
+        import ROOT
+        ROOT.PyConfig.IgnoreCommandLineOptions = True
+        ROOT.gROOT.SetBatch()
+
         t = ROOT.TFile.Open(pfn)
+
+        if callable(check_tfile) and check_tfile(t) is False:
+            raise Exception("custom tfile check failed")
+
         t.Close()
 
-    for rdr in 2 * xrd_redirectors:
-        _, err, timedout = call_thread(check, (pfn(rdr),), timeout=timeout)
-        if not timedout and err is None:
-            redirector = rdr
-            break
-    else:
-        raise Exception("could not determine redirector to load %s" % lfn)
+    for timeout in law.util.make_list(timeout):
+        for rdr in xrd_redirectors:
+            print("check redirector {} (timeout {}s)".format(rdr, timeout))
+            finished, _, err = call_proc(check, (pfn(rdr), check_tfile), timeout=timeout)
+            if finished and err is None:
+                return rdr
 
-    return redirector
+    raise Exception("could not determine redirector to load {}".format(lfn))
 
 
 root_array_types = {

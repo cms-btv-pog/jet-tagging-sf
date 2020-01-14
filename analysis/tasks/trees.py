@@ -69,23 +69,18 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow)
         jes_unc_src_file = setup_files["jes_unc_src_file"] if self.dataset_inst.is_mc else ""
 
         # determine the xrd redirector and download the file
-        if os.environ["JTSF_DIST_VERSION"] == "slc6":
-            redirector = determine_xrd_redirector(lfn)
-        else:
-            redirector = random.choice(xrd_redirectors)
+        redirector = determine_xrd_redirector(lfn)
         xrd_url = "root://{}/{}".format(redirector, lfn)
+
         if self.stream_input_file:
             input_file = xrd_url
         else:
-            dirname, basename = os.path.split(xrd_url)
-            input_target = law.wlcg.WLCGFileTarget(basename,
-                fs=law.wlcg.WLCGFileSystem(base=dirname, cache_config=None))
-            local_input_target = tmp_dir.child("input_file.root", type="f")
-            with self.publish_step("download input file ...", runtime=True):
-                input_file = input_target.copy_to_local(local_input_target)
-                input_file = law.target.file.add_scheme(input_file, "file")
-                self.publish_message("size is {:.2f} {}".format(
-                    *law.util.human_bytes(local_input_target.stat.st_size)))
+            input_file = "file://" + tmp_dir.child("input_file.root", type="f").path
+            cmd = "xrdcp-old {} {}".format(xrd_url, input_file)
+            with self.publish_step("download input file from {} ...".format(xrd_url)):
+                code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash")[0]
+                if code != 0:
+                    raise Exception("xrdcp failed")
 
         # cmsRun argument helper
         def cmsRunArg(key, value):

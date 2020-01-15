@@ -35,7 +35,7 @@ law index
 law run InstallCMSSWCode
 ```
 
-To let the tasks talk to a central luigi scheduler, you need to set `$JRST_SCHEDULER_HOST`.
+To let the tasks talk to a central luigi scheduler, you need to set `$JTSF_SCHEDULER_HOST`.
 
 ### Running Tasks
 

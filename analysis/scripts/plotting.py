@@ -166,17 +166,16 @@ class PlotFromCSV(AnalysisTask):
 
                         root_file = ROOT.TFile.Open(input_file)
 
-                        hist_name = "csv_ratio_Pt{}_Eta{}_final".format(pt_idx, eta_idx)
+                        func_name = "csv_ratio_Pt{}_Eta{}_final".format(pt_idx, eta_idx)
                         if self.flavor == "c":
-                            hist_name = "c_" + hist_name
-                        hist = root_file.Get(hist_name)
+                            func_name = "c_" + func_name
 
-                        x_values = []
+                        func = root_file.Get(func_name)
+
                         y_values = []
-                        for i in xrange(1, hist.GetNbinsX() + 1):
-                            x_val = hist.GetBinCenter(i)
-                            y_val = hist.GetBinContent(i)
-                            x_values.append(x_val)
+                        x_values = np.linspace(-0.1, 1., 10000)
+                        for csv_value in x_values:
+                            y_val = func.Eval(csv_value)
                             y_values.append(y_val)
 
                         ax.plot(x_values, y_values, label="{}, {}".format(".root", "nominal"))

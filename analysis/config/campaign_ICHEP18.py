@@ -301,140 +301,6 @@ dataset_tt_sl = od.Dataset(
 
 # Drell-Yan
 
-# TODO: Add when available (current one is mislabelled)
-#dataset_dy_lep_4To50_Ht70To100 = od.Dataset(
-#    "dy_lep_4To50_Ht70To100", 2211,
-#    campaign=campaign,
-#    n_files=121,
-#    keys=[
-#        "/DYJetsToLL_M-4to50_HT-70to100_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
-#    ],
-#)
-
-dataset_dy_lep_4To50_Ht100To200 = od.Dataset(
-    "dy_lep_4To50_Ht100To200", 2212,
-    campaign=campaign,
-    n_files=114 + 15,
-    keys=[
-        "/DYJetsToLL_M-4to50_HT-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-        "/DYJetsToLL_M-4to50_HT-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_4To50_Ht200To400 = od.Dataset(
-    "dy_lep_4To50_Ht200To400", 2213,
-    campaign=campaign,
-    n_files=19,
-    keys=[
-        "/DYJetsToLL_M-4to50_HT-200to400_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_4To50_Ht400To600 = od.Dataset(
-    "dy_lep_4To50_Ht400To600", 2214,
-    campaign=campaign,
-    n_files=19,
-    keys=[
-        "/DYJetsToLL_M-4to50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_4To50_Ht600ToInf = od.Dataset(
-    "dy_lep_4To50_Ht600ToInf", 2215,
-    campaign=campaign,
-    n_files=34,
-    keys=[
-        "/DYJetsToLL_M-4to50_HT-600toInf_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_50ToInf_Ht70To100 = od.Dataset(
-    "dy_lep_50ToInf_Ht70To100", 2221,
-    campaign=campaign,
-    n_files=207,
-    keys=[
-        "/DYJetsToLL_M-50_HT-70to100_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_50ToInf_Ht100To200 = od.Dataset(
-    "dy_lep_50ToInf_Ht100To200", 2222,
-    campaign=campaign,
-    n_files=153 + 61,
-    keys=[
-        "/DYJetsToLL_M-50_HT-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-        "/DYJetsToLL_M-50_HT-100to200_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_50ToInf_Ht200To400 = od.Dataset(
-    "dy_lep_50ToInf_Ht200To400", 2223,
-    campaign=campaign,
-    n_files=202 + 22,
-    keys=[
-        "/DYJetsToLL_M-50_HT-200to400_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-        "/DYJetsToLL_M-50_HT-200to400_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_50ToInf_Ht400To600 = od.Dataset(
-    "dy_lep_50ToInf_Ht400To600", 2224,
-    campaign=campaign,
-    n_files=147 + 23,
-    keys=[
-        "/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-        "/DYJetsToLL_M-50_HT-400to600_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14_ext1-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_50ToInf_Ht600To800 = od.Dataset(
-    "dy_lep_50ToInf_Ht600To800", 2225,
-    campaign=campaign,
-    n_files=158,
-    keys=[
-        "/DYJetsToLL_M-50_HT-600to800_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_50ToInf_Ht800To1200 = od.Dataset(
-    "dy_lep_50ToInf_Ht800To1200", 2226,
-    campaign=campaign,
-    n_files=66,
-    keys=[
-        "/DYJetsToLL_M-50_HT-800to1200_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_50ToInf_Ht1200To2500 = od.Dataset(
-    "dy_lep_50ToInf_Ht1200To2500", 2227,
-    campaign=campaign,
-    n_files=15,
-    keys=[
-        "/DYJetsToLL_M-50_HT-1200to2500_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
-dataset_dy_lep_50ToInf_Ht2500ToInf = od.Dataset(
-    "dy_lep_50ToInf_Ht2500ToInf", 2228,
-    campaign=campaign,
-    n_files=10,
-    keys=[
-        "/DYJetsToLL_M-50_HT-2500toInf_TuneCP5_13TeV-madgraphMLM-pythia8/RunIIFall17MiniAODv2-PU2017_12Apr2018_94X_mc2017_realistic_v14-v1/MINIAODSIM",
-    ],
-    context=campaign_name,
-)
-
 dataset_dy_lep_10To50 = od.Dataset(
     "dy_lep_10To50", 2230,
     campaign=campaign,
@@ -653,24 +519,11 @@ for d in datasets_data_mu:
 
 dataset_tt_dl.add_process(process_tt_dl)
 dataset_tt_sl.add_process(process_tt_sl)
-#dataset_dy_lep_4To50_Ht70To100.add_process(process_dy_lep_5To50_Ht70To100)  # TODO: 5To50 okay? # TODO: enable
-dataset_dy_lep_4To50_Ht100To200.add_process(process_dy_lep_5To50_Ht100To200)  # TODO: 5To50 okay?
-dataset_dy_lep_4To50_Ht200To400.add_process(process_dy_lep_5To50_Ht200To400)  # TODO: 5To50 okay?
-dataset_dy_lep_4To50_Ht400To600.add_process(process_dy_lep_5To50_Ht400To600)  # TODO: 5To50 okay?
-dataset_dy_lep_4To50_Ht600ToInf.add_process(process_dy_lep_5To50_Ht600ToInf)  # TODO: 5To50 okay?
 dataset_dy_lep_10To50.add_process(process_dy_lep_10To50)
 dataset_dy_lep_50ToInf.add_process(process_dy_lep_50ToInf)
 dataset_dy_lep_0Jets.add_process(process_dy_lep_0Jets)
 dataset_dy_lep_1Jets.add_process(process_dy_lep_1Jets)
 dataset_dy_lep_2Jets.add_process(process_dy_lep_2Jets)
-dataset_dy_lep_50ToInf_Ht70To100.add_process(process_dy_lep_50ToInf_Ht70To100)
-dataset_dy_lep_50ToInf_Ht100To200.add_process(process_dy_lep_50ToInf_Ht100To200)
-dataset_dy_lep_50ToInf_Ht200To400.add_process(process_dy_lep_50ToInf_Ht200To400)
-dataset_dy_lep_50ToInf_Ht400To600.add_process(process_dy_lep_50ToInf_Ht400To600)
-dataset_dy_lep_50ToInf_Ht600To800.add_process(process_dy_lep_50ToInf_Ht600To800)
-dataset_dy_lep_50ToInf_Ht800To1200.add_process(process_dy_lep_50ToInf_Ht800To1200)
-dataset_dy_lep_50ToInf_Ht1200To2500.add_process(process_dy_lep_50ToInf_Ht1200To2500)
-dataset_dy_lep_50ToInf_Ht2500ToInf.add_process(process_dy_lep_50ToInf_Ht2500ToInf)
 dataset_st_s_lep.add_process(process_st_s_lep)
 dataset_st_t_t.add_process(process_st_t_t)
 dataset_st_t_tbar.add_process(process_st_t_tbar)

@@ -501,7 +501,8 @@ class PlotScaleFactor(PlotTask):
             down_shifted_hists = defaultdict(dict)
             down_shifted_fit_hists = defaultdict(dict)
 
-            normalization_input = config_input.pop("norm")
+            if self.fix_normalization:
+                normalization_input = config_input.pop("norm")
             for shift_idx, (shift, inp_target) in enumerate(config_input.items()):
                 # get scaling factors for normalization
                 if self.fix_normalization:

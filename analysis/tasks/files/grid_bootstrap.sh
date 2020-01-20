@@ -29,6 +29,7 @@ action() {
     export PATH_ORIG="$PATH"
     export PYTHONPATH_ORIG="$PYTHONPATH"
     export LD_LIBRARY_PATH_ORIG="$LD_LIBRARY_PATH"
+    export GFAL_PLUGIN_DIR_ORIG="$GFAL_PLUGIN_DIR"
 
     export JTSF_DATA="$TMP/jtsf_data"
     export JTSF_SOFTWARE="$JTSF_DATA/software"
@@ -50,6 +51,7 @@ action() {
         export PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/bin/:$PATH"
         export GLOBUS_THREAD_MODEL="none"
         export LD_LIBRARY_PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib:$LD_LIBRARY_PATH"
+        export GFAL_PLUGIN_DIR="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64/gfal2-plugins"
     fi
 
     #
@@ -94,5 +96,6 @@ action() {
 
     # source the repo setup
     source "jet-tagging-sf/setup.sh"
+    cd $LAW_JOB_HOME
 }
 action "$@"

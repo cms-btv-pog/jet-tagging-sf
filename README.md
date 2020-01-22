@@ -1,5 +1,9 @@
 # Jet Tagging Scale Factors Measurement
 
+### Scale factor method
+
+The scale factors calculated with this repository are designed to calibrate the shape of b-tagging discriminants (currently DeepCSV and DeepJet) for heavy flavor and light flavor jets.
+
 ### Implementation Info
 
 The *Luigi Analysis Workflow* (**law**) package is used to structure the scale factor measurement.
@@ -39,19 +43,4 @@ To let the tasks talk to a central luigi scheduler, you need to set `$JTSF_SCHED
 
 ### Running Tasks
 
-##### `WriteTrees`
-
-```shell
-# example
-law run WriteTrees --dataset data_B_ee --version prod1 --grid-ce CNAF --poll-interval 1 --transfer-logs
-```
-
-### Available Grid CEs
-
-- `RWTH`
-- `RWTH_short`
-- `DESY`
-- `CNAF`
-- `IRFU`
-- `IIHE`
-- `CIEMAT`
+Check the wiki page of this repository for instructions on how to run the tasks required for the SF calculations.

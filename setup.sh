@@ -40,14 +40,15 @@ action() {
         fi
     fi
 
-    # default CMSSW setup when on VISPA
-    [ "$JTSF_ON_VISPA" = "1" ] && export JTSF_CMSSW_SETUP="NONE"
-
     # other defaults
     [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/$JTSF_DIST_VERSION/software/$( whoami )"
     [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
     [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
-    [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="Moriond19"
+    [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="Legacy18"
+    [ -z "$JTSF_CAMPAIGN" ] && export JTSF_CAMPAIGN="Run2_pp_13TeV_$JTSF_CMSSW_SETUP"
+
+    # default CMSSW setup when on VISPA
+    [ "$JTSF_ON_VISPA" = "1" ] && export JTSF_CMSSW_SETUP="NONE"
 
     # law and luigi setup
     export LAW_HOME="$JTSF_BASE/.law"
@@ -83,7 +84,7 @@ action() {
     #
 
     jtsf_install_pip() {
-        pip install --ignore-installed --no-cache-dir --prefix "$JTSF_SOFTWARE" "$@"
+        pip2 install --ignore-installed --no-cache-dir --prefix "$JTSF_SOFTWARE" "$@"
     }
     export -f jtsf_install_pip
 
@@ -146,10 +147,12 @@ action() {
     if [ $JTSF_DIST_VERSION == "slc6" ]; then
         source "$JTSF_SOFTWARE/gfal2/setup.sh" || return "$?"
     else
-        export GLOBUS_THREAD_MODEL="none"
-        export LD_LIBRARY_PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib:$LD_LIBRARY_PATH"
-        export PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/bin:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/sbin:$PATH"
-        export PYTHONPATH="$PYTHONPATH:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64/python2.7/site-packages/"
+        if [ "$JTSF_CMSSW_SETUP" = "NONE" ]; then
+            export GLOBUS_THREAD_MODEL="none"
+            export LD_LIBRARY_PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib:$LD_LIBRARY_PATH"
+            export PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/bin:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/sbin:$PATH"
+            export PYTHONPATH="$PYTHONPATH:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64/python2.7/site-packages/"
+        fi
     fi
 
     # add _this_ repo

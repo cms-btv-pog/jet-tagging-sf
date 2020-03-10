@@ -2,7 +2,7 @@
 # flake8: noqa
 
 """
-Defintion of the campaign and datasets for 2016 legacy rereco data for Moriond 2019.
+Defintion of the campaign and datasets for 2016 legacy rereco data.
 """
 
 
@@ -12,7 +12,7 @@ from analysis.config.processes import *
 
 
 # campaign
-campaign_name = "2018_Run2_pp_13TeV_MORIOND19legacy"
+campaign_name = "Run2_pp_13TeV_Legacy16"
 campaign = od.Campaign(
     campaign_name, 2,
     ecm=13,

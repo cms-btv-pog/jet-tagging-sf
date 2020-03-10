@@ -544,19 +544,19 @@ void TreeMaker::beginJob()
     std::cout << "total variables: " << varMap_.size() << std::endl;
 
     // set campaign specific information
-    if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19legacy")
+    if (campaign_ == "Run2_pp_13TeV_Legacy16")
     {
         tightJetID_ = &TreeMaker::tightJetID_2016;
         pileupJetIdWP_ = 4;
         maxJetEta_ = 2.4;
     }
-    else if (campaign_ == "2017_Run2_pp_13TeV_ICHEP18")
+    else if (campaign_ == "Run2_pp_13TeV_Legacy17")
     {
         tightJetID_ = &TreeMaker::tightJetID_2017;
         pileupJetIdWP_ = 4;
         maxJetEta_ = 2.5;
     }
-    else if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19")
+    else if (campaign_ == "Run2_pp_13TeV_Legacy18")
     {
         tightJetID_ = &TreeMaker::tightJetID_2018;
         pileupJetIdWP_ = 4;
@@ -1485,7 +1485,7 @@ void TreeMaker::applyJER(pat::Jet& jet, const std::vector<reco::GenJet>* genJets
         { JME::Binning::JetEta, jet.eta() }, { JME::Binning::Rho, rho } });
 
     double sf = 0.;
-    if (campaign_ == "2018_Run2_pp_13TeV_MORIOND19")
+    if (campaign_ == "Run2_pp_13TeV_Legacy18")
     {
         sf = jerScaleFactor_->getScaleFactor({ {JME::Binning::JetPt, jet.pt() },
             { JME::Binning::JetEta, jet.eta() } }, v);

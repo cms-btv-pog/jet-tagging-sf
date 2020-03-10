@@ -234,11 +234,11 @@ try:
             "applyEnergyCorrections": False,
             "applyVIDOnCorrectedEgamma": False,
     }
-    if options.campaign == "2018_Run2_pp_13TeV_MORIOND19":
+    if options.campaign == "Run2_pp_13TeV_Legacy18":
         params["era"] = "2018-Prompt"
-    elif options.campaign == "2017_Run2_pp_13TeV_ICHEP18":
+    elif options.campaign == "Run2_pp_13TeV_Legacy17":
         params["era"] = "2017-Nov17ReReco"
-    elif options.campaign == "2018_Run2_pp_13TeV_MORIOND19legacy":
+    elif options.campaign == "Run2_pp_13TeV_Legacy16":
         params["runEnergyCorrections"] = False
         params["era"] = "2016-Legacy"
     else:
@@ -260,7 +260,7 @@ try:
     electronCollection = cms.InputTag("correctedElectrons", "", process.name_())
 
     # updated MET Filter:
-    if options.campaign in ["2018_Run2_pp_13TeV_MORIOND19", "2017_Run2_pp_13TeV_ICHEP18"]:
+    if options.campaign in ["Run2_pp_13TeV_Legacy18", "Run2_pp_13TeV_Legacy17"]:
         process.load('RecoMET.METFilters.ecalBadCalibFilter_cfi')
 
         baddetEcallist = cms.vuint32(
@@ -294,7 +294,7 @@ try:
         "muonColl" : muonCollection.value(),
         "jetCollUnskimmed" : jetCollection.value(),
     }
-    if options.campaign == "2017_Run2_pp_13TeV_ICHEP18":
+    if options.campaign == "Run2_pp_13TeV_Legacy17":
         params["fixEE2017"] = True
         params["fixEE2017Params"] = {"userawPt": True, "ptThreshold": 50.0, "minEtaThreshold": 2.65, "maxEtaThreshold": 3.139}
 
@@ -305,7 +305,7 @@ try:
     # add DeepJet discriminators
     from PhysicsTools.PatAlgos.tools.jetTools import updateJetCollection
 
-    if options.campaign != "2018_Run2_pp_13TeV_MORIOND19":
+    if options.campaign != "Run2_pp_13TeV_Legacy18":
         updateJetCollection(
            process,
            jetSource = jetCollection,
@@ -384,7 +384,7 @@ try:
     process.treeMaker.muonCollection = muonCollection
     process.treeMaker.metCollection = metCollection
     process.treeMaker.jetCollection = jetCollection
-    process.treeMaker.applyHEMFilter = cms.bool(True) if options.campaign == "2018_Run2_pp_13TeV_MORIOND19" else cms.bool(False)
+    process.treeMaker.applyHEMFilter = cms.bool(True) if options.campaign == "Run2_pp_13TeV_Legacy18" else cms.bool(False)
 
     # additional configuration
     process.maxEvents = cms.untracked.PSet(input=cms.untracked.int32(options.maxEvents))

@@ -4,10 +4,10 @@ import scinum as sn
 import numpy as np
 
 def create_config(base_cfg):
-    # setup the config for ICHEP 2018
-    from analysis.config.campaign_ICHEP18 import campaign as campaign_ICHEP18
+    # setup the config for 2017 data
+    from analysis.config.campaign_Legacy17 import campaign as campaign_Legacy17
     from analysis.config.jet_tagging_sf import ch_ee, ch_emu, ch_mumu
-    cfg = base_cfg.copy(campaign=campaign_ICHEP18)
+    cfg = base_cfg.copy(campaign=campaign_Legacy17)
 
     # add datasets
     dataset_names = [
@@ -30,7 +30,7 @@ def create_config(base_cfg):
     ]
 
     for dataset_name in dataset_names:
-        dataset = campaign_ICHEP18.get_dataset(dataset_name)
+        dataset = campaign_Legacy17.get_dataset(dataset_name)
         cfg.add_dataset(dataset)
 
     # store channels per real dataset

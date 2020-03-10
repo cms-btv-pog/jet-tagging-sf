@@ -54,8 +54,5 @@ action() {
 
     cd "$origin"
 
-    # set default campaign
-    export JTSF_CAMPAIGN="2018_Run2_pp_13TeV_MORIOND19"
-
 }
 action "$@"

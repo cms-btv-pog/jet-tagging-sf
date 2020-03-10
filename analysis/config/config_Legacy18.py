@@ -3,10 +3,10 @@
 import scinum as sn
 
 def create_config(base_cfg):
-    # setup the config for Moriond 2019 (2018 data)
-    from analysis.config.campaign_Moriond19 import campaign as campaign_Moriond19
+    # setup the config for 2018 data
+    from analysis.config.campaign_Legacy18 import campaign as campaign_Legacy18
     from analysis.config.jet_tagging_sf import ch_ee, ch_emu, ch_mumu
-    cfg = base_cfg.copy(campaign=campaign_Moriond19)
+    cfg = base_cfg.copy(campaign=campaign_Legacy18)
     ch_e = cfg.add_channel("e", 4)
     ch_mu = cfg.add_channel("mu", 5)
 
@@ -31,7 +31,7 @@ def create_config(base_cfg):
     ]
 
     for dataset_name in dataset_names:
-        dataset = campaign_Moriond19.get_dataset(dataset_name)
+        dataset = campaign_Legacy18.get_dataset(dataset_name)
         cfg.add_dataset(dataset)
 
     # store channels per real dataset

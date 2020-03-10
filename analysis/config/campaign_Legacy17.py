@@ -2,7 +2,7 @@
 # flake8: noqa
 
 """
-Defintion of the campaign and datasets for 2017 data for ICHEP 2018.
+Defintion of the campaign and datasets for 2017 data.
 """
 
 
@@ -12,7 +12,7 @@ from analysis.config.processes import *
 
 
 # campaign
-campaign_name = "2017_Run2_pp_13TeV_ICHEP18"
+campaign_name = "Run2_pp_13TeV_Legacy17"
 campaign = od.Campaign(
     campaign_name, 1,
     ecm=13,

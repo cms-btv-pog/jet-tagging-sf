@@ -70,19 +70,19 @@ xrd_redirectors = ["xrootd-cms.infn.it", "cms-xrd-global.cern.ch", "cmsxrootd.fn
 if os.environ.get("JTSF_CAMPAIGN", None) is None:
     raise Exception("JTSF campaign has to be defined.")
 
-if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19":
+if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy18":
     jes_sources_factorized.insert(0, "AbsoluteSample")
     jes_sources_factorized.insert(0, "HEMIssue")
     jes_sources_reduced =  ["Absolute", "Absolute_2018", "BBEC1", "BBEC1_2018", "EC2",
         "EC2_2018", "FlavorQCD", "HF", "HF_2018", "RelativeBal", "RelativeSample_2018",
         "Total", "HEMIssue"]
 
-if os.environ["JTSF_CAMPAIGN"] == "2017_Run2_pp_13TeV_ICHEP18":
+if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy17":
     jes_sources_reduced = ["Absolute", "Absolute_2017", "BBEC1", "BBEC1_2017", "EC2",
         "EC2_2017", "FlavorQCD", "HF", "HF_2017", "RelativeBal", "RelativeSample_2017",
         "Total"]
 
-if os.environ["JTSF_CAMPAIGN"] == "2018_Run2_pp_13TeV_MORIOND19legacy":
+if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy16":
     jes_sources_reduced = ["Absolute", "Absolute_2016", "BBEC1", "BBEC1_2016", "EC2",
         "EC2_2016", "FlavorQCD", "HF", "HF_2016", "RelativeBal", "RelativeSample_2016",
         "Total"]
@@ -668,23 +668,23 @@ def get_file_merging(cfg, key, dataset):
 cfg.set_aux("get_file_merging", get_file_merging)
 
 # add specific configs
-from analysis.config.config_ICHEP18 import create_config as create_config_ICHEP18
-config_ICHEP18 = create_config_ICHEP18(cfg)
-add_btag_variables(config_ICHEP18)
-add_categories(config_ICHEP18, "deepcsv")
-add_categories(config_ICHEP18, "deepjet")
+from analysis.config.config_Legacy17 import create_config as create_config_Legacy17
+config_Legacy17 = create_config_Legacy17(cfg)
+add_btag_variables(config_Legacy17)
+add_categories(config_Legacy17, "deepcsv")
+add_categories(config_Legacy17, "deepjet")
 
-from analysis.config.config_Moriond19 import create_config as create_config_Moriond19
-config_Moriond19 = create_config_Moriond19(cfg)
-add_btag_variables(config_Moriond19)
-add_categories(config_Moriond19, "deepcsv")
-add_categories(config_Moriond19, "deepjet")
+from analysis.config.config_Legacy18 import create_config as create_config_Legacy18
+config_Legacy18 = create_config_Legacy18(cfg)
+add_btag_variables(config_Legacy18)
+add_categories(config_Legacy18, "deepcsv")
+add_categories(config_Legacy18, "deepjet")
 
-from analysis.config.config_Moriond19_legacy import create_config as create_config_Moriond19_legacy
-config_Moriond19_legacy = create_config_Moriond19_legacy(cfg)
-add_btag_variables(config_Moriond19_legacy)
-add_categories(config_Moriond19_legacy, "deepcsv")
-add_categories(config_Moriond19_legacy, "deepjet")
-config_Moriond19_legacy.get_aux("binning")["lf"]["abs(eta)"] = [0., 0.8, 1.6, 2.4]
-config_Moriond19_legacy.get_aux("binning")["hf"]["abs(eta)"] = [0., 2.4]
-config_Moriond19_legacy.get_aux("binning")["c"]["abs(eta)"] = [0., 2.4]
+from analysis.config.config_Legacy16 import create_config as create_config_Legacy16
+config_Legacy16 = create_config_Legacy16(cfg)
+add_btag_variables(config_Legacy16)
+add_categories(config_Legacy16, "deepcsv")
+add_categories(config_Legacy16, "deepjet")
+config_Legacy16.get_aux("binning")["lf"]["abs(eta)"] = [0., 0.8, 1.6, 2.4]
+config_Legacy16.get_aux("binning")["hf"]["abs(eta)"] = [0., 2.4]
+config_Legacy16.get_aux("binning")["c"]["abs(eta)"] = [0., 2.4]

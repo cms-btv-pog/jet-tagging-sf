@@ -147,7 +147,7 @@ action() {
     if [ $JTSF_DIST_VERSION == "slc6" ]; then
         source "$JTSF_SOFTWARE/gfal2/setup.sh" || return "$?"
     else
-        if [ "$JTSF_CMSSW_SETUP" = "NONE" ]; then
+        if [ "$JTSF_CMSSW_SETUP" != "NONE" ]; then
             export GLOBUS_THREAD_MODEL="none"
             export LD_LIBRARY_PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib:$LD_LIBRARY_PATH"
             export PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/bin:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/sbin:$PATH"

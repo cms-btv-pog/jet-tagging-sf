@@ -241,6 +241,8 @@ try:
     elif options.campaign == "Run2_pp_13TeV_Legacy16":
         params["runEnergyCorrections"] = False
         params["era"] = "2016-Legacy"
+    elif options.campaign == "Run2_pp_13TeV_UltraLegacy17":
+        params["era"] = "2017-UL"
     else:
         raise ValueError("Unknown campaign {}".format(options.campaign))
     setupEgammaPostRecoSeq(process, **params)
@@ -260,6 +262,7 @@ try:
     electronCollection = cms.InputTag("correctedElectrons", "", process.name_())
 
     # updated MET Filter:
+    # https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2
     if options.campaign in ["Run2_pp_13TeV_Legacy18", "Run2_pp_13TeV_Legacy17"]:
         process.load('RecoMET.METFilters.ecalBadCalibFilter_cfi')
 
@@ -286,6 +289,7 @@ try:
         seq += process.ecalBadCalibReducedMINIAODFilter
 
     # MET correction
+    # https://twiki.cern.ch/twiki/bin/viewauth/CMS/MissingETUncertaintyPrescription
     from PhysicsTools.PatUtils.tools.runMETCorrectionsAndUncertainties import runMetCorAndUncFromMiniAOD
     params = {
         "isData" : options.isData,

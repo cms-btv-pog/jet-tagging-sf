@@ -550,7 +550,7 @@ void TreeMaker::beginJob()
         pileupJetIdWP_ = 4;
         maxJetEta_ = 2.4;
     }
-    else if (campaign_ == "Run2_pp_13TeV_Legacy17")
+    else if (campaign_ == "Run2_pp_13TeV_Legacy17" || campaign_ == "Run2_pp_13TeV_UltraLegacy17")
     {
         tightJetID_ = &TreeMaker::tightJetID_2017;
         pileupJetIdWP_ = 4;

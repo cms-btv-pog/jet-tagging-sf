@@ -151,7 +151,7 @@ def create_config(base_cfg):
     })
 
     # JER
-    cfg.set_aux("jer_version", "Fall17_V3")
+    cfg.set_aux("jer_version", "Summer19UL17")
 
     # JES
     cfg.set_aux("jes_version", {

@@ -104,7 +104,8 @@ cfg.set_aux("jes_levels", {
 
 # add auxiliary info to base config
 cfg.set_aux("sandboxes", {
-    "slc6": "singularity::/cvmfs/singularity.opensciencegrid.org/bbockelm/cms:rhel6",
+    "slc6": "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel6-m20200612",
+    "slc7": "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7-m20200612",
     "NO_SANDBOX": "NO_STR",
 })
 

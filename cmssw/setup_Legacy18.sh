@@ -21,35 +21,46 @@ action() {
         eval `scramv1 runtime -sh`
         scram b
 
-        #
-        # custom topics
-        #
+        if [ "$JTSF_ON_GRID" == "1" ]; then # unpack custom installation from .tgz
+            cd "$( dirname "$CMSSW_BASE" )"
+            if [ -f "cmssw.tgz" ]; then
+                tar -xzvf "cmssw.tgz" --directory $CMSSW_BASE
+                rm "cmssw.tgz"
+            fi
+            cd "$CMSSW_BASE/src"
+        else
+            #
+            # custom topics
+            #
 
-        # https://twiki.cern.ch/twiki/bin/view/CMS/EgammaPostRecoRecipes
-        git cms-merge-topic cms-egamma:EgammaPostRecoTools
-        git cms-merge-topic cms-egamma:PhotonIDValueMapSpeedup1029 #optional but speeds up the photon ID value module so things fun faster
-        git cms-merge-topic cms-egamma:slava77-btvDictFix_10210 #fixes the Run2018D dictionary issue, see https://github.com/cms-sw/cmssw/issues/26182
-        scram b -j "$scram_cores"
+            # https://twiki.cern.ch/twiki/bin/view/CMS/EgammaPostRecoRecipes
+            git cms-merge-topic cms-egamma:EgammaPostRecoTools
+            git cms-merge-topic cms-egamma:PhotonIDValueMapSpeedup1029 #optional but speeds up the photon ID value module so things fun faster
+            git cms-merge-topic cms-egamma:slava77-btvDictFix_10210 #fixes the Run2018D dictionary issue, see https://github.com/cms-sw/cmssw/issues/26182
+            scram b -j "$scram_cores"
 
-        # E-gamma
-        git cms-addpkg EgammaAnalysis/ElectronTools  #check out the package otherwise code accessing it will crash
-        rm EgammaAnalysis/ElectronTools/data -rf   #delete the data directory so we can populate it ourselves
-        git clone git@github.com:cms-data/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
+            # E-gamma
+            git cms-addpkg EgammaAnalysis/ElectronTools  #check out the package otherwise code accessing it will crash
+            rm EgammaAnalysis/ElectronTools/data -rf   #delete the data directory so we can populate it ourselves
+            git clone git@github.com:cms-data/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
 
-        # fix for new JER version
-        # git cms-merge-topic ahinzmann:resolutionSmearingFix102
+            # fix for new JER version
+            # git cms-merge-topic ahinzmann:resolutionSmearingFix102
 
-        # deterministic seed producer
-        git cms-merge-topic yrath:deterministicSeeds_102X
+            # deterministic seed producer
+            #git cms-merge-topic yrath:deterministicSeeds_102X
+            git fetch git@github.com:yrath/cmssw.git deterministicSeeds_106X && git cherry-pick aa1ff1709e66e3c44570d562e77ad125559cc6f2
 
-        # MET
-        git cms-addpkg RecoMET/METFilters
+            # MET
+            git cms-addpkg RecoMET/METFilters
+        fi
 
         scram b -j "$scram_cores"
 
     else
         cd "$CMSSW_BASE/src"
         eval `scramv1 runtime -sh`
+        scram build
     fi
 
     cd "$origin"

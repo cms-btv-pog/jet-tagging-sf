@@ -15,18 +15,20 @@ import law
 import luigi
 import six
 
-from analysis.tasks.base import AnalysisTask, DatasetTask, WrapperTask, GridWorkflow, HTCondorWorkflow
+from analysis.tasks.base import AnalysisTask, DatasetTask, WrapperTask, GridWorkflow, HTCondorWorkflow, AnalysisSandboxTask
 from analysis.tasks.external import GetDatasetLFNs, DownloadSetupFiles
 from analysis.util import wget, determine_xrd_redirector
 from analysis.config.jet_tagging_sf import xrd_redirectors
 
-class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow):
+
+class WriteTrees(DatasetTask, AnalysisSandboxTask, GridWorkflow, law.LocalWorkflow):
 
     max_events = luigi.IntParameter(default=law.NO_INT)
-
     workflow_run_decorators = [law.decorator.notify]
 
     stream_input_file = False
+
+    sandbox = "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7-m20200612"
 
     def workflow_requires(self):
         if self.cancel_jobs or self.cleanup_jobs:
@@ -69,18 +71,19 @@ class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow)
         jes_unc_src_file = setup_files["jes_unc_src_file"] if self.dataset_inst.is_mc else ""
 
         # determine the xrd redirector and download the file
-        redirector = determine_xrd_redirector(lfn)
+        redirector = xrd_redirectors[0] #determine_xrd_redirector(lfn)
         xrd_url = "root://{}/{}".format(redirector, lfn)
 
         if self.stream_input_file:
             input_file = xrd_url
         else:
-            input_file = "file://" + tmp_dir.child("input_file.root", type="f").path
-            cmd = "xrdcp-old {} {}".format(xrd_url, input_file)
+            input_file = "input_file.root"
+            cmd = "xrdcp {} {}".format(xrd_url, input_file)
             with self.publish_step("download input file from {} ...".format(xrd_url)):
-                code = law.util.interruptable_popen(cmd, shell=True, executable="/bin/bash")[0]
+                code = law.util.interruptable_popen(cmd, shell=True, cwd=tmp_dir.path, executable="/bin/bash")[0]
                 if code != 0:
                     raise Exception("xrdcp failed")
+            input_file = "file://" + os.path.join(tmp_dir.path, input_file)
 
         # cmsRun argument helper
         def cmsRunArg(key, value):
@@ -159,7 +162,7 @@ class WriteTreesWrapper(WrapperTask):
     wrapped_task = WriteTrees
 
 
-class MergeTrees(DatasetTask, law.tasks.CascadeMerge, GridWorkflow, HTCondorWorkflow):
+class MergeTrees(DatasetTask, AnalysisSandboxTask, law.tasks.CascadeMerge, GridWorkflow):
 
     merge_factor = 25
 

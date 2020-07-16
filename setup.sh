@@ -152,6 +152,7 @@ action() {
             export LD_LIBRARY_PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib:$LD_LIBRARY_PATH"
             export PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/bin:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/sbin:$PATH"
             export PYTHONPATH="$PYTHONPATH:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64/python2.7/site-packages/"
+            export GFAL_PLUGIN_DIR="/cvmfs/grid.cern.ch/centos7-umd4-ui-4.0.3-1_191004/usr/lib64/gfal2-plugins/"
         fi
     fi
 

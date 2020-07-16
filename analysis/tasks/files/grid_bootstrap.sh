@@ -32,15 +32,17 @@ action() {
     export GFAL_PLUGIN_DIR_ORIG="$GFAL_PLUGIN_DIR"
 
     export JTSF_DATA="$TMP/jtsf_data"
-    export JTSF_SOFTWARE="$JTSF_DATA/software"
+    export JTSF_SOFTWARE="$JTSF_DATA/$JTSF_DIST_VERSION/software"
+    export SANDBOX_JTSF_SOFTWARE="$JTSF_DATA/{{sandbox_jtsf_dist_version}}/software"
+
     export JTSF_STORE="$JTSF_DATA/store"
     export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
-    export JTSF_GRID_USER="{{jtsf_grid_user}}"
-    export JTSF_CMSSW_SETUP="{{jtsf_cmssw_setup}}"
 
-    export SCRAM_ARCH="{{scram_arch}}"
-    export CMSSW_VERSION="{{cmssw_version}}"
-    export CMSSW_BASE="$JTSF_DATA/cmssw/$CMSSW_VERSION"
+    export JTSF_GRID_USER="{{jtsf_grid_user}}"
+
+    export JTSF_CMSSW_SETUP="{{jtsf_cmssw_setup}}"
+    export SANDBOX_CMSSW_VERSION="{{sandbox_cmssw_version}}"
+    export SANDBOX_CMSSW_BASE="$JTSF_DATA/cmssw/{{sandbox_scram_arch}}/$SANDBOX_CMSSW_VERSION"
 
     export JTSF_ON_GRID="1"
 
@@ -58,14 +60,9 @@ action() {
     # load CMSSW
     #
 
-    source "/cvmfs/cms.cern.ch/cmsset_default.sh"
-    mkdir -p "$( dirname "$CMSSW_BASE" )"
-    cd "$( dirname "$CMSSW_BASE" )"
-    scramv1 project CMSSW "$CMSSW_VERSION"
-    cd "$CMSSW_VERSION"
-    load_replica "{{cmssw_base_url}}" "$CMSSW_VERSION\.\d+\.tgz" "cmssw.tgz"
-    tar -xzf "cmssw.tgz"
-    rm "cmssw.tgz"
+    mkdir -p "$( dirname "$SANDBOX_CMSSW_BASE" )"
+    cd "$( dirname "$SANDBOX_CMSSW_BASE" )"
+    load_replica "{{cmssw_base_url}}" "$SANDBOX_CMSSW_VERSION\.\d+\.tgz" "cmssw.tgz"
     cd "$TMP"
 
     #
@@ -79,6 +76,15 @@ action() {
     rm "software.tgz"
     cd "$TMP"
 
+    if [[ "$JTSF_SOFTWARE" != "$SANDBOX_JTSF_SOFTWARE" ]]; then
+        mkdir -p "$SANDBOX_JTSF_SOFTWARE"
+        cd "$SANDBOX_JTSF_SOFTWARE"
+        load_replica "{{sandbox_software_base_url}}" "software\.\d+\.tgz" "software.tgz"
+        tar -xzf "software.tgz"
+        rm "software.tgz"
+        cd "$TMP"
+    fi
+
     #
     # load the repo bundle
     #
@@ -87,12 +93,9 @@ action() {
     tar -xzf "repo.tgz"
     rm "repo.tgz"
 
-    # setup CMSSW
-
-    cd "$CMSSW_BASE/src"
-    eval `scramv1 runtime -sh`
-    scram build
-    cd "$TMP"
+    # copy user proxy
+    cp $X509_USER_PROXY "grid.proxy"
+    export SANDBOX_X509_USER_PROXY="$TMP/grid.proxy"
 
     # source the repo setup
     source "jet-tagging-sf/setup.sh"

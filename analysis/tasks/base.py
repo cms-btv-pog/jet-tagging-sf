@@ -240,7 +240,7 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
     }
 
     sl_distribution_map = collections.defaultdict(lambda: "slc7", {"RWTH": "slc6"})
-    req_sandbox = "NO_SANDBOX"
+    req_sandbox = "slc7" # sandbox to run in on the grid
 
     grid_ce = law.CSVParameter(default=["RWTH"], significant=False, description="target computing "
         "element(s)")
@@ -267,28 +267,25 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
 
         if not len(set([self.sl_distribution_map[ce] for ce in self.grid_ce])) == 1:
             raise Exception("Cannot submit to multiple CEs running different distributions.")
-
-        if self.sl_distribution_map[self.grid_ce[0]] != self.sl_dist_version:
-            self.req_sandbox = self.sl_distribution_map[self.grid_ce[0]]
+        self.remote_sl_dist_version = self.sl_distribution_map[self.grid_ce[0]]
 
         reqs["cmssw"] = UploadCMSSW.req(self, replicas=10, _prefer_cli=["replicas"],
             sandbox=self.config_inst.get_aux("sandboxes")[self.req_sandbox])
         reqs["software"] = UploadSoftware.req(self, replicas=10, _prefer_cli=["replicas"],
+            sandbox=self.config_inst.get_aux("sandboxes")[self.remote_sl_dist_version])
+        reqs["sandbox_software"] = UploadSoftware.req(self, replicas=10, _prefer_cli=["replicas"],
             sandbox=self.config_inst.get_aux("sandboxes")[self.req_sandbox])
         reqs["repo"] = UploadRepo.req(self, replicas=10, _prefer_cli=["replicas"])
 
     def _setup_render_variables(self, config, reqs):
         config.render_variables["jtsf_grid_user"] = os.getenv("JTSF_GRID_USER")
         config.render_variables["jtsf_cmssw_setup"] = os.getenv("JTSF_CMSSW_SETUP")
+        config.render_variables["sandbox_jtsf_dist_version"] = self.req_sandbox
         config.render_variables["cmssw_base_url"] = reqs["cmssw"].output().dir.uri()
 
-        scram_arch = os.getenv("SCRAM_ARCH")
-        if self.req_sandbox != "NO_SANDBOX":
-            scram_arch = scram_arch.replace(self.sl_dist_version, self.req_sandbox)
-        config.render_variables["scram_arch"] = scram_arch
-
-        config.render_variables["cmssw_version"] = os.getenv("CMSSW_VERSION")
+        config.render_variables["sandbox_cmssw_version"] = os.getenv("CMSSW_VERSION")
         config.render_variables["software_base_url"] = reqs["software"].output().dir.uri()
+        config.render_variables["sandbox_software_base_url"] = reqs["sandbox_software"].output().dir.uri()
         config.render_variables["repo_checksum"] = reqs["repo"].checksum
         config.render_variables["repo_base"] = reqs["repo"].output().dir.uri()
 
@@ -410,21 +407,34 @@ class AnalysisSandboxTask(law.SandboxTask):
 
     allow_empty_sandbox = True
 
-    def sandbox_setup_cmds(self):
-        cmds = super(AnalysisSandboxTask, self).sandbox_setup_cmds()
-
-        cmds.append('export JTSF_CMSSW_SETUP="{}"'.format(os.environ["JTSF_CMSSW_SETUP"]))
-        cmds.append("source {}".format(os.path.join(os.environ["JTSF_BASE"], "setup.sh")))
-        cmds.append("source {}".format(os.path.join(
-            os.environ["JTSF_BASE"], "singularity", "setup_$JTSF_DIST_VERSION.sh"))
-        )
-
-        return cmds
-
     def __init__(self, *args, **kwargs):
         self.singularity_forward_law = lambda: False
         self.singularity_allow_binds = lambda: False
         super(AnalysisSandboxTask, self).__init__(*args, **kwargs)
+
+    def singularity_args(self):
+        if os.environ.get("JTSF_ON_GRID", 0) == "1":
+            return ["--bind", "/cvmfs"]
+        else:
+            return []
+
+    def sandbox_setup_cmds(self):
+        cmds = super(AnalysisSandboxTask, self).sandbox_setup_cmds()
+
+        if os.environ.get("JTSF_ON_GRID") == "1":
+            for var in ["JTSF_DATA", "JTSF_STORE", "JTSF_LOCAL_CACHE",
+                "JTSF_GRID_USER", "JTSF_ON_GRID", "TMP", "LAW_JOB_HOME"]:
+                cmds.append('export {}="{}"'.format(var, os.environ[var]))
+            # environment variables that may differ between sandbox and outer layer
+            for var in ["JTSF_SOFTWARE", "CMSSW_VERSION", "CMSSW_BASE", "X509_USER_PROXY"]:
+                cmds.append('export {}="{}"'.format(var, os.environ["SANDBOX_" + var]))
+
+        cmds.append('export JTSF_CMSSW_SETUP="{}"'.format(os.environ["JTSF_CMSSW_SETUP"]))
+        cmds.append("source {}".format(os.path.join(os.environ["JTSF_BASE"], "setup.sh")))
+        cmds.append("source {}".format(os.path.join(
+            os.environ["JTSF_BASE"], "singularity", "setup_slc7.sh"))
+        )
+        return cmds
 
 
 class UploadCMSSW(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxTask,

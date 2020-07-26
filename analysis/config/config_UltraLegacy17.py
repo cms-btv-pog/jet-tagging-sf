@@ -17,16 +17,16 @@ def create_config(base_cfg):
         #"data_B_e", "data_C_e", "data_D_e", "data_E_e", "data_F_e",
         #"data_B_mu", "data_C_mu", "data_D_mu", "data_E_mu", "data_F_mu",
         "tt_dl", "tt_sl",
-        "dy_lep_10To50",
-        #"dy_lep_50ToInf",
-        "dy_lep_0Jets", "dy_lep_1Jets", "dy_lep_2Jets",
+        #"dy_lep_10To50",
+        "dy_lep_50ToInf",
+        #"dy_lep_0Jets", "dy_lep_1Jets", "dy_lep_2Jets",
         "st_s_lep",
-        "st_t_t", "st_t_tbar",
-        "st_tW_t", "st_tW_tbar",
+        #"st_t_t", "st_t_tbar",
+        #"st_tW_t", "st_tW_tbar",
         "WW", "WZ", "ZZ",
         "W_lep",
-        "ttH",
-        "ttWJets_lep", "ttWJets_had", "ttZJets_lep", "ttZJets_had",
+        #"ttH",
+        #"ttWJets_lep", "ttWJets_had", "ttZJets_lep", "ttZJets_had",
     ]
 
     for dataset_name in dataset_names:
@@ -43,24 +43,24 @@ def create_config(base_cfg):
     # store b-tagger working points
     cfg.set_aux("working_points", {
         "deepcsv": {
-            "loose": 0.1522,
-            "medium": 0.4941,
-            "tight": 0.8001,
+            "loose": 0.1355,
+            "medium": 0.4506,
+            "tight": 0.7738,
         },
         "deepjet": {
-            "loose": 0.0521,
-            "medium": 0.3033,
-            "tight": 0.7489,
+            "loose": 0.0532,
+            "medium": 0.3040,
+            "tight": 0.7476,
         }
     })
 
     # luminosities per channel in /pb
     cfg.set_aux("lumi", {
-        ch_ee: 41296.082,
-        ch_emu: 41296.082,
-        ch_mumu: 41296.082,
-        #ch_e: 41296.082,
-        #ch_mu: 41296.082,
+        ch_ee: 41480.0,
+        ch_emu: 41480.0,
+        ch_mumu: 41480.0,
+        #ch_e: 41480.0,
+        #ch_mu: 41480.0,
     })
 
     # run ranges
@@ -156,14 +156,14 @@ def create_config(base_cfg):
     # JES
     cfg.set_aux("jes_version", {
         "data": [
-            rr["B"] + ("Summer19UL17_RunB_V4_DATA",),
-            rr["C"] + ("Summer19UL17_RunC_V4_DATA",),
-            rr["D"] + ("Summer19UL17_RunD_V4_DATA",),
-            rr["E"] + ("Summer19UL17_RunE_V4_DATA",),
-            rr["F"] + ("Summer19UL17_RunF_V4_DATA",),
+            rr["B"] + ("Summer19UL17_RunB_V5_DATA",),
+            rr["C"] + ("Summer19UL17_RunC_V5_DATA",),
+            rr["D"] + ("Summer19UL17_RunD_V5_DATA",),
+            rr["E"] + ("Summer19UL17_RunE_V5_DATA",),
+            rr["F"] + ("Summer19UL17_RunF_V5_DATA",),
         ],
         "mc": [
-            (1, int(1e9), "Summer19UL17_V4_MC"),
+            (1, int(1e9), "Summer19UL17_V5_MC"),
         ],
     })
 
@@ -202,24 +202,27 @@ def create_config(base_cfg):
     # file merging information (stage -> dataset -> files after merging)
     cfg.set_aux("file_merging", {
         "trees": {
+            "tt_dl": 155,
+            "tt_sl": 4,
+            "dy_lep_50ToInf": 73,
         }
     })
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod1",  # reduced jes sources
-        "MergeTrees": "prod1",
-        "MergeMetaData": "prod1",
-        "WriteHistograms": "prod1",
-        "MergeHistograms": "prod1",
-        "MeasureCScaleFactors": "prod1",
-        "MeasureScaleFactors": "prod1",
-        "FitScaleFactors": "prod1",
-        "BundleScaleFactors": "prod1",
-        "GetScaleFactorWeights": "prod1",
-        "MergeScaleFactorWeights": "prod1",
+        "WriteTrees": "prod2",  # reduced jes sources
+        "MergeTrees": "prod2",
+        "MergeMetaData": "prod2",
+        "WriteHistograms": "prod2",
+        "MergeHistograms": "prod2",
+        "MeasureCScaleFactors": "prod2",
+        "MeasureScaleFactors": "prod2",
+        "FitScaleFactors": "prod2",
+        "BundleScaleFactors": "prod2",
+        "GetScaleFactorWeights": "prod2",
+        "MergeScaleFactorWeights": "prod2",
         "OptimizeBinning": "prod1",
-        "CreateScaleFactorResults": "prod1",
+        "CreateScaleFactorResults": "prod2",
     })
 
     return cfg

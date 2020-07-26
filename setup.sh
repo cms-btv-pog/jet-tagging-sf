@@ -47,8 +47,9 @@ action() {
     [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="Legacy18"
     [ -z "$JTSF_CAMPAIGN" ] && export JTSF_CAMPAIGN="Run2_pp_13TeV_$JTSF_CMSSW_SETUP"
 
-    # default CMSSW setup when on VISPA
+    # default CMSSW setup when on VISPA or otherwise set
     [ "$JTSF_ON_VISPA" = "1" ] && export JTSF_CMSSW_SETUP="NONE"
+    [ "$JTSF_NO_CMSSW" = "1" ] && export JTSF_CMSSW_SETUP="NONE"
 
     # law and luigi setup
     export LAW_HOME="$JTSF_BASE/.law"
@@ -128,8 +129,8 @@ action() {
         jtsf_install_pip slackclient
         jtsf_install_pip docutils
         jtsf_install_pip git+https://github.com/riga/order.git@4b78ad6c06caee65f42e470a3c88fb61bba2d8f8
-        jtsf_install_pip git+https://github.com/spotify/luigi.git
-        LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip --no-dependencies git+https://github.com/riga/law.git
+        jtsf_install_pip git+https://github.com/spotify/luigi.git@2.8.13
+        LAW_INSTALL_CUSTOM_SCRIPT="1" jtsf_install_pip --no-dependencies git+https://github.com/riga/law.git@v0.0.37
 
         # gfal2
         if [ $JTSF_DIST_VERSION == "slc6" ]; then

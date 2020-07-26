@@ -184,6 +184,7 @@ private:
     JetID jetID(pat::Jet&, reco::RecoCandidate*, reco::RecoCandidate*, bool, bool);
     bool tightJetID_2016(pat::Jet&);
     bool tightJetID_2017(pat::Jet&);
+    bool tightJetID_UL2017(pat::Jet&);
     bool tightJetID_2018(pat::Jet&);
 
     // random helpers
@@ -550,12 +551,19 @@ void TreeMaker::beginJob()
         pileupJetIdWP_ = 4;
         maxJetEta_ = 2.4;
     }
-    else if (campaign_ == "Run2_pp_13TeV_Legacy17" || campaign_ == "Run2_pp_13TeV_UltraLegacy17")
+    else if (campaign_ == "Run2_pp_13TeV_Legacy17")
     {
         tightJetID_ = &TreeMaker::tightJetID_2017;
         pileupJetIdWP_ = 4;
         maxJetEta_ = 2.5;
     }
+    else if (campaign_ == "Run2_pp_13TeV_UltraLegacy17")
+    {
+        tightJetID_ = &TreeMaker::tightJetID_UL2017;
+        pileupJetIdWP_ = 4;
+        maxJetEta_ = 2.5;
+    }
+
     else if (campaign_ == "Run2_pp_13TeV_Legacy18")
     {
         tightJetID_ = &TreeMaker::tightJetID_2018;
@@ -1607,6 +1615,40 @@ bool TreeMaker::tightJetID_2017(pat::Jet& jet) {
     }
     return passPOGID;
 }
+
+bool TreeMaker::tightJetID_UL2017(pat::Jet& jet) {
+    bool passPOGID;
+    double absEta = fabs(jet.eta());
+
+    if (absEta <= 2.6)
+    {
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.nConstituents() > 1 &&
+            jet.chargedHadronEnergyFraction() > 0. &&
+            jet.chargedMultiplicity() > 0;
+    }
+    else if (absEta <= 2.7)
+    {
+        passPOGID = jet.neutralHadronEnergyFraction() < 0.9 &&
+            jet.neutralEmEnergyFraction() < 0.99 &&
+            jet.chargedMultiplicity() > 0;
+    }
+    else if (absEta <= 3.)
+    {
+        passPOGID = jet.neutralEmEnergyFraction() > 0.01 &&
+            jet.neutralEmEnergyFraction() < 0.99 &&
+            jet.neutralMultiplicity() > 1;
+    }
+    else
+    {
+        passPOGID = jet.neutralEmEnergyFraction() < 0.9 &&
+            jet.neutralHadronEnergyFraction() > 0.2 &&
+            jet.neutralMultiplicity() > 10;
+    }
+    return passPOGID;
+}
+
 
 bool TreeMaker::tightJetID_2018(pat::Jet& jet) {
     bool passPOGID;

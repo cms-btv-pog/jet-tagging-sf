@@ -377,9 +377,9 @@ dataset_st_s_lep = od.Dataset(
 dataset_st_t_t = od.Dataset(
     "st_t_t", 301,
     campaign=campaign,
-    n_files=0,
+    n_files=111,
     keys= [
-        "",
+        "/ST_t-channel_top_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer19UL17MiniAOD-106X_mc2017_realistic_v6-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -387,9 +387,9 @@ dataset_st_t_t = od.Dataset(
 dataset_st_t_tbar = od.Dataset(
     "st_t_tbar", 302,
     campaign=campaign,
-    n_files=0,
+    n_files=80,
     keys= [
-        "",
+        "/ST_t-channel_antitop_5f_InclusiveDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer19UL17MiniAOD-106X_mc2017_realistic_v6-v1/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -399,9 +399,9 @@ dataset_st_t_tbar = od.Dataset(
 dataset_st_tW_t = od.Dataset(
     "st_tW_t", 321,
     campaign=campaign,
-    n_files=0,
+    n_files=160,
     keys=[
-        "",
+        "/ST_tW_top_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer19UL17MiniAOD-106X_mc2017_realistic_v6-v3/MINIAODSIM",
     ],
     context=campaign_name,
 )
@@ -409,9 +409,9 @@ dataset_st_tW_t = od.Dataset(
 dataset_st_tW_tbar = od.Dataset(
     "st_tW_tbar", 322,
     campaign=campaign,
-    n_files=0,
+    n_files=149,
     keys=[
-        "",
+        "/ST_tW_antitop_5f_NoFullyHadronicDecays_TuneCP5_13TeV-powheg-pythia8/RunIISummer19UL17MiniAOD-106X_mc2017_realistic_v6-v3/MINIAODSIM",
     ],
     context=campaign_name,
 )

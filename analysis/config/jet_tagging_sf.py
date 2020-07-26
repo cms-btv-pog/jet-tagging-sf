@@ -58,7 +58,7 @@ ch_mumu = cfg.add_channel("mumu", 3)
 jes_sources_factorized = [
     "AbsoluteStat", "AbsoluteScale", "AbsoluteMPFBias", "Fragmentation", "SinglePionECAL",
     "SinglePionHCAL", "FlavorQCD", "TimePtEta", "RelativeJEREC1", "RelativeJEREC2", "RelativeJERHF",
-    "RelativePtBB", "RelativePtEC1", "RelativePtEC2", "RelativePtHF", "RelativeBal", "RelativeFSR",
+    "RelativePtBB", "RelativePtEC1", "RelativePtEC2", "RelativePtHF", "RelativeBal", "RelativeSample", "RelativeFSR",
     "RelativeStatFSR", "RelativeStatEC", "RelativeStatHF", "PileUpDataMC", "PileUpPtRef",
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
 ]
@@ -76,16 +76,16 @@ if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy18":
     jes_sources_reduced =  ["Absolute", "Absolute_2018", "BBEC1", "BBEC1_2018", "EC2",
         "EC2_2018", "FlavorQCD", "HF", "HF_2018", "RelativeBal", "RelativeSample_2018",
         "Total", "HEMIssue"]
-
 if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy17":
     jes_sources_reduced = ["Absolute", "Absolute_2017", "BBEC1", "BBEC1_2017", "EC2",
         "EC2_2017", "FlavorQCD", "HF", "HF_2017", "RelativeBal", "RelativeSample_2017",
         "Total"]
-
 if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy16":
     jes_sources_reduced = ["Absolute", "Absolute_2016", "BBEC1", "BBEC1_2016", "EC2",
         "EC2_2016", "FlavorQCD", "HF", "HF_2016", "RelativeBal", "RelativeSample_2016",
         "Total"]
+if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_UltraLegacy17":
+    jes_sources_reduced = []
 
 jes_sources_all = list(set(jes_sources_factorized + jes_sources_reduced))
 
@@ -93,7 +93,7 @@ cfg.set_aux("jes_sources_factorized", jes_sources_factorized[:])
 cfg.set_aux("jes_sources_reduced", jes_sources_reduced[:])
 cfg.set_aux("jes_sources_all", jes_sources_all[:])
 
-cfg.set_aux("jes_scheme", "reduced")
+cfg.set_aux("jes_scheme", "factorized")
 
 jes_sources = cfg.get_aux("jes_sources_{}".format(cfg.get_aux("jes_scheme")))
 
@@ -669,6 +669,12 @@ def get_file_merging(cfg, key, dataset):
 cfg.set_aux("get_file_merging", get_file_merging)
 
 # add specific configs
+from analysis.config.config_UltraLegacy17 import create_config as create_config_UltraLegacy17
+config_UltraLegacy17 = create_config_UltraLegacy17(cfg)
+add_btag_variables(config_UltraLegacy17)
+add_categories(config_UltraLegacy17, "deepcsv")
+add_categories(config_UltraLegacy17, "deepjet")
+
 from analysis.config.config_Legacy17 import create_config as create_config_Legacy17
 config_Legacy17 = create_config_Legacy17(cfg)
 add_btag_variables(config_Legacy17)

@@ -27,6 +27,7 @@ class WriteTrees(DatasetTask, AnalysisSandboxTask, GridWorkflow, law.LocalWorkfl
     workflow_run_decorators = [law.decorator.notify]
 
     stream_input_file = False
+    xrdcp_attempts = 3
 
     sandbox = "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7-m20200612"
 
@@ -71,7 +72,7 @@ class WriteTrees(DatasetTask, AnalysisSandboxTask, GridWorkflow, law.LocalWorkfl
         jes_unc_src_file = setup_files["jes_unc_src_file"] if self.dataset_inst.is_mc else ""
 
         # determine the xrd redirector and download the file
-        redirector = xrd_redirectors[0] #determine_xrd_redirector(lfn)
+        redirector = xrd_redirectors[1] #determine_xrd_redirector(lfn)
         xrd_url = "root://{}/{}".format(redirector, lfn)
 
         if self.stream_input_file:
@@ -79,10 +80,13 @@ class WriteTrees(DatasetTask, AnalysisSandboxTask, GridWorkflow, law.LocalWorkfl
         else:
             input_file = "input_file.root"
             cmd = "xrdcp {} {}".format(xrd_url, input_file)
-            with self.publish_step("download input file from {} ...".format(xrd_url)):
-                code = law.util.interruptable_popen(cmd, shell=True, cwd=tmp_dir.path, executable="/bin/bash")[0]
-                if code != 0:
-                    raise Exception("xrdcp failed")
+            for _ in range(self.xrdcp_attempts):
+                with self.publish_step("download input file from {} ...".format(xrd_url)):
+                    code = law.util.interruptable_popen(cmd, shell=True, cwd=tmp_dir.path, executable="/bin/bash")[0]
+                    if code == 0:
+                        break
+            else:
+                raise Exception("xrdcp failed")
             input_file = "file://" + os.path.join(tmp_dir.path, input_file)
 
         # cmsRun argument helper

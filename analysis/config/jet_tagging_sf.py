@@ -129,7 +129,7 @@ cfg.set_aux("flavor_ids", {
 
 # store binning information
 hf_binning = {
-    "pt": [20, 30, 50, 70, 100, np.inf],
+    "pt": [20, 30, 50, 70, 100, 140, 200, np.inf],
     "abs(eta)": [0., 2.5],
     "deepcsv": {
         "plotting": [
@@ -157,7 +157,7 @@ hf_binning = {
 
 cfg.set_aux("binning", {
     "lf": {
-        "pt": [20, 30, 40, 60, np.inf],
+        "pt": [20, 30, 40, 60, 100, np.inf],
         "abs(eta)": [0., 0.8, 1.6, 2.5],
         "deepcsv": {
             "plotting": [

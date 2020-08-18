@@ -342,6 +342,26 @@ try:
         seq.associate(process.deepFlavour)
         jetCollection = cms.InputTag("selectedUpdatedPatJetsNewDFTraining", "", process.name_())
 
+    # L1 prefiring weight
+    if options.campaign.endswith(("16", "17")) and not options.isData:
+        applyL1Weights = True
+        if options.campaign.endswith("17"):
+            data_era = "2017BtoF"
+        elif options.campaign.endswith("16"):
+            data_era = "2016BtoH"
+        else:
+            raise ValueError("campaign {} should not have l1 prefiring weights applied".format(options.campaign))
+
+        from PhysicsTools.PatUtils.l1ECALPrefiringWeightProducer_cfi import l1ECALPrefiringWeightProducer
+        process.prefiringweight = l1ECALPrefiringWeightProducer.clone(
+            DataEra = cms.string(data_era),
+            UseJetEMPt = cms.bool(False),
+            PrefiringRateSystematicUncty = cms.double(0.2),
+            SkipWarnings = False)
+        seq += process.prefiringweight
+    else:
+        applyL1Weights = False
+
     # deterministic seeds
     process.load("PhysicsTools.PatUtils.deterministicSeeds_cfi")
     process.deterministicSeeds.produceCollections = cms.bool(True)
@@ -389,6 +409,7 @@ try:
     process.treeMaker.metCollection = metCollection
     process.treeMaker.jetCollection = jetCollection
     process.treeMaker.applyHEMFilter = cms.bool(True) if options.campaign == "Run2_pp_13TeV_Legacy18" else cms.bool(False)
+    process.treeMaker.applyL1Weights = applyL1Weights
 
     # additional configuration
     process.maxEvents = cms.untracked.PSet(input=cms.untracked.int32(options.maxEvents))

@@ -219,6 +219,10 @@ private:
     double deepJetWP_;
     int pileupJetIdWP_;
     bool applyHEMFilter_; // add additional JES unc source for HEM issue and tag events with jet in HEM region
+    bool applyL1Weights_;
+    double prefiring_weight_;
+    double prefiring_weight_up_;
+    double prefiring_weight_down_;
     bool (TreeMaker::*tightJetID_)(pat::Jet&);
     double maxJetEta_;
 
@@ -236,6 +240,9 @@ private:
     edm::EDGetTokenT<std::vector<pat::Jet> > jetToken_;
     edm::EDGetTokenT<std::vector<reco::GenJet> > genJetToken_;
     edm::EDGetTokenT<double> rhoToken_;
+    edm::EDGetTokenT< double > prefweightToken_;
+    edm::EDGetTokenT< double > prefweightupToken_;
+    edm::EDGetTokenT< double > prefweightdownToken_;
 
     // additional members
     VarMap varMap_;
@@ -283,6 +290,7 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , deepCSVWP_(iConfig.getParameter<double>("deepCSVWP"))
     , deepJetWP_(iConfig.getParameter<double>("deepJetWP"))
     , applyHEMFilter_(iConfig.getParameter<bool>("applyHEMFilter"))
+    , applyL1Weights_(iConfig.getParameter<bool>("applyL1Weights"))
     , genInfoToken_(consumes<GenEventInfoProduct>(iConfig.getParameter<edm::InputTag>("genInfoCollection")))
     , triggerBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("triggerBitsCollection")))
     , metFilterBitsToken_(consumes<edm::TriggerResults>(iConfig.getParameter<edm::InputTag>("metFilterBitsCollection")))
@@ -296,6 +304,9 @@ TreeMaker::TreeMaker(const edm::ParameterSet& iConfig)
     , jetToken_(consumes<std::vector<pat::Jet> >(iConfig.getParameter<edm::InputTag>("jetCollection")))
     , genJetToken_(consumes<std::vector<reco::GenJet> >(iConfig.getParameter<edm::InputTag>("genJetCollection")))
     , rhoToken_(consumes<double>(iConfig.getParameter<edm::InputTag>("rhoCollection")))
+    , prefweightToken_(consumes<double>(edm::InputTag("prefiringweight:nonPrefiringProb")))
+    , prefweightupToken_(consumes<double>(edm::InputTag("prefiringweight:nonPrefiringProbUp")))
+    , prefweightdownToken_(consumes<double>(edm::InputTag("prefiringweight:nonPrefiringProbDown")))
     , tfile_(nullptr)
     , tfileMeta_(nullptr)
     , tree_(nullptr)
@@ -427,6 +438,12 @@ void TreeMaker::setupVariables()
     varMap_.addInt32("run");
     varMap_.addInt32("lumi");
     varMap_.addDouble("gen_weight");
+    if (applyL1Weights_)
+    {
+        varMap_.addDouble("prefiring_weight");
+        varMap_.addDouble("prefiring_weight_up");
+        varMap_.addDouble("prefiring_weight_down");
+    }
     varMap_.addFloat("pu");
     varMap_.addDouble("rho");
     varMap_.addInt32("channel");
@@ -609,6 +626,22 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     // read the generator generator infos
     double genWeight = isData_ ? 1. : readGenWeight(event);
 
+    // read L1 prefiring weight
+    if (applyL1Weights_)
+    {
+        edm::Handle<double> prefiring_weight;
+        event.getByToken(prefweightToken_, prefiring_weight);
+        prefiring_weight_ =(*prefiring_weight);
+
+        edm::Handle<double> prefiring_weight_up;
+        event.getByToken(prefweightupToken_, prefiring_weight_up);
+        prefiring_weight_up_ =(*prefiring_weight_up);
+
+        edm::Handle<double> prefiring_weight_down;
+        event.getByToken(prefweightdownToken_, prefiring_weight_down);
+        prefiring_weight_down_ =(*prefiring_weight_down);
+    }
+
     // fill hists
     double histPos = genWeight < 0 ? -0.5 : 0.5;
     eventHist_->Fill(histPos, 1.);
@@ -732,6 +765,13 @@ void TreeMaker::analyze(const edm::Event& event, const edm::EventSetup& iSetup)
     varMap_.setFloat("pu", pu);
     varMap_.setDouble("rho", rho);
     varMap_.setInt32("channel", int32_t(channel));
+
+    if (applyL1Weights_)
+    {
+        varMap_.setDouble("prefiring_weight", prefiring_weight_);
+        varMap_.setDouble("prefiring_weight_up", prefiring_weight_up_);
+        varMap_.setDouble("prefiring_weight_down", prefiring_weight_down_);
+    }
 
     // lepton variables
     size_t n_leps = is_sl ? 1 : 2;

@@ -41,11 +41,12 @@ action() {
     fi
 
     # other defaults
-    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/$JTSF_DIST_VERSION/software/$( whoami )"
-    [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
-    [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
     [ -z "$JTSF_CMSSW_SETUP" ] && export JTSF_CMSSW_SETUP="Legacy18"
     [ -z "$JTSF_CAMPAIGN" ] && export JTSF_CAMPAIGN="Run2_pp_13TeV_$JTSF_CMSSW_SETUP"
+    [ -z "$JTSF_SOFTWARE" ] && export JTSF_SOFTWARE="$JTSF_DATA/$JTSF_CMSSW_SETUP/$JTSF_DIST_VERSION/software/$( whoami )"
+    [ -z "$JTSF_STORE" ] && export JTSF_STORE="$JTSF_DATA/store"
+    [ -z "$JTSF_LOCAL_CACHE" ] && export JTSF_LOCAL_CACHE="$JTSF_DATA/cache"
+
 
     # default CMSSW setup when on VISPA or otherwise set
     [ "$JTSF_ON_VISPA" = "1" ] && export JTSF_CMSSW_SETUP="NONE"

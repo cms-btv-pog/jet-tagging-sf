@@ -217,11 +217,58 @@ class WrapperTask(AnalysisTask, law.WrapperTask):
         return collections.OrderedDict([(params, req(*params)) for params in params_list])
 
 
-class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
+class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
+
+    htcondor_pool = luigi.Parameter(default="", significant=False, description="target "
+        "htcondor pool")
+    htcondor_scheduler = luigi.Parameter(default="", significant=False, description="target "
+        "htcondor scheduler")
+
+    htcondor_ce = law.CSVParameter(default=(), significant=False, description="target arc computing "
+        "element(s), default: ()")
+
+    def htcondor_use_local_scheduler(self):
+        return True
+
+
+class AnalysisSandboxTask(law.SandboxTask):
+
+    allow_empty_sandbox = True
+    req_sandbox = "slc7" # sandbox key
+
+    def __init__(self, *args, **kwargs):
+        self.singularity_forward_law = lambda: False
+        self.singularity_allow_binds = lambda: False
+        super(AnalysisSandboxTask, self).__init__(*args, **kwargs)
+
+    def singularity_args(self):
+        if os.environ.get("JTSF_ON_GRID", 0) == "1":
+            return ["--bind", "/cvmfs", "-H", os.environ["LAW_JOB_HOME"]]
+        else:
+            return []
+
+    def sandbox_setup_cmds(self):
+        cmds = super(AnalysisSandboxTask, self).sandbox_setup_cmds()
+
+        if os.environ.get("JTSF_ON_GRID") == "1":
+            for var in ["JTSF_DATA", "JTSF_STORE", "JTSF_LOCAL_CACHE",
+                "JTSF_GRID_USER", "JTSF_ON_GRID", "TMP", "LAW_JOB_HOME"]:
+                cmds.append('export {}="{}"'.format(var, os.environ[var]))
+            # environment variables that may differ between sandbox and outer layer
+            for var in ["JTSF_SOFTWARE", "CMSSW_VERSION", "CMSSW_BASE", "X509_USER_PROXY"]:
+                cmds.append('export {}="{}"'.format(var, os.environ["SANDBOX_" + var]))
+
+        cmds.append('export JTSF_CMSSW_SETUP="{}"'.format(os.environ["JTSF_CMSSW_SETUP"]))
+        cmds.append("source {}".format(os.path.join(os.environ["JTSF_BASE"], "setup.sh")))
+        cmds.append("source {}".format(os.path.join(
+            os.environ["JTSF_BASE"], "singularity", "setup_{}.sh".format(self.req_sandbox)))
+        )
+        return cmds
+
+
+class GridWorkflow(AnalysisTask, AnalysisSandboxTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow, HTCondorWorkflow):
 
     glite_ce_map = {
-        "RWTH": "grid-ce.physik.rwth-aachen.de:8443/cream-pbs-cms",
-        "RWTH_short": "grid-ce.physik.rwth-aachen.de:8443/cream-pbs-short",
         "CNAF": [
             "ce04-lcg.cr.cnaf.infn.it:8443/cream-lsf-cms",
             "ce05-lcg.cr.cnaf.infn.it:8443/cream-lsf-cms",
@@ -238,12 +285,15 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
         "DESY": "grid-arcce0.desy.de",
         "KIT": ["arc-{}-kit.gridka.de".format(i) for i in range(1, 6 + 1)],
     }
+    htcondor_ce_map = {
+        "RWTH": "grid-ce-1-rwth.gridka.de grid-ce-1-rwth.gridka.de:9619",  # input to grid_resource
+    }
 
-    sl_distribution_map = collections.defaultdict(lambda: "slc7", {"RWTH": "slc6"})
-    req_sandbox = "slc7" # sandbox to run in on the grid
-
+    sl_distribution_map = collections.defaultdict(lambda: "slc7")
     grid_ce = law.CSVParameter(default=["RWTH"], significant=False, description="target computing "
         "element(s)")
+
+    sandbox = "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7-m20200612"
 
     exclude_params_branch = {"grid_ce"}
 
@@ -252,7 +302,17 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
         params = AnalysisTask.modify_param_values(params)
         if "workflow" in params and law.is_no_param(params["workflow"]):
             grid_ce = params["grid_ce"]
-            workflow = "arc" if grid_ce[0] in cls.arc_ce_map else "glite"
+
+            # figure out ce version
+            if grid_ce[0] in cls.arc_ce_map:
+                workflow = "arc"
+            elif grid_ce[0] in cls.glite_ce_map:
+                workflow = "glite"
+            elif grid_ce[0] in cls.htcondor_ce_map:
+                workflow = "htcondor"
+            else:
+                raise ValueError("Unknown computing element type {}".format(grid_ce[0]))
+
             ces = []
             for ce in grid_ce:
                 ces.append(getattr(cls, workflow + "_ce_map").get(ce, ce))
@@ -261,20 +321,16 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
         return params
 
     def _setup_workflow_requires(self, reqs):
-        # figure out if the CE runs the same operating system as we are
-        # if not, upload the software and cmssw from an appropriate sandbox
-        self.sl_dist_version = os.getenv("JTSF_DIST_VERSION")
-
         if not len(set([self.sl_distribution_map[ce] for ce in self.grid_ce])) == 1:
             raise Exception("Cannot submit to multiple CEs running different distributions.")
         self.remote_sl_dist_version = self.sl_distribution_map[self.grid_ce[0]]
 
         reqs["cmssw"] = UploadCMSSW.req(self, replicas=10, _prefer_cli=["replicas"],
-            sandbox=self.config_inst.get_aux("sandboxes")[self.req_sandbox])
+            sandbox=self.sandbox)
         reqs["software"] = UploadSoftware.req(self, replicas=10, _prefer_cli=["replicas"],
             sandbox=self.config_inst.get_aux("sandboxes")[self.remote_sl_dist_version])
         reqs["sandbox_software"] = UploadSoftware.req(self, replicas=10, _prefer_cli=["replicas"],
-            sandbox=self.config_inst.get_aux("sandboxes")[self.req_sandbox])
+            sandbox=self.sandbox)
         reqs["repo"] = UploadRepo.req(self, replicas=10, _prefer_cli=["replicas"])
 
     def _setup_render_variables(self, config, reqs):
@@ -289,6 +345,7 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
         config.render_variables["repo_checksum"] = reqs["repo"].checksum
         config.render_variables["repo_base"] = reqs["repo"].output().dir.uri()
 
+    # GLITE
     def glite_workflow_requires(self):
         reqs = law.glite.GLiteWorkflow.glite_workflow_requires(self)
         self._setup_workflow_requires(reqs)
@@ -309,6 +366,7 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
         config.vo = "cms:/cms/dcms"
         return config
 
+    # ARC
     def arc_workflow_requires(self):
         reqs = law.arc.ARCWorkflow.arc_workflow_requires(self)
         self._setup_workflow_requires(reqs)
@@ -330,36 +388,35 @@ class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow):
     def arc_stageout_file(self):
         return law.util.rel_path(__file__, "files", "arc_stageout.sh")
 
-
-class HTCondorWorkflow(law.htcondor.HTCondorWorkflow):
-    """
-    Batch systems are typically very heterogeneous by design, and so is HTCondor. Law does not aim
-    to "magically" adapt to all possible HTCondor setups which would certainly end in a mess.
-    Therefore we have to configure the base HTCondor workflow in law.contrib.htcondor to work with
-    the VISPA environment. In most cases, like in this example, only a minimal amount of
-    configuration is required.
-    """
-    htcondor_logs = luigi.BoolParameter()
-    htcondor_gpus = luigi.IntParameter(default=2, significant=False, description="number "
-        "of GPUs to request on the VISPA cluster")
+    # HTCONDOR
+    def htcondor_workflow_requires(self):
+        reqs = law.htcondor.HTCondorWorkflow.htcondor_workflow_requires(self)
+        self._setup_workflow_requires(reqs)
+        return reqs
 
     def htcondor_output_directory(self):
-        # the directory where submission meta data should be stored
-        return law.LocalDirectoryTarget(self.local_path())
+        return self.glite_output_directory()
+
+    def htcondor_output_uri(self):
+        return self.glite_output_uri()
+
+    def htcondor_bootstrap_file(self):
+        return self.glite_bootstrap_file()
 
     def htcondor_job_config(self, config, job_num, branches):
-        # copy the entire environment
-        config.custom_content.append(("getenv", "true"))
-        # condor logs
+        self._setup_render_variables(config, self.htcondor_workflow_requires())
+        config.render_variables["output_uri"] = self.htcondor_output_uri()
+        config.universe = "grid"
         config.stdout = "out.txt"
         config.stderr = "err.txt"
         config.log = "log.txt"
+        config.custom_content.append(("grid_resource", "condor {}".format(self.htcondor_ce[0])))
+        config.custom_content.append(("use_x509userproxy", "true"))
 
-        if self.htcondor_gpus > 0:
-            config.custom_content.append(("request_gpus", self.htcondor_gpus))
-
-        config.custom_content.append(("RequestMemory", "16000"))
         return config
+
+    def htcondor_stageout_file(self):
+        return self.arc_stageout_file()
 
 
 class InstallCMSSWCode(AnalysisTask):
@@ -401,40 +458,6 @@ class InstallCMSSWCode(AnalysisTask):
         output = self.output()
         output.parent.touch(0o0770)
         output.touch(self.checksum)
-
-
-class AnalysisSandboxTask(law.SandboxTask):
-
-    allow_empty_sandbox = True
-
-    def __init__(self, *args, **kwargs):
-        self.singularity_forward_law = lambda: False
-        self.singularity_allow_binds = lambda: False
-        super(AnalysisSandboxTask, self).__init__(*args, **kwargs)
-
-    def singularity_args(self):
-        if os.environ.get("JTSF_ON_GRID", 0) == "1":
-            return ["--bind", "/cvmfs"]
-        else:
-            return []
-
-    def sandbox_setup_cmds(self):
-        cmds = super(AnalysisSandboxTask, self).sandbox_setup_cmds()
-
-        if os.environ.get("JTSF_ON_GRID") == "1":
-            for var in ["JTSF_DATA", "JTSF_STORE", "JTSF_LOCAL_CACHE",
-                "JTSF_GRID_USER", "JTSF_ON_GRID", "TMP", "LAW_JOB_HOME"]:
-                cmds.append('export {}="{}"'.format(var, os.environ[var]))
-            # environment variables that may differ between sandbox and outer layer
-            for var in ["JTSF_SOFTWARE", "CMSSW_VERSION", "CMSSW_BASE", "X509_USER_PROXY"]:
-                cmds.append('export {}="{}"'.format(var, os.environ["SANDBOX_" + var]))
-
-        cmds.append('export JTSF_CMSSW_SETUP="{}"'.format(os.environ["JTSF_CMSSW_SETUP"]))
-        cmds.append("source {}".format(os.path.join(os.environ["JTSF_BASE"], "setup.sh")))
-        cmds.append("source {}".format(os.path.join(
-            os.environ["JTSF_BASE"], "singularity", "setup_slc7.sh"))
-        )
-        return cmds
 
 
 class UploadCMSSW(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxTask,

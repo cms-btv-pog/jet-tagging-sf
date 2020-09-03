@@ -42,7 +42,7 @@ action() {
             # E-gamma
             git cms-addpkg EgammaAnalysis/ElectronTools  #check out the package otherwise code accessing it will crash
             rm EgammaAnalysis/ElectronTools/data -rf   #delete the data directory so we can populate it ourselves
-            git clone git@github.com:cms-data/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
+            git clone https://github.com/cms-data/EgammaAnalysis-ElectronTools.git EgammaAnalysis/ElectronTools/data
 
             # fix for new JER version
             # git cms-merge-topic ahinzmann:resolutionSmearingFix102

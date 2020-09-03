@@ -15,13 +15,13 @@ from order.util import join_root_selection
 from collections import defaultdict
 
 from analysis.config.jet_tagging_sf import CategoryGetter
-from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow, HTCondorWorkflow
+from analysis.tasks.base import AnalysisTask, DatasetTask, ShiftTask, WrapperTask, GridWorkflow, AnalysisSandboxTask
 from analysis.tasks.trees import MergeTrees, MergeMetaData
 from analysis.tasks.external import CalculatePileupWeights
 from analysis.util import TreeExtender, walk_categories, format_shifts
 
 
-class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWorkflow):
+class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     iteration = luigi.IntParameter(default=0, description="iteration of the scale factor "
         "calculation, starting at zero, default: 0")
@@ -113,8 +113,10 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
 
     def store_parts(self):
         binning_part = "optimized" if self.optimize_binning else "default"
+        variable_part = self.variable_tag if self.variable_tag else "all"
+        shift_part = "_".join(self.used_shifts) if self.used_shifts else "all"
         return super(WriteHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,) \
-            + (binning_part,)
+            + (variable_part,) + (shift_part,) + (binning_part,)
 
     def output(self):
         return self.wlcg_target("hists_{}.root".format(self.branch))
@@ -329,7 +331,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow, HTCondorWork
                                 for shift in self.shifts:
                                     nominal_sfs = inp["sf"]["nominal"]["sf"] if shift.startswith("c_stat") \
                                         else None
-                                    weighters.append(self.get_scale_factor_weighter( # TODO
+                                    weighters.append(self.get_scale_factor_weighter(
                                         inp["sf"], shift,
                                         nominal_sfs=nominal_sfs)
                                     )
@@ -480,8 +482,13 @@ class MergeHistograms(GridWorkflow, law.tasks.CascadeMerge):
 
     b_tagger = WriteHistograms.b_tagger
     category_tags = WriteHistograms.category_tags
+    variable_tag = WriteHistograms.variable_tag
+    used_shifts = WriteHistograms.used_shifts
 
     merge_factor = 13
+
+    sandbox = "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel6-m20200612"
+    req_sandbox = "slc6"
 
     def create_branch_map(self):
         return law.tasks.CascadeMerge.create_branch_map(self)
@@ -518,8 +525,10 @@ class MergeHistograms(GridWorkflow, law.tasks.CascadeMerge):
 
     def store_parts(self):
         binning_part = "optimized" if self.optimize_binning else "default"
+        variable_part = self.variable_tag if self.variable_tag else "all"
+        shift_part = "_".join(self.used_shifts) if self.used_shifts else "all"
         return super(MergeHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,) \
-            + (binning_part,)
+            + (variable_part,) + (shift_part,) + (binning_part,)
 
     def cascade_output(self):
         return self.wlcg_target("hists.root")

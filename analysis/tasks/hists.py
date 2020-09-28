@@ -21,16 +21,16 @@ from analysis.tasks.external import CalculatePileupWeights
 from analysis.util import TreeExtender, walk_categories, format_shifts
 
 
-class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
+class WriteHistograms(DatasetTask, AnalysisSandboxTask, GridWorkflow, law.LocalWorkflow):
 
     iteration = luigi.IntParameter(default=0, description="iteration of the scale factor "
         "calculation, starting at zero, default: 0")
     final_it = luigi.BoolParameter(description="Flag for the final iteration of the scale factor "
         "calculation.")
-    variable_tag = luigi.Parameter(default="", description="Only consider variables with the given "
-        "tag. Use all if empty.")
+    variable_tags = CSVParameter(default=[], description="Only consider variables with one or more of "
+        "the given tags. Use all if empty.")
     category_tags = CSVParameter(default=[], description="Only consider categories whose top-level "
-    "category has one or more of the given tags. Use all if empty.")
+        "category has one or more of the given tags. Use all if empty.")
     used_shifts = CSVParameter(default=[])  # needs to be named differently from the wrapper task parameter
     binning = CSVParameter(default=[], cls=luigi.FloatParameter, description="Overwrite default binning "
         "of variables. If exactly three values are provided, they are interpreted as a tuple of (n_bins, min, max).")
@@ -41,6 +41,9 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
     file_merging = "trees"
 
     workflow_run_decorators = [law.decorator.notify]
+
+    sandbox = "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7-m20200612"
+    req_sandbox = "slc7"
 
     def __init__(self, *args, **kwargs):
         super(WriteHistograms, self).__init__(*args, **kwargs)
@@ -113,7 +116,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
     def store_parts(self):
         binning_part = "optimized" if self.optimize_binning else "default"
-        variable_part = self.variable_tag if self.variable_tag else "all"
+        variable_part = "_".join(self.variable_tags) if self.variable_tags else "all"
         shift_part = "_".join(self.used_shifts) if self.used_shifts else "all"
         return super(WriteHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,) \
             + (variable_part,) + (shift_part,) + (binning_part,)
@@ -350,6 +353,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                         sum_weights = inp["meta"].load()["event_weights"]["sum"]
 
                     # get category-dependent binning if optimized binning is used
+                    # only for b-taaging discriminants
                     if self.optimize_binning:
                         category_binnings = inp["binning"].load()
 
@@ -413,12 +417,15 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
 
                                 # actual projecting
                                 for variable in self.config_inst.variables:
+                                    # save variable binning to reset at end of loop
+                                    base_variable_binning = variable.binning
+
                                     if variable.has_tag("skip_all"):
                                         continue
                                     if region and variable.has_tag("skip_{}".format(region)):
                                         continue
-                                    # if a variable tag is given, require it
-                                    if self.variable_tag and not variable.has_tag(self.variable_tag):
+                                    # if variable tags is given, require at least one
+                                    if len(self.variable_tags) > 0 and not variable.has_tag(self.variable_tags, mode=any):
                                         continue
                                     # do not write one b-tag discriminant in the category of another
                                     if variable.get_aux("b_tagger", self.b_tagger) != self.b_tagger:
@@ -435,7 +442,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                         variable.binning = self.binning
 
                                     # use optimized binning for b-tag discriminants if provided
-                                    if self.optimize_binning and variable.has_aux("b_tagger"):
+                                    if self.optimize_binning and variable.get_aux("can_optimize_bins", True):
                                         binning_category = category.get_aux("binning_category", category)
                                         # overwrite binning if specialized binning is defined for this category
                                         variable.binning = category_binnings.get(binning_category.name,
@@ -463,6 +470,7 @@ class WriteHistograms(DatasetTask, GridWorkflow, law.LocalWorkflow):
                                         variable.expression.format(**{"jec_identifier": jec_identifier}),
                                         selection)
                                     hist.Write()
+                                    variable.binning = base_variable_binning
 
                         progress(i)
 
@@ -472,7 +480,7 @@ class WriteHistogramsWrapper(WrapperTask):
     wrapped_task = WriteHistograms
 
 
-class MergeHistograms(GridWorkflow, law.tasks.CascadeMerge):
+class MergeHistograms(AnalysisSandboxTask, GridWorkflow, law.tasks.CascadeMerge):
 
     iteration = WriteHistograms.iteration
     final_it = WriteHistograms.final_it
@@ -482,13 +490,18 @@ class MergeHistograms(GridWorkflow, law.tasks.CascadeMerge):
 
     b_tagger = WriteHistograms.b_tagger
     category_tags = WriteHistograms.category_tags
-    variable_tag = WriteHistograms.variable_tag
+    variable_tags = WriteHistograms.variable_tags
     used_shifts = WriteHistograms.used_shifts
 
     merge_factor = 13
 
     sandbox = "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel6-m20200612"
     req_sandbox = "slc6"
+
+    def htcondor_job_config(self, config, job_num, branches):
+        config = super(MergeHistograms, self).htcondor_job_config(config, job_num, branches)
+        config.custom_content.append(("RequestMemory", "3000"))
+        return config
 
     def create_branch_map(self):
         return law.tasks.CascadeMerge.create_branch_map(self)
@@ -525,7 +538,7 @@ class MergeHistograms(GridWorkflow, law.tasks.CascadeMerge):
 
     def store_parts(self):
         binning_part = "optimized" if self.optimize_binning else "default"
-        variable_part = self.variable_tag if self.variable_tag else "all"
+        variable_part = "_".join(self.variable_tags) if self.variable_tags else "all"
         shift_part = "_".join(self.used_shifts) if self.used_shifts else "all"
         return super(MergeHistograms, self).store_parts() + (self.b_tagger,) + (self.iteration,) \
             + (variable_part,) + (shift_part,) + (binning_part,)
@@ -569,6 +582,9 @@ class MergeHistograms(GridWorkflow, law.tasks.CascadeMerge):
         return "_{}_{}".format(self.cascade_tree, self.cascade_depth)
 
     def arc_output_postfix(self):
+        return self.glite_output_postfix()
+
+    def htcondor_output_postfix(self):
         return self.glite_output_postfix()
 
 

@@ -58,7 +58,8 @@ ch_mumu = cfg.add_channel("mumu", 3)
 jes_sources_factorized = [
     "AbsoluteStat", "AbsoluteScale", "AbsoluteMPFBias", "Fragmentation", "SinglePionECAL",
     "SinglePionHCAL", "FlavorQCD", "TimePtEta", "RelativeJEREC1", "RelativeJEREC2", "RelativeJERHF",
-    "RelativePtBB", "RelativePtEC1", "RelativePtEC2", "RelativePtHF", "RelativeBal", "RelativeSample", "RelativeFSR",
+    "RelativePtBB", "RelativePtEC1", "RelativePtEC2", "RelativePtHF", "RelativeBal", "RelativeSample",
+    "RelativeFSR",
     "RelativeStatFSR", "RelativeStatEC", "RelativeStatHF", "PileUpDataMC", "PileUpPtRef",
     "PileUpPtBB", "PileUpPtEC1", "PileUpPtEC2", "PileUpPtHF", "Total",
 ]
@@ -129,7 +130,7 @@ cfg.set_aux("flavor_ids", {
 
 # store binning information
 hf_binning = {
-    "pt": [20, 30, 50, 70, 100, 140, 200, np.inf],
+    "pt": [20, 30, 50, 70, 100, 140, np.inf],
     "abs(eta)": [0., 2.5],
     "deepcsv": {
         "plotting": [
@@ -208,7 +209,7 @@ def get_btag_info(cfg, idx, working_point, b_tagger="deepcsv", operator=">"):
 
     return "({}) {} {}".format(btag_variable.expression, operator, btag_wp)
 
-def get_z_window_info(cfg, flavour, et_miss=30.0, z_window=10.):
+def get_z_window_info(cfg, flavour, et_miss=30.0, z_window=10., z_pt_min=10.):
     cuts = []
     # ET-miss requirement
     et_miss_expr = "(met_px{jec_identifier}**2 + met_py{jec_identifier}**2)**0.5"
@@ -228,6 +229,12 @@ def get_z_window_info(cfg, flavour, et_miss=30.0, z_window=10.):
     # z peak diamond
     if flavour == "lf":
         cuts.append("pass_z_mask{jec_identifier} == 0")
+
+    # minimum Z pt
+    z_pt_expr = "((lep1_px + lep2_px)**2 + (lep1_py + lep2_py)**2)**0.5"
+    if flavour == "lf":
+        cuts.append("{} > {}".format(z_pt_expr, z_pt_min))
+
     return cuts
 
 def get_region_info(cfg, idx, channel, et_miss=30., z_window=10., add_btag_cut=True, b_tagger="deepcsv"):
@@ -348,9 +355,16 @@ cfg.add_variable(
 cfg.add_variable(
     name="mll",
     expression="mll",
-    binning=(20, 80., 100.),
-    tags={"contamination"},
+    binning=(25, 0., 100.),
+    tags={"contamination", "main"},
     x_title="M(ll)",
+)
+cfg.add_variable(
+    name="Z_pt",
+    expression="((lep1_px + lep2_px)**2 + (lep1_py + lep2_py)**2)**0.5",
+    binning=(25, 0., 100.),
+    tags={"main"},
+    x_title="Z p_{T}",
 )
 cfg.add_variable(
     name="n_jets",
@@ -444,7 +458,10 @@ def add_btag_variables(cfg):
                 binning=binning,
                 x_title="Jet_{{{}}} DeepCSV".format(jet_idx),
                 tags=tags,
-                aux={"b_tagger": "deepcsv"}, # to filter required b-tagger in histogram writer
+                aux={
+                    "b_tagger": "deepcsv", # to filter required b-tagger in histogram writer
+                    "can_optimize_bins": True,
+                },
                 context=cfg.name,
             )
 
@@ -458,7 +475,10 @@ def add_btag_variables(cfg):
                 binning=binning,
                 x_title="Jet_{{{}}} DeepJet".format(jet_idx),
                 tags=tags,
-                aux={"b_tagger": "deepjet"}, # to filter required b-tagger in histogram writer
+                aux={
+                    "b_tagger": "deepjet", # to filter required b-tagger in histogram writer
+                    "can_optimize_bins": True,
+                },
                 context=cfg.name,
             )
 

@@ -750,10 +750,10 @@ class CreateScaleFactorResults(AnalysisTask):
 
             if region in ("hf", "c"):
                 eta_bin = 0
-                pt_bin = {20: 0, 30: 1, 50: 2, 70: 3, 100: 4}[pt_lower]
+                pt_bin = {20: 0, 30: 1, 50: 2, 70: 3, 100: 4, 140: 5}[pt_lower]
             elif region == "lf":
                 eta_bin = {"0": 0, "0p8": 1, "1p6": 2}[eta_lower]
-                pt_bin = {20: 0, 30: 1, 40: 2, 60: 3}[pt_lower]
+                pt_bin = {20: 0, 30: 1, 40: 2, 60: 3, 100: 4}[pt_lower]
             else:
                 raise ValueError("Unknown region {}".format(region))
 
@@ -811,7 +811,7 @@ class CreateScaleFactorResults(AnalysisTask):
 
         # add nominal c tag function (flat value of 1)
         c_func = ROOT.TF1("c nominal", "1.", -2., 1.1)
-        for iPt in range(5):
+        for iPt in range(6):
             hf_funcs.append(("c_csv_ratio_Pt{}_Eta0_final".format(iPt), c_func.Clone()))
 
         with outp["root_lf"].localize("w") as tmp:

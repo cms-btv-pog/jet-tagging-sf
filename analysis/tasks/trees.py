@@ -15,19 +15,22 @@ import law
 import luigi
 import six
 
-from analysis.tasks.base import AnalysisTask, DatasetTask, WrapperTask, GridWorkflow
+from analysis.tasks.base import AnalysisTask, AnalysisSandboxTask, DatasetTask, WrapperTask, GridWorkflow
 from analysis.tasks.external import GetDatasetLFNs, DownloadSetupFiles
 from analysis.util import wget, determine_xrd_redirector
 from analysis.config.jet_tagging_sf import xrd_redirectors
 
 
-class WriteTrees(DatasetTask, GridWorkflow, law.LocalWorkflow):
+class WriteTrees(DatasetTask, AnalysisSandboxTask, GridWorkflow, law.LocalWorkflow):
 
     max_events = luigi.IntParameter(default=law.NO_INT)
     workflow_run_decorators = [law.decorator.notify]
 
     stream_input_file = False
     xrdcp_attempts = 3
+
+    sandbox = "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7-m20200612"
+    req_sandbox = "slc7"
 
     def workflow_requires(self):
         if self.cancel_jobs or self.cleanup_jobs:
@@ -221,6 +224,9 @@ class MergeTrees(DatasetTask, law.tasks.CascadeMerge, GridWorkflow):
         return "_{}_{}".format(self.cascade_tree, self.cascade_depth)
 
     def arc_output_postfix(self):
+        return self.glite_output_postfix()
+
+    def htcondor_output_postfix(self):
         return self.glite_output_postfix()
 
 

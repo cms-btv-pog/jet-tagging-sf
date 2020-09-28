@@ -26,11 +26,6 @@ action() {
     # set env variables
     #
 
-    export PATH_ORIG="$PATH"
-    export PYTHONPATH_ORIG="$PYTHONPATH"
-    export LD_LIBRARY_PATH_ORIG="$LD_LIBRARY_PATH"
-    export GFAL_PLUGIN_DIR_ORIG="$GFAL_PLUGIN_DIR"
-
     export JTSF_DATA="$TMP/jtsf_data"
     export JTSF_SOFTWARE="$JTSF_DATA/$JTSF_DIST_VERSION/software"
     export SANDBOX_JTSF_SOFTWARE="$JTSF_DATA/{{sandbox_jtsf_dist_version}}/software"
@@ -55,6 +50,11 @@ action() {
         export LD_LIBRARY_PATH="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64:/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib:$LD_LIBRARY_PATH"
         export GFAL_PLUGIN_DIR="/cvmfs/grid.cern.ch/centos7-ui-4.0.3-1_umd4v3/usr/lib64/gfal2-plugins"
     fi
+
+    export PATH_ORIG="$PATH"
+    export PYTHONPATH_ORIG="$PYTHONPATH"
+    export LD_LIBRARY_PATH_ORIG="$LD_LIBRARY_PATH"
+    export GFAL_PLUGIN_DIR_ORIG="$GFAL_PLUGIN_DIR"
 
     #
     # load CMSSW

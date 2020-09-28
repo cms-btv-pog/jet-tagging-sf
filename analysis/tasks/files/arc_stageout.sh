@@ -22,11 +22,11 @@ action() {
 
         if [ -f "$src_dir/$file_name" ]; then
             echo "stageout $msg_name $src_dir/$file_name"
-            python -c "import gfal2;\
-                ctx = gfal2.creat_context();\
-                params = ctx.transfer_parameters();\
-                params.overwrite = True;\
-                ctx.filecopy(params, 'file://$src_dir/$file_name', '$output_uri/$file_name')"
+            PATH="$PATH_ORIG" \
+                PYTHONPATH="$PYTHONPATH_ORIG" \
+                LD_LIBRARY_PATH="$LD_LIBRARY_PATH_ORIG" \
+                GFAL_PLUGIN_DIR="$GFAL_PLUGIN_DIR_ORIG" \
+                gfal-copy -f "$src_dir/$file_name" "$output_uri/$file_name"
         else
             2>&1 echo "cannot stageout missing $msg_name $src_dir/$file_name"
         fi

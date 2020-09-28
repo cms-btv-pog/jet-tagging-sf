@@ -266,7 +266,7 @@ class AnalysisSandboxTask(law.SandboxTask):
         return cmds
 
 
-class GridWorkflow(AnalysisTask, AnalysisSandboxTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow, HTCondorWorkflow):
+class GridWorkflow(AnalysisTask, law.glite.GLiteWorkflow, law.arc.ARCWorkflow, HTCondorWorkflow):
 
     glite_ce_map = {
         "CNAF": [
@@ -293,6 +293,7 @@ class GridWorkflow(AnalysisTask, AnalysisSandboxTask, law.glite.GLiteWorkflow, l
     grid_ce = law.CSVParameter(default=["RWTH"], significant=False, description="target computing "
         "element(s)")
 
+    req_sandbox = "slc7" # sandbox key
     sandbox = "singularity::/cvmfs/singularity.opensciencegrid.org/cmssw/cms:rhel7-m20200612"
 
     exclude_params_branch = {"grid_ce"}
@@ -407,11 +408,12 @@ class GridWorkflow(AnalysisTask, AnalysisSandboxTask, law.glite.GLiteWorkflow, l
         self._setup_render_variables(config, self.htcondor_workflow_requires())
         config.render_variables["output_uri"] = self.htcondor_output_uri()
         config.universe = "grid"
-        config.stdout = "out.txt"
-        config.stderr = "err.txt"
-        config.log = "log.txt"
+        #config.stdout = "out.txt"
+        #config.stderr = "err.txt"
+        #config.log = "log.txt"
         config.custom_content.append(("grid_resource", "condor {}".format(self.htcondor_ce[0])))
         config.custom_content.append(("use_x509userproxy", "true"))
+        config.custom_content.append(("transfer_output_files", '""'))
 
         return config
 
@@ -491,7 +493,7 @@ class UploadCMSSW(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxTask
 
     def single_output(self):
         path = "{}.tgz".format(os.path.basename(self.get_cmssw_path()))
-        return self.wlcg_target(path, fs="wlcg_fs_software")
+        return self.wlcg_target(path)
 
     def output(self):
         return law.tasks.TransferLocalFile.output(self)
@@ -516,7 +518,7 @@ class UploadSoftware(AnalysisTask, law.tasks.TransferLocalFile, AnalysisSandboxT
         return super(UploadSoftware, self).store_parts() + (sl_dist_version,)
 
     def single_output(self):
-        return self.wlcg_target("software.tgz", fs="wlcg_fs_software")
+        return self.wlcg_target("software.tgz")
 
     def run(self):
         # create the local bundle
@@ -547,7 +549,7 @@ class UploadRepo(AnalysisTask, law.git.BundleGitRepository, law.tasks.TransferLo
 
     def single_output(self):
         path = "{}.{}.tgz".format(os.path.basename(self.get_repo_path()), self.checksum)
-        return self.wlcg_target(path, fs="wlcg_fs_software")
+        return self.wlcg_target(path)
 
     def output(self):
         return law.tasks.TransferLocalFile.output(self)

@@ -50,6 +50,11 @@ class WriteTrees(DatasetTask, AnalysisSandboxTask, GridWorkflow, law.LocalWorkfl
             "meta": self.wlcg_target("meta_{}.root".format(self.branch)),
         }
 
+    def htcondor_job_config(self, config, job_num, branches):
+        config = super(WriteTrees, self).htcondor_job_config(config, job_num, branches)
+        config.custom_content.append(("RequestMemory", "2500"))
+        return config
+
     def run(self):
         lfn = self.input()["lfns"].random_target().load()[self.branch_data]
 

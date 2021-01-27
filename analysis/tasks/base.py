@@ -243,7 +243,10 @@ class AnalysisSandboxTask(law.SandboxTask):
 
     def singularity_args(self):
         if os.environ.get("JTSF_ON_GRID", 0) == "1":
-            return ["--bind", "/cvmfs", "-H", os.environ["LAW_JOB_HOME"]]
+            bindpaths = ["/cvmfs"]
+            if os.path.exists("/etc/cvmfs/SITECONF"):
+                bindpaths.append("/etc/cvmfs/SITECONF")
+            return ["--bind", ",".join(bindpaths), "-H", os.environ["LAW_JOB_HOME"]]
         else:
             return []
 

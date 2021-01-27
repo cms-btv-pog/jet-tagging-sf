@@ -442,7 +442,7 @@ class WriteHistograms(DatasetTask, AnalysisSandboxTask, GridWorkflow, law.LocalW
                                         variable.binning = self.binning
 
                                     # use optimized binning for b-tag discriminants if provided
-                                    if self.optimize_binning and variable.get_aux("can_optimize_bins", True):
+                                    if self.optimize_binning and variable.get_aux("can_optimize_bins", False):
                                         binning_category = category.get_aux("binning_category", category)
                                         # overwrite binning if specialized binning is defined for this category
                                         variable.binning = category_binnings.get(binning_category.name,

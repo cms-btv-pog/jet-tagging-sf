@@ -52,6 +52,8 @@ cfg.add_process(process_ttVJets)
 ch_ee = cfg.add_channel("ee", 1)
 ch_emu = cfg.add_channel("emu", 2)
 ch_mumu = cfg.add_channel("mumu", 3)
+ch_e = cfg.add_channel("e", 4)
+ch_mu = cfg.add_channel("mu", 5)
 
 # define configurations that are not part of a config
 
@@ -77,16 +79,20 @@ if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy18":
     jes_sources_reduced =  ["Absolute", "Absolute_2018", "BBEC1", "BBEC1_2018", "EC2",
         "EC2_2018", "FlavorQCD", "HF", "HF_2018", "RelativeBal", "RelativeSample_2018",
         "Total", "HEMIssue"]
-if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy17":
+elif os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy17":
     jes_sources_reduced = ["Absolute", "Absolute_2017", "BBEC1", "BBEC1_2017", "EC2",
         "EC2_2017", "FlavorQCD", "HF", "HF_2017", "RelativeBal", "RelativeSample_2017",
         "Total"]
-if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy16":
+elif os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_Legacy16":
     jes_sources_reduced = ["Absolute", "Absolute_2016", "BBEC1", "BBEC1_2016", "EC2",
         "EC2_2016", "FlavorQCD", "HF", "HF_2016", "RelativeBal", "RelativeSample_2016",
         "Total"]
-if os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_UltraLegacy17":
+elif os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_UltraLegacy17":
     jes_sources_reduced = []
+elif os.environ["JTSF_CAMPAIGN"] == "Run2_pp_13TeV_UltraLegacy18":
+    jes_sources_reduced = []
+else:
+    raise Excpetion("jes sources not defined for campaign {}".format(os.environ["JTSF_CAMPAIGN"]))
 
 jes_sources_all = list(set(jes_sources_factorized + jes_sources_reduced))
 
@@ -94,7 +100,7 @@ cfg.set_aux("jes_sources_factorized", jes_sources_factorized[:])
 cfg.set_aux("jes_sources_reduced", jes_sources_reduced[:])
 cfg.set_aux("jes_sources_all", jes_sources_all[:])
 
-cfg.set_aux("jes_scheme", "factorized")
+cfg.set_aux("jes_scheme", "reduced")
 
 jes_sources = cfg.get_aux("jes_sources_{}".format(cfg.get_aux("jes_scheme")))
 
@@ -363,7 +369,7 @@ cfg.add_variable(
     name="Z_pt",
     expression="((lep1_px + lep2_px)**2 + (lep1_py + lep2_py)**2)**0.5",
     binning=(25, 0., 100.),
-    tags={"main"},
+    tags={"main", "test"},
     x_title="Z p_{T}",
 )
 cfg.add_variable(
@@ -682,6 +688,61 @@ def add_categories(cfg, b_tagger):
                     cont_merged_cat = cfg.get_category(cont_merged_name)
                 cont_merged_cat.add_category(contamination_cat)
 
+    # sl categories
+    sl_phasespaces = [
+        ("closure", join_root_selection(
+            ["n_jets{jec_identifier} == 4",
+             "n_tags_{}{{jec_identifier}} == 2".format(b_tagger)
+            ])),
+        ("high_multiplicity", join_root_selection(
+            ["n_jets{jec_identifier} >= 6",
+             "n_tags_{}{{jec_identifier}} >= 4".format(b_tagger)
+            ])),
+        ("high_pt", join_root_selection(
+            ["n_jets{jec_identifier} == 4",
+             "n_tags_{}{{jec_identifier}} == 2".format(b_tagger),
+             "jet1_pt{jec_identifier} > 100."
+            ])),
+    ]
+    for ch in [ch_e, ch_mu]:
+        # phase space region loop (measurement, closure, ...)
+        for ps_name, ps_sel in sl_phasespaces:
+            for jet_idx in range(1, 5):
+                for fl_name, fl_sel in get_flavor_info(jet_idx):
+                    # categories per channel
+                    rg_cat = ch.add_category(
+                        name="{}__{}__j{}__{}__{}__{}".format(ch.name, ps_name, str(jet_idx),
+                            fl_name, b_tagger, cfg.name),
+                        label="{}, {}, jet{}, {}".format(ch.name, ps_name, str(jet_idx), fl_name),
+                        selection=join_root_selection("channel == {}".format(ch.id), ps_sel, fl_sel),
+                        tags={b_tagger},
+                        aux={
+                            "channel": ch,
+                            "phase_space": ps_name,
+                            "config": cfg.name,
+                            "flavor": fl_name,
+                            "i_flavor_jet": jet_idx,
+                        },
+                    )
+                    # combine region categories to create inclusive control regions for plotting
+                    rg_merged_name = "sl__{}__{}".format(ps_name, b_tagger)
+                    if not cfg.has_category(rg_merged_name):
+                        rg_merged_cat = cfg.add_category(
+                            name=rg_merged_name,
+                            label="sl, {}".format(ps_name),
+                            tags={"sl", b_tagger},
+                            aux={
+                                "phase_space": ps_name,
+                            },
+                            context=cfg.name,
+                        )
+                    else:
+                        rg_merged_cat = cfg.get_category(rg_merged_name)
+                    rg_merged_cat.add_category(rg_cat)
+
+
+
+
 def get_file_merging(cfg, key, dataset):
     dataset_name = dataset if isinstance(dataset, six.string_types) else dataset.name
     return cfg.get_aux("file_merging")[key].get(dataset_name, 1)
@@ -695,23 +756,29 @@ add_btag_variables(config_UltraLegacy17)
 add_categories(config_UltraLegacy17, "deepcsv")
 add_categories(config_UltraLegacy17, "deepjet")
 
-from analysis.config.config_Legacy17 import create_config as create_config_Legacy17
-config_Legacy17 = create_config_Legacy17(cfg)
-add_btag_variables(config_Legacy17)
-add_categories(config_Legacy17, "deepcsv")
-add_categories(config_Legacy17, "deepjet")
+from analysis.config.config_UltraLegacy18 import create_config as create_config_UltraLegacy18
+config_UltraLegacy18 = create_config_UltraLegacy18(cfg)
+add_btag_variables(config_UltraLegacy18)
+add_categories(config_UltraLegacy18, "deepcsv")
+add_categories(config_UltraLegacy18, "deepjet")
 
-from analysis.config.config_Legacy18 import create_config as create_config_Legacy18
-config_Legacy18 = create_config_Legacy18(cfg)
-add_btag_variables(config_Legacy18)
-add_categories(config_Legacy18, "deepcsv")
-add_categories(config_Legacy18, "deepjet")
+#from analysis.config.config_Legacy17 import create_config as create_config_Legacy17
+#config_Legacy17 = create_config_Legacy17(cfg)
+#add_btag_variables(config_Legacy17)
+#add_categories(config_Legacy17, "deepcsv")
+#add_categories(config_Legacy17, "deepjet")
 
-from analysis.config.config_Legacy16 import create_config as create_config_Legacy16
-config_Legacy16 = create_config_Legacy16(cfg)
-add_btag_variables(config_Legacy16)
-add_categories(config_Legacy16, "deepcsv")
-add_categories(config_Legacy16, "deepjet")
-config_Legacy16.get_aux("binning")["lf"]["abs(eta)"] = [0., 0.8, 1.6, 2.4]
-config_Legacy16.get_aux("binning")["hf"]["abs(eta)"] = [0., 2.4]
-config_Legacy16.get_aux("binning")["c"]["abs(eta)"] = [0., 2.4]
+#from analysis.config.config_Legacy18 import create_config as create_config_Legacy18
+#config_Legacy18 = create_config_Legacy18(cfg)
+#add_btag_variables(config_Legacy18)
+#add_categories(config_Legacy18, "deepcsv")
+#add_categories(config_Legacy18, "deepjet")
+
+#from analysis.config.config_Legacy16 import create_config as create_config_Legacy16
+#config_Legacy16 = create_config_Legacy16(cfg)
+#add_btag_variables(config_Legacy16)
+#add_categories(config_Legacy16, "deepcsv")
+#add_categories(config_Legacy16, "deepjet")
+#config_Legacy16.get_aux("binning")["lf"]["abs(eta)"] = [0., 0.8, 1.6, 2.4]
+#config_Legacy16.get_aux("binning")["hf"]["abs(eta)"] = [0., 2.4]
+#config_Legacy16.get_aux("binning")["c"]["abs(eta)"] = [0., 2.4]

@@ -6,7 +6,7 @@ import numpy as np
 def create_config(base_cfg):
     # setup the config for 2017 data
     from analysis.config.campaign_UltraLegacy17 import campaign as campaign_UltraLegacy17
-    from analysis.config.jet_tagging_sf import ch_ee, ch_emu, ch_mumu
+    from analysis.config.jet_tagging_sf import ch_ee, ch_emu, ch_mumu, ch_e, ch_mu
     cfg = base_cfg.copy(campaign=campaign_UltraLegacy17)
 
     # add datasets
@@ -14,8 +14,8 @@ def create_config(base_cfg):
         "data_B_ee", "data_C_ee", "data_D_ee", "data_E_ee", "data_F_ee",
         "data_B_emu", "data_C_emu", "data_D_emu", "data_E_emu", "data_F_emu",
         "data_B_mumu", "data_C_mumu", "data_D_mumu", "data_E_mumu", "data_F_mumu",
-        #"data_B_e", "data_C_e", "data_D_e", "data_E_e", "data_F_e",
-        #"data_B_mu", "data_C_mu", "data_D_mu", "data_E_mu", "data_F_mu",
+        "data_B_e", "data_C_e", "data_D_e", "data_E_e", "data_F_e",
+        "data_B_mu", "data_C_mu", "data_D_mu", "data_E_mu", "data_F_mu",
         "tt_dl", "tt_sl",
         "dy_lep_10To50",
         #"dy_lep_50ToInf",
@@ -60,8 +60,8 @@ def create_config(base_cfg):
         ch_ee: 41480.0,
         ch_emu: 41480.0,
         ch_mumu: 41480.0,
-        #ch_e: 41480.0,
-        #ch_mu: 41480.0,
+        ch_e: 41480.0,
+        ch_mu: 41480.0,
     })
 
     # run ranges
@@ -104,35 +104,35 @@ def create_config(base_cfg):
             "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*", # only 2017 C-F
             "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*", # only 2017 C-F
         ],
-        #ch_e: [
-        #    "HLT_Ele35_WPTight_Gsf_v*",
-        #    "HLT_Ele28_eta2p1_WPTight_Gsf_HT150_v*",
-        #],
-        #ch_mu: [
-        #    "HLT_IsoMu27_v*",
-        #    "HLT_IsoMu24_eta2p1_v*", # only 2017 B, C, D
-        #],
+        ch_e: [
+            "HLT_Ele35_WPTight_Gsf_v*",
+            "HLT_Ele28_eta2p1_WPTight_Gsf_HT150_v*",
+        ],
+        ch_mu: [
+            "HLT_IsoMu27_v*",
+            "HLT_IsoMu24_eta2p1_v*", # only 2017 B, C, D
+        ],
     })
 
     # special triggers per real dataset
-    cfg.set_aux("data_triggers", {
-        cfg.get_dataset("data_B_mumu"): [
-            "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v*",
-        ],
-    })
-    for era in ["C", "D", "E", "F"]:
-        cfg.set_aux("data_triggers", {
-            cfg.get_dataset("data_{}_mumu".format(era)): [
-                "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*",
-                "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*",
-            ],
-        })
-    #for era in ["E", "F"]:
+    #cfg.set_aux("data_triggers", {
+    #    cfg.get_dataset("data_B_mumu"): [
+    #        "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_v*",
+    #    ],
+    #})
+    #for era in ["C", "D", "E", "F"]:
     #    cfg.set_aux("data_triggers", {
-    #        cfg.get_dataset("data_{}_mu".format(era)): [
-    #            "HLT_IsoMu27_v*",
+    #        cfg.get_dataset("data_{}_mumu".format(era)): [
+    #            "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass3p8_v*",
+    #            "HLT_Mu17_TrkIsoVVL_Mu8_TrkIsoVVL_DZ_Mass8_v*",
     #        ],
     #    })
+    for era in ["E", "F"]:
+        cfg.set_aux("data_triggers", {
+            cfg.get_dataset("data_{}_mu".format(era)): [
+                "HLT_IsoMu27_v*",
+            ],
+        })
 
     # MET filters
     # https://twiki.cern.ch/twiki/bin/view/CMS/MissingETOptionalFiltersRun2
@@ -203,22 +203,31 @@ def create_config(base_cfg):
     # file merging information (stage -> dataset -> files after merging)
     cfg.set_aux("file_merging", {
         "trees": {
-            "tt_dl": 155,
-            "tt_sl": 4,
-            "dy_lep_50ToInf": 73,
-            "dy_lep_LO_50ToInf": 21,
-            "st_tW_t": 4,
-            "st_tW_tbar": 4,
+#            "tt_dl": 155,
+#            "tt_sl": 4,
+#            "dy_lep_50ToInf": 73,
+#            "dy_lep_LO_50ToInf": 21,
+#            "st_tW_t": 4,
+#            "st_tW_tbar": 4,
+            "tt_dl": 194,
+            "tt_sl": 540,
+            "dy_lep_LO_50ToInf": 8,
+            "st_s_lep": 14,
+            "st_t_t": 2,
+            "st_tW_t": 32,
+            "st_tW_tbar": 25,
+            "WW": 2,
+            "W_lep": 4,
         }
     })
 
     # versions
     cfg.set_aux("versions", {
-        "WriteTrees": "prod2",  # reduced jes sources
-        "MergeTrees": "prod2",
-        "MergeMetaData": "prod2",
-        "WriteHistograms": "prod5",
-        "MergeHistograms": "prod5",
+        "WriteTrees": "prod2_sl",
+        "MergeTrees": "prod2_sl",
+        "MergeMetaData": "prod2_sl",
+        "WriteHistograms": "prod5_sl",
+        "MergeHistograms": "prod5_sl",
         "MeasureCScaleFactors": "prod5",
         "MeasureScaleFactors": "prod5",
         "FitScaleFactors": "prod5",

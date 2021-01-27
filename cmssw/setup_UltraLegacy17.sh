@@ -13,7 +13,7 @@ action() {
     fi
 
     export SCRAM_ARCH="${JTSF_DIST_VERSION}_amd64_gcc700"
-    [ -z "$CMSSW_BASE" ] && export CMSSW_BASE="$JTSF_DATA/cmssw/$SCRAM_ARCH/$CMSSW_VERSION"
+    [ -z "$CMSSW_BASE" ] && export CMSSW_BASE="$JTSF_DATA/cmssw/$JTSF_CAMPAIGN/$SCRAM_ARCH/$CMSSW_VERSION"
 
     source "/cvmfs/cms.cern.ch/cmsset_default.sh"
 
